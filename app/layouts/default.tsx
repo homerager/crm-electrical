@@ -1,0 +1,142 @@
+export default defineComponent({
+  name: 'DefaultLayout',
+  setup() {
+    const { user, isAdmin, logout } = useAuth()
+    const route = useRoute()
+    const slots = useSlots()
+    const drawer = ref(true)
+    const rail = ref(false)
+    const theme = ref('light')
+
+    const navItems = computed(() => {
+      const base = [
+        { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
+        { title: 'Склади', icon: 'mdi-warehouse', to: '/warehouses' },
+        { title: 'Обʼєкти', icon: 'mdi-office-building-outline', to: '/objects' },
+        { title: 'Товари', icon: 'mdi-package-variant-closed', to: '/products' },
+        { title: 'Контрагенти', icon: 'mdi-domain', to: '/contractors' },
+        { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
+        { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
+        { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
+      ]
+      if (isAdmin.value) {
+        base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
+      }
+      return base
+    })
+
+    function toggleTheme() {
+      theme.value = theme.value === 'light' ? 'dark' : 'light'
+    }
+
+    return () => (
+      <v-app theme={theme.value}>
+        <v-navigation-drawer v-model={drawer.value} rail={rail.value} permanent>
+          <v-list-item
+            prepend-icon="mdi-lightning-bolt-circle"
+            title="ЕлектроМонтаж CRM"
+            nav
+          >
+            {{
+              append: () => (
+                <v-btn
+                  variant="text"
+                  icon={rail.value ? 'mdi-chevron-right' : 'mdi-chevron-left'}
+                  onClick={() => (rail.value = !rail.value)}
+                />
+              ),
+            }}
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list density="compact" nav>
+            {navItems.value.map((item) => (
+              <v-list-item
+                key={item.to}
+                prepend-icon={item.icon}
+                title={item.title}
+                to={item.to}
+                active={route.path === item.to || (item.to !== '/' && route.path.startsWith(item.to))}
+                active-color="primary"
+                rounded="lg"
+              />
+            ))}
+          </v-list>
+
+          {{
+            append: () => (
+              <>
+                <v-divider />
+                <v-list density="compact" nav class="pa-2">
+                  {user.value && (
+                    <v-list-item
+                      prepend-icon="mdi-account-circle"
+                      title={user.value.name}
+                      subtitle={user.value.role === 'ADMIN' ? 'Адміністратор' : 'Комірник'}
+                    />
+                  )}
+                  <v-list-item
+                    prepend-icon={theme.value === 'light' ? 'mdi-weather-night' : 'mdi-weather-sunny'}
+                    title="Тема"
+                    onClick={toggleTheme}
+                    rounded="lg"
+                  />
+                  <v-list-item
+                    prepend-icon="mdi-logout"
+                    title="Вийти"
+                    onClick={logout}
+                    rounded="lg"
+                    base-color="error"
+                  />
+                </v-list>
+              </>
+            ),
+          }}
+        </v-navigation-drawer>
+
+        <v-app-bar elevation={1}>
+          <v-app-bar-nav-icon onClick={() => (drawer.value = !drawer.value)} />
+          <v-app-bar-title>
+            <span class="text-body-1 font-weight-medium">{getPageTitle(route.path)}</span>
+          </v-app-bar-title>
+          {{
+            append: () => (
+              <>
+                {user.value && (
+                  <v-chip class="mr-3" prepend-icon="mdi-account-circle" variant="tonal" color="primary">
+                    {user.value.name}
+                  </v-chip>
+                )}
+              </>
+            ),
+          }}
+        </v-app-bar>
+
+        <v-main style="background: var(--v-theme-background)">
+          <v-container fluid class="pa-6">
+            {slots.default?.()}
+          </v-container>
+        </v-main>
+      </v-app>
+    )
+  },
+})
+
+function getPageTitle(path: string): string {
+  const titles: Record<string, string> = {
+    '/': 'Дашборд',
+    '/warehouses': 'Склади',
+    '/objects': 'Будівельні обʼєкти',
+    '/products': 'Товари',
+    '/contractors': 'Контрагенти',
+    '/invoices': 'Накладні',
+    '/movements': 'Переміщення',
+    '/reports': 'Репорти',
+    '/users': 'Користувачі',
+  }
+  for (const [key, val] of Object.entries(titles)) {
+    if (path === key || (key !== '/' && path.startsWith(key))) return val
+  }
+  return 'CRM'
+}
