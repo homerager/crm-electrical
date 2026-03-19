@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
       ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { sku: { contains: search, mode: 'insensitive' } }] }
       : undefined,
     include: {
+      group: true,
       stock: {
         include: { warehouse: true },
       },

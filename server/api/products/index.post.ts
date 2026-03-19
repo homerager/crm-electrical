@@ -7,12 +7,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, description, sku, unit } = body
+  const { name, description, sku, unit, groupId } = body
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
 
   const product = await prisma.product.create({
-    data: { name, description, sku: sku || null, unit: unit || 'шт' },
+    data: { name, description, sku: sku || null, unit: unit || 'шт', groupId: groupId || null },
+    include: { group: true },
   })
 
   return { product }

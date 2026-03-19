@@ -7,11 +7,12 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { name, description, sku, unit } = body
+  const { name, description, sku, unit, groupId } = body
 
   const product = await prisma.product.update({
     where: { id },
-    data: { name, description, sku: sku || null, unit },
+    data: { name, description, sku: sku || null, unit, groupId: groupId || null },
+    include: { group: true },
   })
 
   return { product }

@@ -5,8 +5,21 @@ export default defineComponent({
 
     const { isAdmin } = useAuth()
     const search = ref('')
+    const filterGroupId = ref<string | null>(null)
+
     const { data, refresh, pending } = useFetch('/api/products', { query: { search } })
-    const products = computed(() => (data.value as any)?.products ?? [])
+    const products = computed(() => {
+      const all = (data.value as any)?.products ?? []
+      if (!filterGroupId.value) return all
+      return all.filter((p: any) => p.groupId === filterGroupId.value)
+    })
+
+    const { data: groupsData } = useFetch('/api/product-groups')
+    const groups = computed(() => (groupsData.value as any)?.groups ?? [])
+    const groupOptions = computed(() => [
+      { title: 'Усі групи', value: null },
+      ...groups.value.map((g: any) => ({ title: g.name, value: g.id })),
+    ])
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -15,19 +28,27 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', description: '', sku: '', unit: 'шт' })
+    const form = reactive({ name: '', description: '', sku: '', unit: 'шт', groupId: null as string | null })
 
     const unitOptions = ['шт', 'м', 'м²', 'м³', 'кг', 'т', 'л', 'уп', 'к-т', 'пог.м']
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', description: '', sku: '', unit: 'шт' })
+      Object.assign(form, { name: '', description: '', sku: '', unit: 'шт', groupId: null })
+      error.value = ''
       dialog.value = true
     }
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(form, { name: item.name, description: item.description || '', sku: item.sku || '', unit: item.unit })
+      Object.assign(form, {
+        name: item.name,
+        description: item.description || '',
+        sku: item.sku || '',
+        unit: item.unit,
+        groupId: item.groupId || null,
+      })
+      error.value = ''
       dialog.value = true
     }
 
@@ -69,6 +90,7 @@ export default defineComponent({
       { title: 'Назва', key: 'name' },
       { title: 'Артикул', key: 'sku' },
       { title: 'Одиниця', key: 'unit', width: 100 },
+      { title: 'Група', key: 'group', sortable: false },
       { title: 'Опис', key: 'description' },
       { title: 'На складах', key: 'stock', sortable: false },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
@@ -92,19 +114,39 @@ export default defineComponent({
 
         <v-card>
           <v-card-text class="pb-0">
-            <v-text-field
-              v-model={search.value}
-              label="Пошук за назвою або артикулом"
-              prepend-inner-icon="mdi-magnify"
-              clearable
-              hide-details
-            />
+            <v-row>
+              <v-col cols={12} sm={8}>
+                <v-text-field
+                  v-model={search.value}
+                  label="Пошук за назвою або артикулом"
+                  prepend-inner-icon="mdi-magnify"
+                  clearable
+                  hide-details
+                />
+              </v-col>
+              <v-col cols={12} sm={4}>
+                <v-select
+                  v-model={filterGroupId.value}
+                  label="Фільтр за групою"
+                  items={groupOptions.value}
+                  item-title="title"
+                  item-value="value"
+                  clearable
+                  hide-details
+                />
+              </v-col>
+            </v-row>
           </v-card-text>
 
           <v-data-table headers={headers} items={products.value} loading={pending.value} hover>
             {{
               'item.sku': ({ item }: any) => (
                 <v-chip size="small" variant="outlined">{item.sku || '—'}</v-chip>
+              ),
+              'item.group': ({ item }: any) => (
+                item.group
+                  ? <v-chip size="small" color="secondary" variant="tonal" prepend-icon="mdi-tag">{item.group.name}</v-chip>
+                  : <span class="text-medium-emphasis">—</span>
               ),
               'item.stock': ({ item }: any) => {
                 const total = totalStock(item)
@@ -156,6 +198,16 @@ export default defineComponent({
               <v-text-field v-model={form.name} label="Назва *" class="mb-3" />
               <v-text-field v-model={form.sku} label="Артикул (SKU)" class="mb-3" />
               <v-combobox v-model={form.unit} label="Одиниця виміру" items={unitOptions} class="mb-3" />
+              <v-select
+                v-model={form.groupId}
+                label="Група товарів"
+                items={groups.value}
+                item-title="name"
+                item-value="id"
+                clearable
+                class="mb-3"
+                prepend-inner-icon="mdi-tag"
+              />
               <v-textarea v-model={form.description} label="Опис" rows={3} />
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
