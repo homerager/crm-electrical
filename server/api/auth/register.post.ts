@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { prisma } from '~/server/utils/prisma'
+import { prisma } from '../../utils/prisma'
 import type { Role } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {

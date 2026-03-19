@@ -135,10 +135,10 @@ export default defineComponent({
               <v-text-field v-model={form.address} label="Адреса" class="mb-3 mt-3" />
               <v-textarea v-model={form.notes} label="Примітки" rows={2} />
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions class="pa-4 pt-0">
               <v-spacer />
-              <v-btn variant="text" onClick={() => (dialog.value = false)}>Скасувати</v-btn>
-              <v-btn color="primary" loading={saving.value} disabled={!form.name} onClick={save}>
+              <v-btn variant="outlined" onClick={() => (dialog.value = false)}>Скасувати</v-btn>
+              <v-btn color="primary" variant="elevated" loading={saving.value} disabled={!form.name} onClick={save}>
                 {editItem.value ? 'Зберегти' : 'Створити'}
               </v-btn>
             </v-card-actions>
@@ -149,10 +149,10 @@ export default defineComponent({
           <v-card>
             <v-card-title>Видалити контрагента?</v-card-title>
             <v-card-text>Контрагент "{deleteItem.value?.name}" буде видалено.</v-card-text>
-            <v-card-actions>
+            <v-card-actions class="pa-4 pt-0">
               <v-spacer />
-              <v-btn variant="text" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
-              <v-btn color="error" onClick={confirmDelete}>Видалити</v-btn>
+              <v-btn variant="outlined" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
+              <v-btn color="error" variant="elevated" onClick={confirmDelete}>Видалити</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>

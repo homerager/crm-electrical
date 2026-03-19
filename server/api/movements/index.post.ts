@@ -1,4 +1,4 @@
-import { prisma } from '~/server/utils/prisma'
+
 import type { MovementType } from '@prisma/client'
 
 interface MovementItemInput {

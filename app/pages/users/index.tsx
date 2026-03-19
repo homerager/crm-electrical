@@ -152,11 +152,12 @@ export default defineComponent({
                 item-value="value"
               />
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions class="pa-4 pt-0">
               <v-spacer />
-              <v-btn variant="text" onClick={() => (createDialog.value = false)}>Скасувати</v-btn>
+              <v-btn variant="outlined" onClick={() => (createDialog.value = false)}>Скасувати</v-btn>
               <v-btn
                 color="primary"
+                variant="elevated"
                 loading={saving.value}
                 disabled={!createForm.name || !createForm.email || !createForm.password}
                 onClick={createUser}
@@ -188,10 +189,10 @@ export default defineComponent({
                 hide-details
               />
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions class="pa-4 pt-0">
               <v-spacer />
-              <v-btn variant="text" onClick={() => (editDialog.value = false)}>Скасувати</v-btn>
-              <v-btn color="primary" loading={saving.value} disabled={!editForm.name} onClick={saveEdit}>
+              <v-btn variant="outlined" onClick={() => (editDialog.value = false)}>Скасувати</v-btn>
+              <v-btn color="primary" variant="elevated" loading={saving.value} disabled={!editForm.name} onClick={saveEdit}>
                 Зберегти
               </v-btn>
             </v-card-actions>

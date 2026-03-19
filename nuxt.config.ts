@@ -40,5 +40,12 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
     shim: false,
+    typeCheck: false,
+  },
+
+  nitro: {
+    rollupConfig: {
+      external: [/\.prisma/],
+    },
   },
 })

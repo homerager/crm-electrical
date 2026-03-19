@@ -1,4 +1,4 @@
-import { prisma } from '~/server/utils/prisma'
+
 import type { ObjectStatus } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {

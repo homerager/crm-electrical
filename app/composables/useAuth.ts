@@ -6,18 +6,22 @@ export interface AuthUser {
   isActive: boolean
 }
 
-const user = ref<AuthUser | null>(null)
-const initialized = ref(false)
-
 export function useAuth() {
+  const user = useState<AuthUser | null>('auth-user', () => null)
+  const initialized = useState<boolean>('auth-initialized', () => false)
+
   const isLoggedIn = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
   async function fetchMe() {
     try {
-      const data = await $fetch<{ user: AuthUser }>('/api/auth/me')
+      const headers = import.meta.server ? useRequestHeaders(['cookie']) : {}
+      const data = await $fetch<{ user: AuthUser }>('/api/auth/me', { headers })
+      console.log('[useAuth] fetchMe raw data:', JSON.stringify(data))
       user.value = data.user
-    } catch {
+      console.log('[useAuth] user.value.name after set:', user.value?.name, typeof user.value?.name)
+    } catch (e) {
+      console.error('[useAuth] fetchMe error:', e)
       user.value = null
     } finally {
       initialized.value = true
@@ -29,7 +33,9 @@ export function useAuth() {
       method: 'POST',
       body: { email, password },
     })
+    console.log('[useAuth] login raw data:', JSON.stringify(data))
     user.value = data.user
+    console.log('[useAuth] user.value.name after login:', user.value?.name, typeof user.value?.name)
     return data.user
   }
 

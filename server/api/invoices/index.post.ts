@@ -1,4 +1,4 @@
-import { prisma } from '~/server/utils/prisma'
+
 import type { InvoiceType } from '@prisma/client'
 
 interface InvoiceItemInput {

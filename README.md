@@ -22,7 +22,7 @@ npm install
 Переконайтесь що PostgreSQL запущено. Створіть базу даних:
 
 ```sql
-CREATE DATABASE crm_electrical;
+CREATE DATABASE crm_electrical_db;
 ```
 
 ### 3. Змінні середовища
@@ -34,7 +34,7 @@ cp .env.example .env
 ```
 
 ```env
-DATABASE_URL="postgresql://postgres:your_password@localhost:5432/crm_electrical"
+DATABASE_URL="postgresql://postgres:your_password@localhost:5432/crm_electrical_db"
 JWT_SECRET="your-super-secret-key-min-32-chars"
 ```
 

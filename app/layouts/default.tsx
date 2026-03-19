@@ -8,6 +8,15 @@ export default defineComponent({
     const rail = ref(false)
     const theme = ref('light')
 
+    const userName = computed<string>(() => {
+      const name = user.value?.name
+      if (!name) return ''
+      return typeof name === 'string' ? name : String(name)
+    })
+    const userRoleLabel = computed(() =>
+      user.value?.role === 'ADMIN' ? 'Адміністратор' : 'Комірник',
+    )
+
     const navItems = computed(() => {
       const base = [
         { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
@@ -31,40 +40,45 @@ export default defineComponent({
 
     return () => (
       <v-app theme={theme.value}>
+
+        {/* Navigation Drawer — all content in named slots to avoid [object Object] */}
         <v-navigation-drawer v-model={drawer.value} rail={rail.value} permanent>
-          <v-list-item
-            prepend-icon="mdi-lightning-bolt-circle"
-            title="ЕлектроМонтаж CRM"
-            nav
-          >
-            {{
-              append: () => (
-                <v-btn
-                  variant="text"
-                  icon={rail.value ? 'mdi-chevron-right' : 'mdi-chevron-left'}
-                  onClick={() => (rail.value = !rail.value)}
-                />
-              ),
-            }}
-          </v-list-item>
-
-          <v-divider />
-
-          <v-list density="compact" nav>
-            {navItems.value.map((item) => (
-              <v-list-item
-                key={item.to}
-                prepend-icon={item.icon}
-                title={item.title}
-                to={item.to}
-                active={route.path === item.to || (item.to !== '/' && route.path.startsWith(item.to))}
-                active-color="primary"
-                rounded="lg"
-              />
-            ))}
-          </v-list>
-
           {{
+            default: () => (
+              <>
+                <v-list-item
+                  prepend-icon="mdi-lightning-bolt-circle"
+                  title="ЕлектроМонтаж CRM"
+                  nav
+                >
+                  {{
+                    append: () => (
+                      <v-btn
+                        variant="text"
+                        icon={rail.value ? 'mdi-chevron-right' : 'mdi-chevron-left'}
+                        onClick={() => (rail.value = !rail.value)}
+                      />
+                    ),
+                  }}
+                </v-list-item>
+
+                <v-divider />
+
+                <v-list density="compact" nav>
+                  {navItems.value.map((item) => (
+                    <v-list-item
+                      key={item.to}
+                      prepend-icon={item.icon}
+                      title={item.title}
+                      to={item.to}
+                      active={route.path === item.to || (item.to !== '/' && route.path.startsWith(item.to))}
+                      active-color="primary"
+                      rounded="lg"
+                    />
+                  ))}
+                </v-list>
+              </>
+            ),
             append: () => (
               <>
                 <v-divider />
@@ -72,8 +86,8 @@ export default defineComponent({
                   {user.value && (
                     <v-list-item
                       prepend-icon="mdi-account-circle"
-                      title={user.value.name}
-                      subtitle={user.value.role === 'ADMIN' ? 'Адміністратор' : 'Комірник'}
+                      title={userName.value}
+                      subtitle={userRoleLabel.value}
                     />
                   )}
                   <v-list-item
@@ -95,17 +109,22 @@ export default defineComponent({
           }}
         </v-navigation-drawer>
 
+        {/* App Bar — same fix: all content in named slots */}
         <v-app-bar elevation={1}>
-          <v-app-bar-nav-icon onClick={() => (drawer.value = !drawer.value)} />
-          <v-app-bar-title>
-            <span class="text-body-1 font-weight-medium">{getPageTitle(route.path)}</span>
-          </v-app-bar-title>
           {{
+            default: () => (
+              <>
+                <v-app-bar-nav-icon onClick={() => (drawer.value = !drawer.value)} />
+                <v-app-bar-title>
+                  <span class="text-body-1 font-weight-medium">{getPageTitle(route.path)}</span>
+                </v-app-bar-title>
+              </>
+            ),
             append: () => (
               <>
                 {user.value && (
                   <v-chip class="mr-3" prepend-icon="mdi-account-circle" variant="tonal" color="primary">
-                    {user.value.name}
+                    {userName.value}
                   </v-chip>
                 )}
               </>
@@ -118,6 +137,7 @@ export default defineComponent({
             {slots.default?.()}
           </v-container>
         </v-main>
+
       </v-app>
     )
   },

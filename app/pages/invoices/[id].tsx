@@ -118,10 +118,10 @@ export default defineComponent({
             <v-card-text>
               Накладну №{invoice.value?.number} буде видалено, залишки на складі будуть перераховані.
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions class="pa-4 pt-0">
               <v-spacer />
-              <v-btn variant="text" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
-              <v-btn color="error" loading={deleting.value} onClick={confirmDelete}>Видалити</v-btn>
+              <v-btn variant="outlined" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
+              <v-btn color="error" variant="elevated" loading={deleting.value} onClick={confirmDelete}>Видалити</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>

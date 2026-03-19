@@ -1,4 +1,4 @@
-import { prisma } from '~/server/utils/prisma'
+
 
 export default defineEventHandler(async () => {
   const warehouses = await prisma.warehouse.findMany({

@@ -1,4 +1,3 @@
-import { prisma } from '~/server/utils/prisma'
 import type { Role } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {

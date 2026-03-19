@@ -1,4 +1,3 @@
-import { prisma } from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth

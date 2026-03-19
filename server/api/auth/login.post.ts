@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
-import { prisma } from '~/server/utils/prisma'
-import { signJwt } from '~/server/utils/jwt'
+import { prisma } from '../../utils/prisma'
+import { signJwt } from '../../utils/jwt'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
