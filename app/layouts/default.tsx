@@ -6,7 +6,20 @@ export default defineComponent({
     const slots = useSlots()
     const drawer = ref(true)
     const rail = ref(false)
-    const theme = ref('light')
+
+    const themeCookie = useCookie<'light' | 'dark'>('crm-theme', {
+      default: () => 'dark',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    })
+    const theme = computed({
+      get: () => themeCookie.value,
+      set: (val) => { themeCookie.value = val },
+    })
+
+    function toggleTheme() {
+      theme.value = theme.value === 'light' ? 'dark' : 'light'
+    }
 
     const userName = computed<string>(() => {
       const name = user.value?.name
@@ -34,10 +47,6 @@ export default defineComponent({
       }
       return base
     })
-
-    function toggleTheme() {
-      theme.value = theme.value === 'light' ? 'dark' : 'light'
-    }
 
     return () => (
       <v-app theme={theme.value}>
