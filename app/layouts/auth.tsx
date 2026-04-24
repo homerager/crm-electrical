@@ -12,7 +12,7 @@ export default defineComponent({
                 <div class="text-center mb-6">
                   <v-icon size={56} color="white" icon="mdi-lightning-bolt-circle" />
                   <div class="text-h5 font-weight-bold text-white mt-2">
-                    ЕлектроМонтаж CRM
+                    ПРОГРЕС ЕЛЕКТРИК CRM
                   </div>
                   <div class="text-body-2 text-blue-lighten-3">
                     Облік матеріалів

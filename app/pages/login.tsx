@@ -2,6 +2,10 @@ export default defineComponent({
   name: 'LoginPage',
   setup() {
     definePageMeta({ layout: 'auth', middleware: ['auth'] })
+    
+    useHead({
+      title: "Логін"
+    })
 
     const { login } = useAuth()
     const router = useRouter()
@@ -58,6 +62,7 @@ export default defineComponent({
         <v-card-actions class="px-4 pb-4">
           <v-btn
             block
+            variant="flat"
             color="primary"
             size="large"
             loading={loading.value}
