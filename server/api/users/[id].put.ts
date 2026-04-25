@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { role, isActive, name } = body
+  const { role, isActive, name, phone } = body
 
   const user = await prisma.user.update({
     where: { id },
@@ -16,8 +16,9 @@ export default defineEventHandler(async (event) => {
       ...(role !== undefined && { role: role as Role }),
       ...(isActive !== undefined && { isActive }),
       ...(name !== undefined && { name }),
+      ...(phone !== undefined && { phone: phone?.trim() || null }),
     },
-    select: { id: true, name: true, email: true, role: true, isActive: true },
+    select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, telegramChatId: true },
   })
 
   return { user }

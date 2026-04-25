@@ -41,6 +41,7 @@ export default defineComponent({
         { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
         { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
         { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
+        { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
       ]
       if (isAdmin.value) {
         base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
@@ -164,6 +165,7 @@ function getPageTitle(path: string): string {
     '/invoices': 'Накладні',
     '/movements': 'Переміщення',
     '/reports': 'Репорти',
+    '/tasks': 'Завдання',
     '/users': 'Користувачі',
   }
   for (const [key, val] of Object.entries(titles)) {

@@ -2,10 +2,7 @@ export default defineComponent({
   name: 'UsersPage',
   setup() {
     definePageMeta({ middleware: ['auth'] })
-
-    useHead({
-      title: 'Користувачі'
-    })
+    useHead({ title: 'Користувачі' })
 
     const { isAdmin, user: currentUser } = useAuth()
     const router = useRouter()
@@ -23,8 +20,25 @@ export default defineComponent({
     const error = ref('')
     const editItem = ref<any>(null)
 
-    const createForm = reactive({ name: '', email: '', password: '', role: 'STOREKEEPER' })
-    const editForm = reactive({ name: '', role: 'STOREKEEPER', isActive: true })
+    const createForm = reactive({ name: '', email: '', password: '', role: 'STOREKEEPER', phone: '' })
+    const editForm = reactive({ name: '', role: 'STOREKEEPER', isActive: true, phone: '' })
+
+    // Telegram webhook setup
+    const webhookLoading = ref(false)
+    const webhookResult = ref<{ ok: boolean; webhookUrl?: string; error?: string } | null>(null)
+
+    async function setupWebhook() {
+      webhookLoading.value = true
+      webhookResult.value = null
+      try {
+        const res = await $fetch<any>('/api/telegram/setup-webhook', { method: 'POST' })
+        webhookResult.value = { ok: true, webhookUrl: res.webhookUrl }
+      } catch (e: any) {
+        webhookResult.value = { ok: false, error: e?.data?.statusMessage || 'Помилка' }
+      } finally {
+        webhookLoading.value = false
+      }
+    }
 
     const roleOptions = [
       { title: 'Адміністратор', value: 'ADMIN' },
@@ -33,7 +47,13 @@ export default defineComponent({
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(editForm, { name: item.name, role: item.role, isActive: item.isActive })
+      Object.assign(editForm, {
+        name: item.name,
+        role: item.role,
+        isActive: item.isActive,
+        phone: item.phone ?? '',
+      })
+      error.value = ''
       editDialog.value = true
     }
 
@@ -45,8 +65,17 @@ export default defineComponent({
           method: 'POST',
           body: createForm,
         })
+        // Save phone separately if provided
+        if (createForm.phone) {
+          const created = await $fetch<any>('/api/users').then((r: any) =>
+            r.users.find((u: any) => u.email === createForm.email)
+          )
+          if (created) {
+            await $fetch(`/api/users/${created.id}`, { method: 'PUT', body: { phone: createForm.phone } })
+          }
+        }
         createDialog.value = false
-        Object.assign(createForm, { name: '', email: '', password: '', role: 'STOREKEEPER' })
+        Object.assign(createForm, { name: '', email: '', password: '', role: 'STOREKEEPER', phone: '' })
         await refresh()
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка створення'
@@ -84,10 +113,12 @@ export default defineComponent({
     const headers = [
       { title: 'Імʼя', key: 'name' },
       { title: 'Email', key: 'email' },
+      { title: 'Телефон', key: 'phone', width: 160 },
+      { title: 'Telegram', key: 'telegram', width: 130 },
       { title: 'Роль', key: 'role', width: 160 },
       { title: 'Статус', key: 'isActive', width: 120 },
-      { title: 'Дата реєстрації', key: 'createdAt', width: 160 },
-      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 120 },
+      { title: 'Реєстрація', key: 'createdAt', width: 140 },
+      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
     ]
 
     return () => (
@@ -95,14 +126,63 @@ export default defineComponent({
         <div class="d-flex align-center mb-4">
           <div class="text-h5 font-weight-bold">Користувачі</div>
           <v-spacer />
-          <v-btn color="primary" prepend-icon="mdi-account-plus" onClick={() => (createDialog.value = true)}>
+          <v-btn color="primary" prepend-icon="mdi-account-plus" onClick={() => { error.value = ''; createDialog.value = true }}>
             Додати користувача
           </v-btn>
         </div>
 
+        {/* Telegram setup card */}
+        <v-card class="mb-4" variant="outlined">
+          <v-card-text class="pa-4">
+            <div class="d-flex align-center gap-3 flex-wrap">
+              <v-icon color="primary" size="28">mdi-send-circle</v-icon>
+              <div style="flex:1; min-width:220px">
+                <div class="text-subtitle-2 font-weight-bold mb-1">Telegram сповіщення</div>
+                <div class="text-body-2 text-medium-emphasis">
+                  Крок 1: вкажіть <code>TELEGRAM_BOT_TOKEN</code> та <code>APP_URL</code> у <code>.env</code>.
+                  Крок 2: натисніть кнопку нижче щоб зареєструвати webhook.
+                  Крок 3: додайте телефон юзеру → він відкриває бота → надсилає <code>/start</code>.
+                </div>
+                {webhookResult.value && (
+                  <v-alert
+                    type={webhookResult.value.ok ? 'success' : 'error'}
+                    variant="tonal"
+                    density="compact"
+                    class="mt-2"
+                  >
+                    {webhookResult.value.ok
+                      ? `✅ Webhook зареєстровано: ${webhookResult.value.webhookUrl}`
+                      : `❌ ${webhookResult.value.error}`
+                    }
+                  </v-alert>
+                )}
+              </div>
+              <v-btn
+                color="primary"
+                variant="tonal"
+                prepend-icon="mdi-webhook"
+                loading={webhookLoading.value}
+                onClick={setupWebhook}
+              >
+                Зареєструвати webhook
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+
         <v-card>
           <v-data-table headers={headers} items={users.value} loading={pending.value} hover>
             {{
+              'item.phone': ({ item }: any) => (
+                <span class={item.phone ? '' : 'text-disabled'}>
+                  {item.phone || '—'}
+                </span>
+              ),
+              'item.telegram': ({ item }: any) => (
+                item.telegramChatId
+                  ? <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-send-check">Підключено</v-chip>
+                  : <v-chip size="small" color="warning" variant="tonal" prepend-icon="mdi-send-clock">Не підкл.</v-chip>
+              ),
               'item.role': ({ item }: any) => (
                 <v-chip
                   size="small"
@@ -131,7 +211,6 @@ export default defineComponent({
                       size="small"
                       color={item.isActive ? 'error' : 'success'}
                       onClick={() => toggleActive(item)}
-                      title={item.isActive ? 'Деактивувати' : 'Активувати'}
                     />
                   )}
                 </div>
@@ -140,21 +219,32 @@ export default defineComponent({
           </v-data-table>
         </v-card>
 
-        <v-dialog v-model={createDialog.value} max-width={500}>
+        {/* Create dialog */}
+        <v-dialog v-model={createDialog.value} max-width={520}>
           <v-card>
-            <v-card-title>Новий користувач</v-card-title>
-            <v-card-text>
-              {error.value && <v-alert type="error" variant="tonal" class="mb-3">{error.value}</v-alert>}
-              <v-text-field v-model={createForm.name} label="Імʼя *" class="mb-3" />
-              <v-text-field v-model={createForm.email} label="Email *" type="email" class="mb-3" />
-              <v-text-field v-model={createForm.password} label="Пароль *" type="password" class="mb-3" />
-              <v-select
-                v-model={createForm.role}
-                label="Роль"
-                items={roleOptions}
-                item-title="title"
-                item-value="value"
-              />
+            <v-card-title class="pa-4">Новий користувач</v-card-title>
+            <v-card-text class="pa-4 pt-0">
+              {error.value && <v-alert type="error" variant="tonal" class="mb-4">{error.value}</v-alert>}
+              <v-text-field v-model={createForm.name} label="Імʼя *" class="mb-4" />
+              <v-text-field v-model={createForm.email} label="Email *" type="email" class="mb-4" />
+              <v-text-field v-model={createForm.password} label="Пароль *" type="password" class="mb-4" />
+              <div class="d-flex mb-4" style="gap:16px">
+                <v-select
+                  v-model={createForm.role}
+                  label="Роль"
+                  items={roleOptions}
+                  item-title="title"
+                  item-value="value"
+                  style="flex:1"
+                />
+                <v-text-field
+                  v-model={createForm.phone}
+                  label="Телефон"
+                  placeholder="+380..."
+                  prepend-inner-icon="mdi-phone"
+                  style="flex:1"
+                />
+              </div>
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />
@@ -172,20 +262,35 @@ export default defineComponent({
           </v-card>
         </v-dialog>
 
-        <v-dialog v-model={editDialog.value} max-width={500}>
+        {/* Edit dialog */}
+        <v-dialog v-model={editDialog.value} max-width={520}>
           <v-card>
-            <v-card-title>Редагувати користувача</v-card-title>
-            <v-card-text>
-              {error.value && <v-alert type="error" variant="tonal" class="mb-3">{error.value}</v-alert>}
-              <v-text-field v-model={editForm.name} label="Імʼя *" class="mb-3" />
-              <v-select
-                v-model={editForm.role}
-                label="Роль"
-                items={roleOptions}
-                item-title="title"
-                item-value="value"
-                class="mb-3"
-              />
+            <v-card-title class="pa-4">Редагувати користувача</v-card-title>
+            <v-card-text class="pa-4 pt-0">
+              {error.value && <v-alert type="error" variant="tonal" class="mb-4">{error.value}</v-alert>}
+              <v-text-field v-model={editForm.name} label="Імʼя *" class="mb-4" />
+              <div class="d-flex mb-4" style="gap:16px">
+                <v-select
+                  v-model={editForm.role}
+                  label="Роль"
+                  items={roleOptions}
+                  item-title="title"
+                  item-value="value"
+                  style="flex:1"
+                />
+                <v-text-field
+                  v-model={editForm.phone}
+                  label="Телефон"
+                  placeholder="+380..."
+                  prepend-inner-icon="mdi-phone"
+                  style="flex:1"
+                />
+              </div>
+              {editItem.value?.telegramChatId && (
+                <v-chip color="success" variant="tonal" prepend-icon="mdi-send-check" class="mb-4">
+                  Telegram підключено
+                </v-chip>
+              )}
               <v-switch
                 v-model={editForm.isActive}
                 label={editForm.isActive ? 'Активний' : 'Деактивований'}

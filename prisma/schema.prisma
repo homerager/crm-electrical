@@ -28,18 +28,40 @@ enum MovementType {
   WAREHOUSE_TO_OBJECT
 }
 
-model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(STOREKEEPER)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CANCELLED
+}
 
-  invoices  Invoice[]
-  movements Movement[]
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           Role     @default(STOREKEEPER)
+  isActive       Boolean  @default(true)
+  phone          String?
+  telegramChatId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoices      Invoice[]
+  movements     Movement[]
+  createdTasks  Task[]     @relation("TaskCreatedBy")
+  assignedTasks Task[]     @relation("TaskAssignedTo")
+  timeLogs      TimeLog[]
+  comments      TaskComment[]
+  attachments   TaskAttachment[]
 
   @@map("users")
 }
@@ -71,6 +93,7 @@ model ConstructionObject {
   updatedAt   DateTime     @updatedAt
 
   movements Movement[]
+  tasks     Task[]
 
   @@map("construction_objects")
 }
@@ -199,4 +222,76 @@ model MovementItem {
   product  Product  @relation(fields: [productId], references: [id])
 
   @@map("movement_items")
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  assignedToId   String?
+  createdById    String
+  objectId       String?
+  parentId       String?
+  dueDate        DateTime?
+  estimatedHours Float?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  object    ConstructionObject? @relation(fields: [objectId], references: [id])
+  createdBy User                @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignee  User?               @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  parent    Task?               @relation("SubTasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subTasks  Task[]              @relation("SubTasks")
+  timeLogs    TimeLog[]
+  comments    TaskComment[]
+  attachments TaskAttachment[]
+
+  @@map("tasks")
+}
+
+model TimeLog {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String
+  hours       Float
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("time_logs")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  filename  String
+  storedAs  String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_attachments")
 }

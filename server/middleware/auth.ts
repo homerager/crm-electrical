@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
   if (!url.pathname.startsWith('/api/')) return
   if (url.pathname.startsWith('/api/auth/login')) return
   if (url.pathname.startsWith('/api/auth/logout')) return
+  if (url.pathname.startsWith('/api/telegram/webhook')) return
 
   const token = getCookie(event, 'token')
   if (!token) {

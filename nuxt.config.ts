@@ -34,6 +34,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     jwtSecret: process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production',
     databaseUrl: process.env.DATABASE_URL || '',
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    appUrl: process.env.APP_URL || 'http://localhost:3000',
     public: {},
   },
 
