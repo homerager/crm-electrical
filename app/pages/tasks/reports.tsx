@@ -64,6 +64,9 @@ export default defineComponent({
           <v-btn variant="outlined" prepend-icon="mdi-arrow-left" to="/tasks" size="small">
             До завдань
           </v-btn>
+          <v-btn color="success" prepend-icon="mdi-currency-usd" to="/tasks/salary" size="small">
+            Зарплатний звіт
+          </v-btn>
         </div>
 
         {/* Date filter */}

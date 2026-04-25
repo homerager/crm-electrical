@@ -206,10 +206,23 @@ export default defineComponent({
         <div class="d-flex align-center mb-4 gap-2 flex-wrap">
           <div class="text-h5 font-weight-bold">Завдання</div>
           <v-spacer />
-          <v-btn-toggle v-model={viewMode.value} density="compact" variant="outlined" divided>
-            <v-btn value="kanban" icon="mdi-view-column" />
-            <v-btn value="list" icon="mdi-format-list-bulleted" />
-          </v-btn-toggle>
+          <v-btn variant="outlined" size="small" prepend-icon="mdi-chart-bar" to="/tasks/reports">
+            Репорти
+          </v-btn>
+          <div class="d-flex align-center" style="gap:8px">
+            <v-btn
+              variant={viewMode.value === 'kanban' ? 'tonal' : 'outlined'}
+              size="small"
+              icon="mdi-view-column"
+              onClick={() => { viewMode.value = 'kanban' }}
+            />
+            <v-btn
+              variant={viewMode.value === 'list' ? 'tonal' : 'outlined'}
+              size="small"
+              icon="mdi-format-list-bulleted"
+              onClick={() => { viewMode.value = 'list' }}
+            />
+          </div>
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
             Нове завдання
           </v-btn>

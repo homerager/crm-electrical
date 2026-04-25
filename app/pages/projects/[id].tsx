@@ -234,10 +234,20 @@ export default defineComponent({
               )}
             </div>
 
-            <v-btn-toggle v-model={viewMode.value} density="compact" variant="outlined" divided>
-              <v-btn value="kanban" icon="mdi-view-column" />
-              <v-btn value="list" icon="mdi-format-list-bulleted" />
-            </v-btn-toggle>
+            <div class="d-flex align-center" style="gap:8px">
+              <v-btn
+                variant={viewMode.value === 'kanban' ? 'tonal' : 'outlined'}
+                size="small"
+                icon="mdi-view-column"
+                onClick={() => { viewMode.value = 'kanban' }}
+              />
+              <v-btn
+                variant={viewMode.value === 'list' ? 'tonal' : 'outlined'}
+                size="small"
+                icon="mdi-format-list-bulleted"
+                onClick={() => { viewMode.value = 'list' }}
+              />
+            </div>
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Нове завдання
             </v-btn>
@@ -421,11 +431,11 @@ export default defineComponent({
             <v-card>
               <v-card-title class="pa-4">Нове завдання в проєкті</v-card-title>
               <v-divider />
-              <v-card-text>
+              <v-card-text class="pa-4">
                 {taskError.value && <v-alert type="error" class="mb-4">{taskError.value}</v-alert>}
-                <v-text-field v-model={form.title} label="Назва *" variant="outlined" density="compact" class="mb-4" />
-                <v-textarea v-model={form.description} label="Опис" variant="outlined" density="compact" rows={3} class="mb-4" />
-                <div class="d-flex gap-4 mb-4">
+                <v-text-field v-model={form.title} label="Назва *" variant="outlined" density="compact" class="mb-5" />
+                <v-textarea v-model={form.description} label="Опис" variant="outlined" density="compact" rows={3} class="mb-5" />
+                <div class="d-flex mb-5" style="gap:16px">
                   <v-select
                     v-model={form.priority} label="Пріоритет"
                     items={PRIORITIES.map((p) => ({ value: p.value, title: p.label }))}
@@ -437,7 +447,7 @@ export default defineComponent({
                     variant="outlined" density="compact" style="flex:1"
                   />
                 </div>
-                <div class="d-flex gap-4 mb-4">
+                <div class="d-flex mb-5" style="gap:16px">
                   <v-text-field v-model={form.dueDate} label="Дедлайн" type="date" variant="outlined" density="compact" style="flex:1" />
                   <v-text-field v-model={form.estimatedHours} label="Плановий час (год)" type="number" variant="outlined" density="compact" style="flex:1" />
                 </div>
