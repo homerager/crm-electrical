@@ -7,10 +7,51 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
 
-  await prisma.warehouse.update({
+  const warehouse = await prisma.warehouse.findUnique({
     where: { id },
-    data: { isActive: false },
+    include: {
+      _count: {
+        select: {
+          invoices: true,
+          movementsFrom: true,
+          movementsTo: true,
+        },
+      },
+      stock: { select: { quantity: true } },
+    },
   })
+
+  if (!warehouse) {
+    throw createError({ statusCode: 404, statusMessage: 'Склад не знайдено' })
+  }
+
+  if (warehouse._count.invoices > 0) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Неможливо видалити: до складу привʼязано ${warehouse._count.invoices} накладну(их). Спочатку видаліть накладні.`,
+    })
+  }
+
+  const movementsCount = warehouse._count.movementsFrom + warehouse._count.movementsTo
+  if (movementsCount > 0) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Неможливо видалити: до складу привʼязано ${movementsCount} переміщення(ь). Спочатку видаліть переміщення.`,
+    })
+  }
+
+  const hasNonZeroStock = warehouse.stock.some((s) => Number(s.quantity) !== 0)
+  if (hasNonZeroStock) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Неможливо видалити: на складі є залишки товарів.',
+    })
+  }
+
+  await prisma.$transaction([
+    prisma.warehouseStock.deleteMany({ where: { warehouseId: id } }),
+    prisma.warehouse.delete({ where: { id } }),
+  ])
 
   return { ok: true }
 })

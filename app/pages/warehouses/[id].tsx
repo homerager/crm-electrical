@@ -23,6 +23,7 @@ export default defineComponent({
     const movements = computed(() => (movData.value as any)?.movements ?? [])
 
     const expandedRows = ref<string[]>([])
+    
     function toggleExpand(movId: string) {
       const idx = expandedRows.value.indexOf(movId)
       if (idx === -1) expandedRows.value.push(movId)

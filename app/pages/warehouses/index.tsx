@@ -15,6 +15,7 @@ export default defineComponent({
     const deleteDialog = ref(false)
     const saving = ref(false)
     const error = ref('')
+    const deleteError = ref('')
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
@@ -34,6 +35,7 @@ export default defineComponent({
 
     function openDelete(item: any) {
       deleteItem.value = item
+      deleteError.value = ''
       deleteDialog.value = true
     }
 
@@ -57,12 +59,13 @@ export default defineComponent({
 
     async function confirmDelete() {
       if (!deleteItem.value) return
+      deleteError.value = ''
       try {
         await $fetch(`/api/warehouses/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
       } catch (e: any) {
-        error.value = e?.data?.statusMessage || 'Помилка видалення'
+        deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
       }
     }
 
@@ -133,16 +136,23 @@ export default defineComponent({
           </v-card>
         </v-dialog>
 
-        <v-dialog v-model={deleteDialog.value} max-width={400}>
+        <v-dialog v-model={deleteDialog.value} max-width={420}>
           <v-card>
-            <v-card-title>Деактивувати склад?</v-card-title>
+            <v-card-title>Видалити склад?</v-card-title>
             <v-card-text>
-              Склад "{deleteItem.value?.name}" буде деактивовано.
+              {deleteError.value
+                ? <v-alert type="error" variant="tonal">{deleteError.value}</v-alert>
+                : <span>Склад "<strong>{deleteItem.value?.name}</strong>" буде видалено.</span>
+              }
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />
-              <v-btn variant="outlined" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
-              <v-btn color="error" variant="elevated" onClick={confirmDelete}>Деактивувати</v-btn>
+              <v-btn variant="outlined" onClick={() => { deleteDialog.value = false; deleteError.value = '' }}>
+                {deleteError.value ? 'Закрити' : 'Скасувати'}
+              </v-btn>
+              {!deleteError.value && (
+                <v-btn color="error" variant="elevated" onClick={confirmDelete}>Видалити</v-btn>
+              )}
             </v-card-actions>
           </v-card>
         </v-dialog>

@@ -58,7 +58,7 @@ export default defineComponent({
               <>
                 <v-list-item
                   prepend-icon="mdi-lightning-bolt-circle"
-                  title="ЕлектроМонтаж CRM"
+                  title="CRM"
                   nav
                 >
                   {{
