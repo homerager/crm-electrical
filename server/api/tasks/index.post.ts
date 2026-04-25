@@ -36,8 +36,8 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  // Telegram notification to assignee (fire-and-forget)
-  if (task.assignedToId && task.assignedToId !== auth.userId) {
+  // Telegram notification to assignee
+  if (task.assignedToId) {
     const assignee = await prisma.user.findUnique({
       where: { id: task.assignedToId },
       select: { telegramChatId: true },

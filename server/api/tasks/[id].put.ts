@@ -65,9 +65,9 @@ export default defineEventHandler(async (event) => {
     const changerName = changer?.name ?? 'Користувач'
     const msg = buildTaskUpdatedMessage(updated, changerName, config.appUrl, changes)
 
-    // Notify assignee (if not the one making the change)
+    // Notify assignee
     const assigneeChatId = (updated.assignee as any)?.telegramChatId
-    if (assigneeChatId && (updated.assignee as any)?.id !== auth.userId) {
+    if (assigneeChatId) {
       sendTelegramMessage(assigneeChatId, msg)
     }
 
