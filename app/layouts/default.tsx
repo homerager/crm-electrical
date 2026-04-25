@@ -41,6 +41,7 @@ export default defineComponent({
         { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
         { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
         { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
+        { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
         { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
       ]
       if (isAdmin.value) {

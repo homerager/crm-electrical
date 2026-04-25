@@ -3,6 +3,7 @@ export default defineEventHandler(async (event) => {
   if (!auth) throw createError({ statusCode: 401 })
 
   const id = getRouterParam(event, 'id')!
+  const isAdmin = auth.role === 'ADMIN'
 
   const task = await prisma.task.findUnique({
     where: { id },
@@ -10,6 +11,7 @@ export default defineEventHandler(async (event) => {
       createdBy: { select: { id: true, name: true } },
       assignee: { select: { id: true, name: true } },
       object: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true, color: true } },
       timeLogs: {
         include: { user: { select: { id: true, name: true } } },
         orderBy: { date: 'desc' },
@@ -34,6 +36,13 @@ export default defineEventHandler(async (event) => {
   })
 
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Завдання не знайдено' })
+
+  if (!isAdmin && task.projectId) {
+    const member = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId: task.projectId, userId: auth.userId } },
+    })
+    if (!member) throw createError({ statusCode: 403, message: 'Доступ заборонено' })
+  }
 
   const totalHours = task.timeLogs.reduce((sum, l) => sum + l.hours, 0)
 

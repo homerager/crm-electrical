@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   if (!auth) throw createError({ statusCode: 401 })
 
   const body = await readBody(event)
-  const { title, description, priority, assignedToId, objectId, parentId, dueDate, estimatedHours } = body
+  const { title, description, priority, assignedToId, objectId, parentId, projectId, dueDate, estimatedHours } = body
 
   if (!title?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Назва завдання обов\'язкова' })
@@ -17,6 +17,13 @@ export default defineEventHandler(async (event) => {
     if (parent.parentId) throw createError({ statusCode: 400, statusMessage: 'Не можна створити підзавдання до підзавдання' })
   }
 
+  if (projectId && auth.role !== 'ADMIN') {
+    const member = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: auth.userId } },
+    })
+    if (!member) throw createError({ statusCode: 403, message: 'Ви не є учасником цього проєкту' })
+  }
+
   const task = await prisma.task.create({
     data: {
       title: title.trim(),
@@ -24,6 +31,7 @@ export default defineEventHandler(async (event) => {
       priority: priority || 'MEDIUM',
       assignedToId: assignedToId || null,
       objectId: objectId || null,
+      projectId: projectId || null,
       parentId: parentId || null,
       dueDate: dueDate ? new Date(dueDate) : null,
       estimatedHours: estimatedHours ? Number(estimatedHours) : null,
@@ -33,6 +41,7 @@ export default defineEventHandler(async (event) => {
       createdBy: { select: { id: true, name: true } },
       assignee: { select: { id: true, name: true } },
       object: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true, color: true } },
     },
   })
 
