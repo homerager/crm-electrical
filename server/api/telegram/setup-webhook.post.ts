@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'TELEGRAM_BOT_TOKEN не налаштовано' })
   }
 
-  const webhookUrl = `${config.appUrl}/api/telegram/webhook`
+  const webhookUrl = `${config.appUrl.replace(/\/$/, '')}/api/telegram/webhook`
   const result = await setTelegramWebhook(webhookUrl)
 
   return { ok: true, webhookUrl, telegramResponse: result }

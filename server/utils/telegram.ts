@@ -40,7 +40,7 @@ export function buildTaskCreatedMessage(task: any, appUrl: string): string {
     `*Дедлайн:* ${escapeMarkdown(due)}`,
     task.description ? `*Опис:* ${escapeMarkdown(task.description.substring(0, 200))}` : null,
     ``,
-    `🔗 [Відкрити завдання](${escapeMarkdown(`${appUrl}/tasks/${task.id}`)})`,
+    `🔗 [Відкрити завдання](${escapeMarkdown(normalizeUrl(appUrl, `/tasks/${task.id}`))})`,
   ].filter(Boolean).join('\n')
 }
 
@@ -56,8 +56,12 @@ export function buildTaskUpdatedMessage(task: any, changedBy: string, appUrl: st
     changeLines,
     `*Змінив:* ${escapeMarkdown(changedBy)}`,
     ``,
-    `🔗 [Відкрити завдання](${escapeMarkdown(`${appUrl}/tasks/${task.id}`)})`,
+    `🔗 [Відкрити завдання](${escapeMarkdown(normalizeUrl(appUrl, `/tasks/${task.id}`))})`,
   ].filter(Boolean).join('\n')
+}
+
+export function normalizeUrl(base: string, path: string): string {
+  return `${base.replace(/\/$/, '')}${path}`
 }
 
 export async function setTelegramWebhook(webhookUrl: string): Promise<any> {
