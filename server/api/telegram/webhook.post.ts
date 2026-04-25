@@ -1,30 +1,27 @@
-import { escapeMarkdown } from '../../utils/telegram'
-
 const TG_API = 'https://api.telegram.org/bot'
 
-async function reply(token: string, chatId: number, text: string, extra?: object) {
+async function sendMessage(token: string, chatId: number, text: string, extra?: object) {
   try {
     await $fetch(`${TG_API}${token}/sendMessage`, {
       method: 'POST',
-      body: { chat_id: chatId, text, parse_mode: 'MarkdownV2', ...extra },
+      body: { chat_id: chatId, text, ...extra },
     })
-  } catch {}
+  } catch (e) {
+    console.error('[TG webhook] sendMessage error:', e)
+  }
 }
 
 async function requestContact(token: string, chatId: number) {
-  await $fetch(`${TG_API}${token}/sendMessage`, {
-    method: 'POST',
-    body: {
-      chat_id: chatId,
-      text: 'Щоб отримувати сповіщення CRM, поділіться своїм номером телефону\\.',
-      parse_mode: 'MarkdownV2',
+  await sendMessage(token, chatId,
+    'Щоб отримувати сповіщення CRM — поділіться своїм номером телефону 👇',
+    {
       reply_markup: {
         keyboard: [[{ text: '📱 Поділитися номером', request_contact: true }]],
         resize_keyboard: true,
         one_time_keyboard: true,
       },
     },
-  })
+  )
 }
 
 export default defineEventHandler(async (event) => {
@@ -32,7 +29,13 @@ export default defineEventHandler(async (event) => {
   const token = config.telegramBotToken
   if (!token) return { ok: true }
 
-  const body = await readBody(event).catch(() => null)
+  let body: any = null
+  try {
+    body = await readBody(event)
+  } catch {
+    return { ok: true }
+  }
+
   if (!body?.message) return { ok: true }
 
   const msg = body.message
@@ -46,20 +49,17 @@ export default defineEventHandler(async (event) => {
 
   // User shared contact
   if (msg.contact) {
-    const rawPhone = msg.contact.phone_number ?? ''
-    // Normalize: keep digits and leading +
-    const phone = rawPhone.replace(/[^\d+]/g, '')
+    const rawPhone = (msg.contact.phone_number ?? '').replace(/[^\d+]/g, '')
+    // Check with and without leading +
+    const variants = [rawPhone, rawPhone.replace(/^\+/, ''), `+${rawPhone.replace(/^\+/, '')}`]
 
-    // Try to find user with matching phone (check both +380... and 380... forms)
-    const variants = [phone, phone.replace(/^\+/, ''), `+${phone.replace(/^\+/, '')}`]
     const user = await prisma.user.findFirst({
       where: { phone: { in: variants }, isActive: true },
     })
 
     if (!user) {
-      await reply(
-        token, chatId,
-        `❌ Користувача з номером *${escapeMarkdown(phone)}* не знайдено в системі\\.\nЗверніться до адміністратора для додавання номеру телефону до вашого профілю\\.`,
+      await sendMessage(token, chatId,
+        `❌ Користувача з номером ${rawPhone} не знайдено.\nЗверніться до адміністратора — він має додати ваш номер у профіль.`,
         { reply_markup: { remove_keyboard: true } },
       )
       return { ok: true }
@@ -70,19 +70,14 @@ export default defineEventHandler(async (event) => {
       data: { telegramChatId: String(chatId) },
     })
 
-    await $fetch(`${TG_API}${token}/sendMessage`, {
-      method: 'POST',
-      body: {
-        chat_id: chatId,
-        text: `✅ *${escapeMarkdown(user.name)}*, ваш акаунт підключено\\!\nВи будете отримувати сповіщення про завдання\\.`,
-        parse_mode: 'MarkdownV2',
-        reply_markup: { remove_keyboard: true },
-      },
-    }).catch(() => {})
+    await sendMessage(token, chatId,
+      `✅ ${user.name}, ваш акаунт підключено!\nВи будете отримувати сповіщення про завдання.`,
+      { reply_markup: { remove_keyboard: true } },
+    )
     return { ok: true }
   }
 
-  // Unknown input
+  // Any other message — show contact button again
   await requestContact(token, chatId)
   return { ok: true }
 })

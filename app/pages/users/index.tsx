@@ -23,6 +23,21 @@ export default defineComponent({
     const createForm = reactive({ name: '', email: '', password: '', role: 'STOREKEEPER', phone: '' })
     const editForm = reactive({ name: '', role: 'STOREKEEPER', isActive: true, phone: '' })
 
+    const webhookLoading = ref(false)
+    const webhookStatus = ref<{ ok: boolean; msg: string } | null>(null)
+
+    async function setupWebhook() {
+      webhookLoading.value = true
+      webhookStatus.value = null
+      try {
+        const res = await $fetch<any>('/api/telegram/setup-webhook', { method: 'POST' })
+        webhookStatus.value = { ok: true, msg: `Webhook зареєстровано: ${res.webhookUrl}` }
+      } catch (e: any) {
+        webhookStatus.value = { ok: false, msg: e?.data?.statusMessage || 'Помилка реєстрації webhook' }
+      } finally {
+        webhookLoading.value = false
+      }
+    }
 
     const roleOptions = [
       { title: 'Адміністратор', value: 'ADMIN' },
@@ -127,17 +142,40 @@ export default defineComponent({
                   <span class="font-weight-medium">Крок 2:</span> Юзер відкриває бота і надсилає <code>/start</code> → натискає «Поділитися номером»<br />
                   <span class="font-weight-medium">Крок 3:</span> Статус змінюється на «Підключено» — сповіщення активовані
                 </div>
-                <v-btn
-                  href="https://t.me/proelectric_crm_bot"
-                  target="_blank"
-                  color="primary"
-                  variant="tonal"
-                  size="small"
-                  prepend-icon="mdi-send"
-                  class="mr-2"
-                >
-                  Відкрити бота
-                </v-btn>
+                <div class="d-flex align-center gap-2 flex-wrap">
+                  <v-btn
+                    href="https://t.me/proelectric_crm_bot"
+                    target="_blank"
+                    color="primary"
+                    variant="tonal"
+                    size="small"
+                    prepend-icon="mdi-send"
+                  >
+                    Відкрити бота
+                  </v-btn>
+                  <v-btn
+                    color="secondary"
+                    variant="outlined"
+                    size="small"
+                    prepend-icon="mdi-webhook"
+                    loading={webhookLoading.value}
+                    onClick={setupWebhook}
+                  >
+                    Зареєструвати webhook
+                  </v-btn>
+                </div>
+                {webhookStatus.value && (
+                  <v-alert
+                    type={webhookStatus.value.ok ? 'success' : 'error'}
+                    variant="tonal"
+                    density="compact"
+                    class="mt-2"
+                    closable
+                    onMousedown={() => (webhookStatus.value = null)}
+                  >
+                    {webhookStatus.value.msg}
+                  </v-alert>
+                )}
               </div>
             </div>
           </v-card-text>
