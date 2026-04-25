@@ -108,6 +108,14 @@ export default defineComponent({
                     rounded="lg"
                   />
                   <v-list-item
+                    prepend-icon="mdi-send"
+                    title="Telegram бот"
+                    href="https://t.me/proelectric_crm_bot"
+                    target="_blank"
+                    rounded="lg"
+                    base-color="primary"
+                  />
+                  <v-list-item
                     prepend-icon="mdi-logout"
                     title="Вийти"
                     onClick={logout}

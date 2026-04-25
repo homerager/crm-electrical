@@ -23,22 +23,6 @@ export default defineComponent({
     const createForm = reactive({ name: '', email: '', password: '', role: 'STOREKEEPER', phone: '' })
     const editForm = reactive({ name: '', role: 'STOREKEEPER', isActive: true, phone: '' })
 
-    // Telegram webhook setup
-    const webhookLoading = ref(false)
-    const webhookResult = ref<{ ok: boolean; webhookUrl?: string; error?: string } | null>(null)
-
-    async function setupWebhook() {
-      webhookLoading.value = true
-      webhookResult.value = null
-      try {
-        const res = await $fetch<any>('/api/telegram/setup-webhook', { method: 'POST' })
-        webhookResult.value = { ok: true, webhookUrl: res.webhookUrl }
-      } catch (e: any) {
-        webhookResult.value = { ok: false, error: e?.data?.statusMessage || 'Помилка' }
-      } finally {
-        webhookLoading.value = false
-      }
-    }
 
     const roleOptions = [
       { title: 'Адміністратор', value: 'ADMIN' },
@@ -138,34 +122,23 @@ export default defineComponent({
               <v-icon color="primary" size="28">mdi-send-circle</v-icon>
               <div style="flex:1; min-width:220px">
                 <div class="text-subtitle-2 font-weight-bold mb-1">Telegram сповіщення</div>
-                <div class="text-body-2 text-medium-emphasis">
-                  Крок 1: вкажіть <code>TELEGRAM_BOT_TOKEN</code> та <code>APP_URL</code> у <code>.env</code>.
-                  Крок 2: натисніть кнопку нижче щоб зареєструвати webhook.
-                  Крок 3: додайте телефон юзеру → він відкриває бота → надсилає <code>/start</code>.
+                <div class="text-body-2 text-medium-emphasis mb-2">
+                  <span class="font-weight-medium">Крок 1:</span> Додайте номер телефону юзеру у форматі <code>+380...</code><br />
+                  <span class="font-weight-medium">Крок 2:</span> Юзер відкриває бота і надсилає <code>/start</code> → натискає «Поділитися номером»<br />
+                  <span class="font-weight-medium">Крок 3:</span> Статус змінюється на «Підключено» — сповіщення активовані
                 </div>
-                {webhookResult.value && (
-                  <v-alert
-                    type={webhookResult.value.ok ? 'success' : 'error'}
-                    variant="tonal"
-                    density="compact"
-                    class="mt-2"
-                  >
-                    {webhookResult.value.ok
-                      ? `✅ Webhook зареєстровано: ${webhookResult.value.webhookUrl}`
-                      : `❌ ${webhookResult.value.error}`
-                    }
-                  </v-alert>
-                )}
+                <v-btn
+                  href="https://t.me/proelectric_crm_bot"
+                  target="_blank"
+                  color="primary"
+                  variant="tonal"
+                  size="small"
+                  prepend-icon="mdi-send"
+                  class="mr-2"
+                >
+                  Відкрити бота
+                </v-btn>
               </div>
-              <v-btn
-                color="primary"
-                variant="tonal"
-                prepend-icon="mdi-webhook"
-                loading={webhookLoading.value}
-                onClick={setupWebhook}
-              >
-                Зареєструвати webhook
-              </v-btn>
             </div>
           </v-card-text>
         </v-card>
@@ -181,7 +154,26 @@ export default defineComponent({
               'item.telegram': ({ item }: any) => (
                 item.telegramChatId
                   ? <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-send-check">Підключено</v-chip>
-                  : <v-chip size="small" color="warning" variant="tonal" prepend-icon="mdi-send-clock">Не підкл.</v-chip>
+                  : (
+                    <v-tooltip text="Відкрити бота і надіслати /start">
+                      {{
+                        activator: ({ props }: any) => (
+                          <v-chip
+                            {...props}
+                            size="small"
+                            color="warning"
+                            variant="tonal"
+                            prepend-icon="mdi-send-clock"
+                            href="https://t.me/proelectric_crm_bot"
+                            target="_blank"
+                            link
+                          >
+                            Підключити
+                          </v-chip>
+                        ),
+                      }}
+                    </v-tooltip>
+                  )
               ),
               'item.role': ({ item }: any) => (
                 <v-chip
