@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Накладні'
+    })
+
     const filterType = ref<string | null>(null)
     const { data, pending, refresh } = useFetch('/api/invoices', {
       query: computed(() => (filterType.value ? { type: filterType.value } : {})),

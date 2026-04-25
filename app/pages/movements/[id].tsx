@@ -8,6 +8,15 @@ export default defineComponent({
     const { data, pending } = useFetch(`/api/movements/${id}`)
     const movement = computed(() => (data.value as any)?.movement)
 
+    useHead({
+      title: computed(() => {
+        if (!movement.value) return 'Переміщення'
+        return movement.value.type === 'WAREHOUSE_TO_WAREHOUSE'
+          ? 'Переміщення між складами'
+          : 'Переміщення на обʼєкт'
+      })
+    })
+
     const itemHeaders = [
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },

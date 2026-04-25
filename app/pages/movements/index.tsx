@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Переміщення'
+    })
+
     const filterType = ref<string | null>(null)
     const { data, pending } = useFetch('/api/movements', {
       query: computed(() => (filterType.value ? { type: filterType.value } : {})),

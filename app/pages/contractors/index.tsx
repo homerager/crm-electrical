@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Контрагенти'
+    })
+
     const { isAdmin } = useAuth()
     const { data, refresh, pending } = useFetch('/api/contractors')
     const contractors = computed(() => (data.value as any)?.contractors ?? [])

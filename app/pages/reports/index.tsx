@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Репорти'
+    })
+
     const { data, pending } = useFetch('/api/reports/stock')
     const { data: objectsData } = useFetch('/api/objects')
 

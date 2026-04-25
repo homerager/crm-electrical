@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Групи товарів'
+    })
+
     const { isAdmin } = useAuth()
     const { data, refresh, pending } = useFetch('/api/product-groups')
     const groups = computed(() => (data.value as any)?.groups ?? [])

@@ -15,6 +15,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Будівельні обʼєкти'
+    })
+
     const { isAdmin } = useAuth()
     const { data, refresh, pending } = useFetch('/api/objects')
     const objects = computed(() => (data.value as any)?.objects ?? [])

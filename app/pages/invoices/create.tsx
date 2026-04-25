@@ -10,6 +10,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Нова накладна'
+    })
+
     const router = useRouter()
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: contractorsData } = useFetch('/api/contractors')

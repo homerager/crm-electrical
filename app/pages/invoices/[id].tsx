@@ -10,6 +10,10 @@ export default defineComponent({
     const invoice = computed(() => (data.value as any)?.invoice)
     const router = useRouter()
 
+    useHead({
+      title: computed(() => invoice.value ? `Накладна №${invoice.value.number}` : 'Накладна')
+    })
+
     const deleteDialog = ref(false)
     const deleting = ref(false)
 

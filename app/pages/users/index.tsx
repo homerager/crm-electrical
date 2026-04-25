@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Користувачі'
+    })
+
     const { isAdmin, user: currentUser } = useAuth()
     const router = useRouter()
 

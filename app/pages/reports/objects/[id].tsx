@@ -9,6 +9,10 @@ export default defineComponent({
 
     const report = computed(() => data.value as any)
     const object = computed(() => report.value?.object)
+
+    useHead({
+      title: computed(() => object.value ? `Репорт: ${object.value.name}` : 'Репорт обʼєкта')
+    })
     const summary = computed(() => report.value?.summary ?? [])
     const movements = computed(() => report.value?.movements ?? [])
 

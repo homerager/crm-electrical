@@ -3,6 +3,10 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
+    useHead({
+      title: 'Товари'
+    })
+
     const { isAdmin } = useAuth()
     const search = ref('')
     const filterGroupId = ref<string | null>(null)

@@ -9,6 +9,10 @@ export default defineComponent({
     const { data, pending } = useFetch(`/api/warehouses/${id}`)
     const warehouse = computed(() => (data.value as any)?.warehouse)
 
+    useHead({
+      title: computed(() => warehouse.value ? `Склад: ${warehouse.value.name}` : 'Склад')
+    })
+
     const tab = ref('stock')
     const directionFilter = ref<'in' | 'out' | null>(null)
 
