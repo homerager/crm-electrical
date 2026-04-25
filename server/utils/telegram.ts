@@ -1,7 +1,7 @@
 const TG_API = 'https://api.telegram.org/bot'
 
-function escapeMarkdown(text: string): string {
-  return text.replace(/[_*[\]()~`>#+=|{}.!\\-]/g, (c) => `\\${c}`)
+export function normalizeUrl(base: string, path: string): string {
+  return `${base.replace(/\/$/, '')}${path}`
 }
 
 export async function sendTelegramMessage(chatId: string, text: string): Promise<void> {
@@ -15,8 +15,7 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
       body: {
         chat_id: chatId,
         text,
-        parse_mode: 'MarkdownV2',
-        disable_web_page_preview: true,
+        disable_web_page_preview: false,
       },
     })
   } catch (e) {
@@ -32,36 +31,43 @@ export function buildTaskCreatedMessage(task: any, appUrl: string): string {
     ? new Date(task.dueDate).toLocaleDateString('uk-UA')
     : 'не вказано'
 
-  return [
-    `📋 *Вам призначено нове завдання*`,
-    ``,
-    `*Назва:* ${escapeMarkdown(task.title)}`,
-    `*Пріоритет:* ${escapeMarkdown(priorityLabels[task.priority] ?? task.priority)}`,
-    `*Дедлайн:* ${escapeMarkdown(due)}`,
-    task.description ? `*Опис:* ${escapeMarkdown(task.description.substring(0, 200))}` : null,
-    ``,
-    `🔗 [Відкрити завдання](${escapeMarkdown(normalizeUrl(appUrl, `/tasks/${task.id}`))})`,
-  ].filter(Boolean).join('\n')
+  const lines = [
+    '📋 Вам призначено нове завдання',
+    '',
+    `Назва: ${task.title}`,
+    `Пріоритет: ${priorityLabels[task.priority] ?? task.priority}`,
+    `Дедлайн: ${due}`,
+  ]
+  if (task.description) {
+    lines.push(`Опис: ${task.description.substring(0, 200)}`)
+  }
+  lines.push('')
+  lines.push(`🔗 ${normalizeUrl(appUrl, `/tasks/${task.id}`)}`)
+
+  return lines.join('\n')
 }
 
-export function buildTaskUpdatedMessage(task: any, changedBy: string, appUrl: string, changes: Record<string, string>): string {
+export function buildTaskUpdatedMessage(
+  task: any,
+  changedBy: string,
+  appUrl: string,
+  changes: Record<string, string>,
+): string {
   const changeLines = Object.entries(changes)
-    .map(([key, val]) => `  • ${escapeMarkdown(key)}: ${escapeMarkdown(val)}`)
+    .map(([key, val]) => `  • ${key}: ${val}`)
     .join('\n')
 
-  return [
-    `🔄 *Завдання оновлено*`,
-    ``,
-    `*Назва:* ${escapeMarkdown(task.title)}`,
+  const lines = [
+    '🔄 Завдання оновлено',
+    '',
+    `Назва: ${task.title}`,
     changeLines,
-    `*Змінив:* ${escapeMarkdown(changedBy)}`,
-    ``,
-    `🔗 [Відкрити завдання](${escapeMarkdown(normalizeUrl(appUrl, `/tasks/${task.id}`))})`,
-  ].filter(Boolean).join('\n')
-}
+    `Змінив: ${changedBy}`,
+    '',
+    `🔗 ${normalizeUrl(appUrl, `/tasks/${task.id}`)}`,
+  ]
 
-export function normalizeUrl(base: string, path: string): string {
-  return `${base.replace(/\/$/, '')}${path}`
+  return lines.join('\n')
 }
 
 export async function setTelegramWebhook(webhookUrl: string): Promise<any> {
@@ -74,5 +80,3 @@ export async function setTelegramWebhook(webhookUrl: string): Promise<any> {
     body: { url: webhookUrl, allowed_updates: ['message'] },
   })
 }
-
-export { escapeMarkdown }
