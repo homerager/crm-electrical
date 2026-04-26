@@ -334,9 +334,9 @@ export default defineComponent({
             class="px-0 pt-0 pb-4"
           />
 
-          <div class="d-flex gap-4 flex-wrap align-start">
+          <div class="d-flex align-start" style="gap:16px">
             {/* Main content */}
-            <div style="flex:1; min-width:0">
+            <div style="flex:1; min-width:0; overflow:hidden">
 
               {/* Title card */}
               <v-card class="mb-4">
@@ -778,79 +778,29 @@ export default defineComponent({
             </div>
 
             {/* Sidebar */}
-            <div style="width:260px; flex-shrink:0">
+            <div style="width:280px; flex-shrink:0">
               <v-card>
-                <v-list density="compact">
-                  <v-list-subheader>ДЕТАЛІ</v-list-subheader>
-
-                  <v-list-item prepend-icon="mdi-account-circle" title="Виконавець">
-                    {{
-                      append: () => (
-                        <span class="text-body-2">{t.assignee?.name ?? 'Не призначено'}</span>
-                      ),
-                    }}
-                  </v-list-item>
-
-                  <v-list-item prepend-icon="mdi-account-plus" title="Створив">
-                    {{
-                      append: () => (
-                        <span class="text-body-2">{t.createdBy?.name}</span>
-                      ),
-                    }}
-                  </v-list-item>
-
-                  {t.object && (
-                    <v-list-item prepend-icon="mdi-office-building-outline" title="Обʼєкт">
-                      {{
-                        append: () => (
-                          <span class="text-body-2">{t.object.name}</span>
-                        ),
-                      }}
-                    </v-list-item>
-                  )}
-
-                  <v-list-item prepend-icon="mdi-calendar-plus" title="Створено">
-                    {{
-                      append: () => (
-                        <span class="text-body-2">{formatDate(t.createdAt)}</span>
-                      ),
-                    }}
-                  </v-list-item>
-
-                  {t.dueDate && (
-                    <v-list-item
-                      prepend-icon="mdi-calendar-clock"
-                      title="Дедлайн"
-                      base-color={isOverdue() ? 'error' : undefined}
-                    >
-                      {{
-                        append: () => (
-                          <span class={`text-body-2 ${isOverdue() ? 'text-error' : ''}`}>
-                            {formatDate(t.dueDate)}
-                          </span>
-                        ),
-                      }}
-                    </v-list-item>
-                  )}
-
-                  <v-list-item prepend-icon="mdi-clock-outline" title="Витрачено">
-                    {{
-                      append: () => (
-                        <span class="text-body-2">{(t.totalHours ?? 0).toFixed(1)}г</span>
-                      ),
-                    }}
-                  </v-list-item>
-
-                  {t.estimatedHours != null && (
-                    <v-list-item prepend-icon="mdi-clock-check-outline" title="Оцінка">
-                      {{
-                        append: () => (
-                          <span class="text-body-2">{t.estimatedHours}г</span>
-                        ),
-                      }}
-                    </v-list-item>
-                  )}
-                </v-list>
+                <v-list-subheader class="px-4 pt-3">ДЕТАЛІ</v-list-subheader>
+                <v-divider />
+                <div class="pa-3">
+                  {[
+                    { icon: 'mdi-account-circle', label: 'Виконавець', value: t.assignee?.name ?? 'Не призначено' },
+                    { icon: 'mdi-account-plus', label: 'Створив', value: t.createdBy?.name },
+                    ...(t.object ? [{ icon: 'mdi-office-building-outline', label: 'Обʼєкт', value: t.object.name }] : []),
+                    { icon: 'mdi-calendar-plus', label: 'Створено', value: formatDate(t.createdAt) },
+                    ...(t.dueDate ? [{ icon: 'mdi-calendar-clock', label: 'Дедлайн', value: formatDate(t.dueDate), error: isOverdue() }] : []),
+                    { icon: 'mdi-clock-outline', label: 'Витрачено', value: `${(t.totalHours ?? 0).toFixed(1)}г` },
+                    ...(t.estimatedHours != null ? [{ icon: 'mdi-clock-check-outline', label: 'Оцінка', value: `${t.estimatedHours}г` }] : []),
+                  ].map((row: any, i: number) => (
+                    <div key={i} class="d-flex align-center py-2 px-1" style="gap:10px; border-bottom: 1px solid rgba(128,128,128,0.1)">
+                      <v-icon size="18" color={row.error ? 'error' : 'medium-emphasis'}>{row.icon}</v-icon>
+                      <span class="text-body-2 text-medium-emphasis" style="flex:1; white-space:nowrap">{row.label}</span>
+                      <span class={`text-body-2 font-weight-medium text-right ${row.error ? 'text-error' : ''}`} style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title={row.value}>
+                        {row.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </v-card>
             </div>
           </div>

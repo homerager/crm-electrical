@@ -153,7 +153,7 @@ export default defineComponent({
                   >
                     Відкрити бота
                   </v-btn>
-                  <v-btn
+                  {/*<v-btn
                     color="secondary"
                     variant="outlined"
                     size="small"
@@ -162,7 +162,7 @@ export default defineComponent({
                     onClick={setupWebhook}
                   >
                     Зареєструвати webhook
-                  </v-btn>
+                  </v-btn> */}
                 </div>
                 {webhookStatus.value && (
                   <v-alert

@@ -70,8 +70,8 @@ export default defineComponent({
         </div>
 
         {/* Date filter */}
-        <v-card class="mb-4 pa-3">
-          <div class="d-flex gap-3 align-center flex-wrap">
+        <v-card class="mb-5 pa-4">
+          <div class="d-flex align-center flex-wrap" style="gap:16px">
             <v-text-field
               v-model={dateFrom.value}
               label="Від"
@@ -102,7 +102,7 @@ export default defineComponent({
           </div>
         </v-card>
 
-        <div class="d-flex gap-4 flex-wrap mb-4">
+        <div class="d-flex flex-wrap mb-4" style="gap:20px">
           {/* Tasks by status */}
           <v-card style="flex:1; min-width:280px">
             <v-card-title class="pa-4 pb-2">
