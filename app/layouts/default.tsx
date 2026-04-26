@@ -43,10 +43,10 @@ export default defineComponent({
         { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
         { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
         { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
-        { title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' },
-        { title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' },
       ]
       if (isAdmin.value) {
+        base.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
+        base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
         base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
       }
       return base

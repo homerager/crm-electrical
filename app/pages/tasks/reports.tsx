@@ -28,7 +28,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 export default defineComponent({
   name: 'TaskReportsPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth', 'admin'] })
     useHead({ title: 'Репорти завдань' })
 
     const dateFrom = ref('')

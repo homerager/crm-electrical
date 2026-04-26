@@ -181,9 +181,11 @@ export default defineComponent({
             <div class="text-caption text-medium-emphasis">Управління проєктами та доступом</div>
           </div>
           <v-spacer />
-          <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
-            Новий проєкт
-          </v-btn>
+          {isAdmin.value && (
+            <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
+              Новий проєкт
+            </v-btn>
+          )}
         </div>
 
         {projects.value.length === 0 && (
@@ -191,9 +193,11 @@ export default defineComponent({
             <v-icon size="64" color="medium-emphasis" class="mb-4">mdi-folder-off-outline</v-icon>
             <div class="text-h6 text-medium-emphasis">Немає проєктів</div>
             <div class="text-body-2 text-medium-emphasis mt-2">Створіть перший проєкт для організації завдань</div>
-            <v-btn color="primary" class="mt-4" prepend-icon="mdi-plus" onClick={openCreate}>
-              Створити проєкт
-            </v-btn>
+            {isAdmin.value && (
+              <v-btn color="primary" class="mt-4" prepend-icon="mdi-plus" onClick={openCreate}>
+                Створити проєкт
+              </v-btn>
+            )}
           </v-card>
         )}
 

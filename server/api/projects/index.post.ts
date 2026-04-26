@@ -1,5 +1,9 @@
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
+  if (auth?.role !== 'ADMIN') {
+    throw createError({ statusCode: 403, message: 'Тільки адміністратор може створювати проєкти' })
+  }
+
   const body = await readBody(event)
   const { name, description, color, memberIds } = body
 
