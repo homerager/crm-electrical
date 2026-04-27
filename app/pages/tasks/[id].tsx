@@ -218,6 +218,11 @@ export default defineComponent({
       return `${(bytes / 1024 / 1024).toFixed(1)} МБ`
     }
 
+    /** Завантаження через API, щоб на production працювали файли (не тільки з .output/public). */
+    function attachmentFileUrl(attachmentId: string) {
+      return `/api/attachments/${attachmentId}`
+    }
+
     const canDeleteAttachment = (att: any) =>
       att.userId === user.value?.id || user.value?.role === 'ADMIN'
 
@@ -763,10 +768,10 @@ export default defineComponent({
                           {isImage(att.mimeType) && (
                               <div
                               style="height:90px; overflow:hidden; cursor:zoom-in; background:#111"
-                              onClick={() => { imagePreview.value = { url: `/uploads/tasks/${att.storedAs}`, name: att.filename }; showImagePreview.value = true }}
+                              onClick={() => { imagePreview.value = { url: attachmentFileUrl(att.id), name: att.filename }; showImagePreview.value = true }}
                             >
                               <img
-                                src={`/uploads/tasks/${att.storedAs}`}
+                                src={attachmentFileUrl(att.id)}
                                 alt={att.filename}
                                 style="width:100%; height:100%; object-fit:cover"
                               />
@@ -775,7 +780,7 @@ export default defineComponent({
                           {isVideo(att.mimeType) && (
                             <div style="height:90px; overflow:hidden; background:#111">
                               <video
-                                src={`/uploads/tasks/${att.storedAs}`}
+                                src={attachmentFileUrl(att.id)}
                                 style="width:100%; height:100%; object-fit:cover"
                                 controls={false}
                                 muted
@@ -800,7 +805,7 @@ export default defineComponent({
                                 icon="mdi-download"
                                 size="x-small"
                                 variant="text"
-                                href={`/uploads/tasks/${att.storedAs}`}
+                                href={attachmentFileUrl(att.id)}
                                 download={att.filename}
                                 onClick={(e: Event) => e.stopPropagation()}
                               />
@@ -937,12 +942,12 @@ export default defineComponent({
                                     <div
                                       style="width: 56px; height: 56px; flex-shrink: 0; cursor: pointer; background: #111; overflow: hidden; border-radius: 4px 0 0 4px"
                                       onClick={() => {
-                                        imagePreview.value = { url: `/uploads/tasks/${att.storedAs}`, name: att.filename }
+                                        imagePreview.value = { url: attachmentFileUrl(att.id), name: att.filename }
                                         showImagePreview.value = true
                                       }}
                                     >
                                       <img
-                                        src={`/uploads/tasks/${att.storedAs}`}
+                                        src={attachmentFileUrl(att.id)}
                                         alt={att.filename}
                                         style="width: 100%; height: 100%; object-fit: cover"
                                       />
@@ -952,7 +957,7 @@ export default defineComponent({
                                     <div class="d-flex align-center" style="gap: 4px">
                                       <v-icon size="16" color={fileColor(att.mimeType)}>{fileIcon(att.mimeType)}</v-icon>
                                       <a
-                                        href={`/uploads/tasks/${att.storedAs}`}
+                                        href={attachmentFileUrl(att.id)}
                                         download={att.filename}
                                         class="text-caption text-truncate d-inline-block"
                                         style="maxWidth: 120px; color: inherit; text-decoration: none"
