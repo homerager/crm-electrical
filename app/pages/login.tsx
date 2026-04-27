@@ -53,11 +53,28 @@ export default defineComponent({
             label="Пароль"
             type={showPassword.value ? 'text' : 'password'}
             prepend-inner-icon="mdi-lock-outline"
-            append-inner-icon={showPassword.value ? 'mdi-eye-off' : 'mdi-eye'}
-            onClickAppendInner={() => (showPassword.value = !showPassword.value)}
             autocomplete="current-password"
             onKeydown={(e: KeyboardEvent) => e.key === 'Enter' && handleSubmit()}
-          />
+          >
+            {{
+              'append-inner': () => (
+                <v-btn
+                  type="button"
+                  icon={showPassword.value ? 'mdi-eye-off' : 'mdi-eye'}
+                  variant="text"
+                  size="small"
+                  tabindex={-1}
+                  aria-pressed={showPassword.value}
+                  aria-label={showPassword.value ? 'Сховати пароль' : 'Показати пароль'}
+                  onMousedown={(e: MouseEvent) => e.preventDefault()}
+                  onClick={(e: MouseEvent) => {
+                    e.stopPropagation()
+                    showPassword.value = !showPassword.value
+                  }}
+                />
+              ),
+            }}
+          </v-text-field>
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
           <v-btn

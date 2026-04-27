@@ -36,6 +36,14 @@ export default defineComponent({
 
     const unitOptions = ['шт', 'м', 'м²', 'м³', 'кг', 'т', 'л', 'уп', 'к-т', 'пог.м']
 
+    function generateSku() {
+      const raw =
+        typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID
+          ? globalThis.crypto.randomUUID().replace(/-/g, '')
+          : `${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`
+      form.sku = `P-${raw.slice(0, 8).toUpperCase()}`
+    }
+
     function openCreate() {
       editItem.value = null
       Object.assign(form, { name: '', description: '', sku: '', unit: 'шт', groupId: null })
@@ -200,7 +208,25 @@ export default defineComponent({
             <v-card-text>
               {error.value && <v-alert type="error" variant="tonal" class="mb-3">{error.value}</v-alert>}
               <v-text-field v-model={form.name} label="Назва *" class="mb-3" />
-              <v-text-field v-model={form.sku} label="Артикул (SKU)" class="mb-3" />
+              <v-text-field v-model={form.sku} label="Артикул (SKU)" class="mb-3">
+                {{
+                  'append-inner': () => (
+                    <v-btn
+                      type="button"
+                      icon="mdi-autorenew"
+                      variant="text"
+                      size="small"
+                      tabindex={-1}
+                      aria-label="Згенерувати артикул"
+                      onMousedown={(e: MouseEvent) => e.preventDefault()}
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation()
+                        generateSku()
+                      }}
+                    />
+                  ),
+                }}
+              </v-text-field>
               <v-combobox v-model={form.unit} label="Одиниця виміру" items={unitOptions} class="mb-3" />
               <v-select
                 v-model={form.groupId}
