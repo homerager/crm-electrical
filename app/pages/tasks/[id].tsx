@@ -813,7 +813,7 @@ export default defineComponent({
                 {editError.value && <v-alert type="error" variant="tonal" class="mb-3">{editError.value}</v-alert>}
                 <v-text-field v-model={editForm.title} label="Назва *" class="mb-3" />
                 <v-textarea v-model={editForm.description} label="Опис" rows={3} class="mb-3" />
-                <div class="d-flex gap-3 mb-3">
+                <div class="d-flex gap-4 mb-3">
                   <v-select
                     v-model={editForm.status}
                     label="Статус"
@@ -827,7 +827,7 @@ export default defineComponent({
                     style="flex:1"
                   />
                 </div>
-                <div class="d-flex gap-3 mb-3">
+                <div class="d-flex gap-4 mb-3">
                   <v-select
                     v-model={editForm.assignedToId}
                     label="Виконавець"
@@ -841,7 +841,7 @@ export default defineComponent({
                     style="flex:1"
                   />
                 </div>
-                <div class="d-flex gap-3">
+                <div class="d-flex gap-4">
                   <v-text-field
                     v-model={editForm.dueDate}
                     label="Дедлайн"

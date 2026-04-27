@@ -211,7 +211,7 @@ export default defineComponent({
                 </div>
               </v-card-text>
               <v-card-actions>
-                <v-btn block color="primary" size="large" loading={saving.value} onClick={save}>
+                <v-btn block color="primary" variant="flat" size="large" loading={saving.value} onClick={save}>
                   Зберегти накладну
                 </v-btn>
               </v-card-actions>
