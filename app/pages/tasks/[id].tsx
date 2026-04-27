@@ -1,3 +1,6 @@
+import TaskCommentContent from '../../components/TaskCommentContent'
+import TaskCommentEditor from '../../components/TaskCommentEditor'
+
 const STATUSES = [
   { value: 'TODO', label: 'До виконання', color: 'blue-grey', icon: 'mdi-circle-outline' },
   { value: 'IN_PROGRESS', label: 'В роботі', color: 'blue', icon: 'mdi-progress-clock' },
@@ -218,24 +221,136 @@ export default defineComponent({
     const canDeleteAttachment = (att: any) =>
       att.userId === user.value?.id || user.value?.role === 'ADMIN'
 
-    // Comments
-    const commentText = ref('')
-    const commentSaving = ref(false)
+    // Comments (HTML + reply / edit; файли в коменті — через pre-upload, потім лінк з POST/PUT)
+    const commentClient = ref(false)
+    onMounted(() => {
+      commentClient.value = true
+    })
 
-    async function postComment() {
-      if (!commentText.value.trim()) return
-      commentSaving.value = true
+    const commentHtml = ref('<p></p>')
+    const commentTextEmpty = ref(true)
+    const commentEditorKey = ref(0)
+    const replyingTo = ref<{ id: string; name: string; at: string } | null>(null)
+    const editingId = ref<string | null>(null)
+    const pendingCommentFiles = ref<{ id: string; filename: string }[]>([])
+    const commentFileInput = ref<HTMLInputElement | null>(null)
+    const commentFileUploading = ref(false)
+    const commentSaving = ref(false)
+    const commentError = ref('')
+
+    function clearCommentComposer() {
+      replyingTo.value = null
+      editingId.value = null
+      commentHtml.value = '<p></p>'
+      commentTextEmpty.value = true
+      pendingCommentFiles.value = []
+      commentEditorKey.value += 1
+    }
+
+    function isCommentEdited(c: { createdAt: string; updatedAt: string }) {
+      return new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime() > 1500
+    }
+
+    function startReplyTo(c: { id: string; user: { name: string }; createdAt: string }) {
+      editingId.value = null
+      replyingTo.value = { id: c.id, name: c.user.name, at: c.createdAt }
+    }
+
+    function startEditComment(c: { id: string; content: string }) {
+      replyingTo.value = null
+      editingId.value = c.id
+      commentHtml.value = c.content && c.content.trim() ? c.content : '<p></p>'
+      commentTextEmpty.value = false
+      commentEditorKey.value += 1
+      pendingCommentFiles.value = []
+    }
+
+    function triggerCommentFile() {
+      commentFileInput.value?.click()
+    }
+
+    async function onCommentFileInput(e: Event) {
+      const input = e.target as HTMLInputElement
+      if (!input.files?.length) return
+      commentFileUploading.value = true
+      commentError.value = ''
       try {
-        await $fetch(`/api/tasks/${id.value}/comments`, {
-          method: 'POST',
-          body: { content: commentText.value },
-        })
-        commentText.value = ''
+        for (const file of Array.from(input.files)) {
+          const formData = new FormData()
+          formData.append('files', file)
+          const r = (await $fetch<{ attachments: { id: string }[] }>(`/api/tasks/${id.value}/attachments`, {
+            method: 'POST',
+            body: formData,
+          })) as { attachments: { id: string }[] }
+          for (const a of r.attachments) {
+            const at = a as { id: string; filename: string }
+            pendingCommentFiles.value = [...pendingCommentFiles.value, { id: at.id, filename: at.filename }]
+          }
+        }
+      } catch (e: any) {
+        commentError.value = e?.data?.statusMessage || 'Помилка завантаження'
+      } finally {
+        commentFileUploading.value = false
+        input.value = ''
+      }
+    }
+
+    async function deletePendingByUnlink(attachmentId: string) {
+      try {
+        await $fetch(`/api/attachments/${attachmentId}`, { method: 'DELETE' })
+        pendingCommentFiles.value = pendingCommentFiles.value.filter((p) => p.id !== attachmentId)
         await refresh()
-      } catch {} finally {
+      } catch {}
+    }
+
+    async function submitComment() {
+      if (commentTextEmpty.value) return
+      const html = commentHtml.value
+      commentSaving.value = true
+      commentError.value = ''
+      try {
+        if (editingId.value) {
+          const pending = pendingCommentFiles.value.map((f) => f.id)
+          await $fetch(`/api/tasks/${id.value}/comments/${editingId.value}`, {
+            method: 'PUT',
+            body: {
+              content: html,
+              attachmentIds: pending.length ? pending : undefined,
+            },
+          })
+        } else {
+          const ids = pendingCommentFiles.value.map((f) => f.id)
+          await $fetch(`/api/tasks/${id.value}/comments`, {
+            method: 'POST',
+            body: {
+              content: html,
+              parentId: replyingTo.value?.id ?? null,
+              attachmentIds: ids.length ? ids : undefined,
+            },
+          })
+        }
+        clearCommentComposer()
+        await refresh()
+      } catch (e: any) {
+        commentError.value = e?.data?.statusMessage || 'Не вдалося зберегти'
+      } finally {
         commentSaving.value = false
       }
     }
+
+    async function deleteTaskComment(c: { id: string }) {
+      if (!window.confirm('Видалити цей коментар?')) return
+      try {
+        if (editingId.value === c.id) clearCommentComposer()
+        await $fetch(`/api/tasks/${id.value}/comments/${c.id}`, { method: 'DELETE' })
+        await refresh()
+      } catch (e: any) {
+        commentError.value = e?.data?.statusMessage || 'Не вдалося видалити'
+      }
+    }
+
+    const canMutateComment = (c: { userId: string }) =>
+      c.userId === user.value?.id || user.value?.role === 'ADMIN'
 
     // Sub-tasks
     const subTaskDialog = ref(false)
@@ -736,18 +851,123 @@ export default defineComponent({
                   </v-chip>
                 </v-card-title>
                 <v-card-text class="pa-4">
+                  {commentError.value && (
+                    <v-alert type="error" variant="tonal" class="mb-3">
+                      <div class="d-flex align-center" style="gap: 8px">
+                        <span style="flex: 1">{commentError.value}</span>
+                        <v-btn
+                          size="x-small"
+                          icon="mdi-close"
+                          variant="text"
+                          onClick={() => (commentError.value = '')}
+                        />
+                      </div>
+                    </v-alert>
+                  )}
+
                   <div class="d-flex flex-column gap-3 mb-4">
                     {(t.comments ?? []).map((c: any) => (
-                      <div key={c.id} class="d-flex gap-3">
+                      <div
+                        key={c.id}
+                        class="d-flex gap-3"
+                        style={{
+                          borderLeft: c.parentId ? '2px solid rgba(128,128,128,0.35)' : 'none',
+                          marginLeft: c.parentId ? '0' : '0',
+                          paddingLeft: c.parentId ? '10px' : '0',
+                        }}
+                      >
                         <v-avatar color="secondary" size="36" variant="tonal">
                           <span class="text-caption">{c.user.name.charAt(0).toUpperCase()}</span>
                         </v-avatar>
                         <v-card variant="tonal" class="pa-3 flex-grow-1">
-                          <div class="d-flex align-center gap-2 mb-1">
-                            <span class="text-body-2 font-weight-bold">{c.user.name}</span>
-                            <span class="text-caption text-disabled">{formatDateTime(c.createdAt)}</span>
+                          <div class="d-flex flex-wrap align-center justify-space-between gap-1 mb-1">
+                            <div>
+                              <span class="text-body-2 font-weight-bold">{c.user.name}</span>
+                              <span class="text-caption text-disabled ml-2">
+                                {formatDateTime(c.createdAt)}
+                                {isCommentEdited(c) && ' · (ред.)'}
+                              </span>
+                            </div>
+                            {canMutateComment(c) && !editingId.value && (
+                              <div class="d-flex flex-wrap" style="gap:4px">
+                                <v-btn
+                                  size="x-small"
+                                  variant="text"
+                                  onClick={() => startReplyTo(c)}
+                                >
+                                  Відповісти
+                                </v-btn>
+                                <v-btn
+                                  size="x-small"
+                                  variant="text"
+                                  onClick={() => startEditComment(c)}
+                                >
+                                  Редагувати
+                                </v-btn>
+                                <v-btn
+                                  size="x-small"
+                                  variant="text"
+                                  color="error"
+                                  onClick={() => deleteTaskComment(c)}
+                                >
+                                  Видалити
+                                </v-btn>
+                              </div>
+                            )}
                           </div>
-                          <div class="text-body-2" style="white-space:pre-wrap">{c.content}</div>
+                          {c.parent && (
+                            <div class="text-caption text-medium-emphasis mb-2" style="opacity:0.9">
+                              <v-icon size="12" class="mr-1">mdi-reply</v-icon>
+                              {c.parent.user.name} · {formatDateTime(c.parent.createdAt)}
+                            </div>
+                          )}
+                          <div class="mb-1">
+                            <TaskCommentContent html={c.content} />
+                          </div>
+                          {c.attachments?.length > 0 && (
+                            <div class="d-flex flex-wrap mt-2" style="gap:8px">
+                              {c.attachments.map((att: any) => (
+                                <v-card
+                                  key={att.id}
+                                  variant="outlined"
+                                  class="d-flex align-center"
+                                  style={{ minWidth: 160, maxWidth: 220 }}
+                                >
+                                  {isImage(att.mimeType) && (
+                                    <div
+                                      style="width: 56px; height: 56px; flex-shrink: 0; cursor: pointer; background: #111; overflow: hidden; border-radius: 4px 0 0 4px"
+                                      onClick={() => {
+                                        imagePreview.value = { url: `/uploads/tasks/${att.storedAs}`, name: att.filename }
+                                        showImagePreview.value = true
+                                      }}
+                                    >
+                                      <img
+                                        src={`/uploads/tasks/${att.storedAs}`}
+                                        alt={att.filename}
+                                        style="width: 100%; height: 100%; object-fit: cover"
+                                      />
+                                    </div>
+                                  )}
+                                  <div class="px-2 py-1" style="flex: 1; minWidth: 0">
+                                    <div class="d-flex align-center" style="gap: 4px">
+                                      <v-icon size="16" color={fileColor(att.mimeType)}>{fileIcon(att.mimeType)}</v-icon>
+                                      <a
+                                        href={`/uploads/tasks/${att.storedAs}`}
+                                        download={att.filename}
+                                        class="text-caption text-truncate d-inline-block"
+                                        style="maxWidth: 120px; color: inherit; text-decoration: none"
+                                        title={att.filename}
+                                        onClick={(e: Event) => e.stopPropagation()}
+                                      >
+                                        {att.filename}
+                                      </a>
+                                    </div>
+                                    <div class="text-caption text-disabled">{formatSize(att.size)}</div>
+                                  </div>
+                                </v-card>
+                              ))}
+                            </div>
+                          )}
                         </v-card>
                       </div>
                     ))}
@@ -755,23 +975,117 @@ export default defineComponent({
                       <div class="text-caption text-disabled text-center py-2">Немає коментарів</div>
                     )}
                   </div>
-                  <div class="d-flex gap-2 align-end">
-                    <v-textarea
-                      v-model={commentText.value}
-                      label="Написати коментар..."
-                      rows={2}
-                      auto-grow
-                      hide-details
-                      variant="outlined"
-                      style="flex:1"
-                    />
-                    <v-btn
-                      color="primary"
-                      icon="mdi-send"
-                      loading={commentSaving.value}
-                      disabled={!commentText.value.trim()}
-                      onClick={postComment}
-                    />
+
+                  {replyingTo.value && (
+                    <v-alert
+                      class="mb-2"
+                      density="compact"
+                      type="info"
+                      variant="tonal"
+                    >
+                      <div class="d-flex align-center" style="gap:8px; flex-wrap: wrap">
+                        <span class="text-caption">
+                          Відповідь: {replyingTo.value.name} · {formatDateTime(replyingTo.value.at)}
+                        </span>
+                        <v-spacer style="min-width: 8px" />
+                        <v-btn size="x-small" variant="text" onClick={() => (replyingTo.value = null)}>
+                          Скасувати
+                        </v-btn>
+                      </div>
+                    </v-alert>
+                  )}
+                  {editingId.value && (
+                    <v-alert
+                      class="mb-2"
+                      density="compact"
+                      type="info"
+                      variant="tonal"
+                    >
+                      <span class="text-caption">Режим редагування. Натисніть «Скасувати зміни», щоб вийти.</span>
+                      <v-btn
+                        class="ml-2"
+                        size="x-small"
+                        variant="text"
+                        onClick={clearCommentComposer}
+                      >
+                        Скасувати
+                      </v-btn>
+                    </v-alert>
+                  )}
+
+                  <div class="d-flex flex-column" style="gap: 8px">
+                    {commentClient.value && (
+                      <div key={commentEditorKey.value}>
+                        <TaskCommentEditor
+                          modelValue={commentHtml.value}
+                          onUpdate:modelValue={(v: string) => (commentHtml.value = v)}
+                          onUpdate:isTextEmpty={(e: boolean) => (commentTextEmpty.value = e)}
+                          disabled={commentSaving.value}
+                          placeholder="Написати коментар…"
+                        />
+                      </div>
+                    )}
+                    {!commentClient.value && <v-skeleton-loader type="article" />}
+
+                    <div class="d-flex flex-wrap align-center" style="gap: 6px">
+                      <v-btn
+                        size="x-small"
+                        variant="outlined"
+                        prepend-icon="mdi-paperclip"
+                        loading={commentFileUploading.value}
+                        onClick={triggerCommentFile}
+                        disabled={commentSaving.value}
+                      >
+                        Вкладення
+                      </v-btn>
+                      <input
+                        ref={commentFileInput}
+                        type="file"
+                        multiple
+                        accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt"
+                        style="display: none"
+                        onChange={onCommentFileInput}
+                      />
+                    </div>
+                    {pendingCommentFiles.value.length > 0 && (
+                      <div class="d-flex flex-wrap align-center" style="gap: 6px">
+                        {pendingCommentFiles.value.map((pf) => (
+                          <div
+                            key={pf.id}
+                            class="d-inline-flex align-center text-caption"
+                            style="border:1px solid rgba(128,128,128,0.35); border-radius: 9999px; padding: 2px 4px 2px 8px; gap: 2px; max-width: 240px"
+                          >
+                            <span class="text-truncate" style="flex:1" title={pf.filename}>
+                              {pf.filename}
+                            </span>
+                            <v-btn
+                              size="x-small"
+                              icon="mdi-close"
+                              variant="text"
+                              density="compact"
+                              onClick={() => deletePendingByUnlink(pf.id)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div class="d-flex align-center justify-end" style="gap: 8px">
+                      {editingId.value && (
+                        <v-btn variant="text" size="small" onClick={clearCommentComposer}>
+                          Скасувати зміни
+                        </v-btn>
+                      )}
+                      <v-btn
+                        color="primary"
+                        prepend-icon={editingId.value ? 'mdi-content-save' : 'mdi-send'}
+                        loading={commentSaving.value}
+                        disabled={commentTextEmpty.value}
+                        onClick={submitComment}
+                      >
+                        {editingId.value ? 'Зберегти' : 'Надіслати'}
+                      </v-btn>
+                    </div>
                   </div>
                 </v-card-text>
               </v-card>

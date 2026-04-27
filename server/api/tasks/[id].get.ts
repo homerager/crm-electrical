@@ -17,10 +17,15 @@ export default defineEventHandler(async (event) => {
         orderBy: { date: 'desc' },
       },
       comments: {
-        include: { user: { select: { id: true, name: true } } },
+        include: {
+          user: { select: { id: true, name: true } },
+          parent: { include: { user: { select: { id: true, name: true } } } },
+          attachments: { include: { user: { select: { id: true, name: true } } } },
+        },
         orderBy: { createdAt: 'asc' },
       },
       attachments: {
+        where: { commentId: null },
         include: { user: { select: { id: true, name: true } } },
         orderBy: { createdAt: 'asc' },
       },

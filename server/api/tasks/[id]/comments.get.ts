@@ -6,7 +6,11 @@ export default defineEventHandler(async (event) => {
 
   const comments = await prisma.taskComment.findMany({
     where: { taskId },
-    include: { user: { select: { id: true, name: true } } },
+    include: {
+      user: { select: { id: true, name: true } },
+      parent: { include: { user: { select: { id: true, name: true } } } },
+      attachments: { include: { user: { select: { id: true, name: true } } } },
+    },
     orderBy: { createdAt: 'asc' },
   })
 

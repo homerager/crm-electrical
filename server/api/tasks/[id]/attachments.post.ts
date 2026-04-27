@@ -1,8 +1,4 @@
-import { writeFile, mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
-import { randomUUID } from 'node:crypto'
-
-const MAX_SIZE = 100 * 1024 * 1024 // 100 MB
+import { MAX_TASK_FILE_SIZE, buildStoredFileName, writeTaskFileBuffer } from '../../../utils/taskAttachmentFile'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -23,16 +19,12 @@ export default defineEventHandler(async (event) => {
   for (const part of parts) {
     if (!part.filename || !part.data) continue
 
-    if (part.data.length > MAX_SIZE) {
+    if (part.data.length > MAX_TASK_FILE_SIZE) {
       throw createError({ statusCode: 413, statusMessage: `Файл "${part.filename}" перевищує ліміт 100 МБ` })
     }
 
-    const ext = part.filename.includes('.') ? part.filename.split('.').pop()!.toLowerCase() : ''
-    const storedAs = `${randomUUID()}${ext ? `.${ext}` : ''}`
-
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'tasks')
-    await mkdir(uploadDir, { recursive: true })
-    await writeFile(join(uploadDir, storedAs), part.data)
+    const storedAs = buildStoredFileName(part.filename)
+    await writeTaskFileBuffer(storedAs, part.data)
 
     const attachment = await prisma.taskAttachment.create({
       data: {

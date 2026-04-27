@@ -279,13 +279,18 @@ model TaskComment {
   id        String   @id @default(cuid())
   taskId    String
   userId    String
+  parentId  String?
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+  parent   TaskComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies  TaskComment[] @relation("CommentReplies")
+  attachments TaskAttachment[]
 
+  @@index([parentId])
   @@map("task_comments")
 }
 
@@ -323,14 +328,17 @@ model TaskAttachment {
   id        String   @id @default(cuid())
   taskId    String
   userId    String
+  commentId String?
   filename  String
   storedAs  String
   mimeType  String
   size      Int
   createdAt DateTime @default(now())
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id])
+  comment TaskComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
+  @@index([commentId])
   @@map("task_attachments")
 }
