@@ -6,7 +6,7 @@ export default defineComponent({
     const route = useRoute()
     const id = route.params.id as string
 
-    const { data, pending } = useFetch(`/api/warehouses/${id}`)
+    const { data, pending, refresh: refreshWarehouse } = useFetch(`/api/warehouses/${id}`)
     const warehouse = computed(() => (data.value as any)?.warehouse)
 
     useHead({
@@ -16,7 +16,7 @@ export default defineComponent({
     const tab = ref('stock')
     const directionFilter = ref<'in' | 'out' | null>(null)
 
-    const { data: movData, pending: movPending } = useFetch(
+    const { data: movData, pending: movPending, refresh: refreshMovements } = useFetch(
       `/api/warehouses/${id}/movements`,
       { query: computed(() => directionFilter.value ? { direction: directionFilter.value } : {}) },
     )
@@ -35,6 +35,7 @@ export default defineComponent({
       { title: 'Артикул', key: 'product.sku' },
       { title: 'Кількість', key: 'quantity', align: 'end' as const },
       { title: 'Одиниця', key: 'product.unit', align: 'end' as const },
+      { title: '', key: 'actions', sortable: false, align: 'end' as const, width: 64 },
     ]
 
     const movHeaders = [
@@ -58,16 +59,42 @@ export default defineComponent({
       { title: 'Відправлення', value: 'out' },
     ]
 
+    const transferOpen = ref(false)
+    const transferKey = ref(0)
+    const transferPrefill = ref<{ productId?: string; qty?: number } | null>(null)
+
+    function openTransfer(params?: { productId: string; qty: number }) {
+      transferPrefill.value = params ? { productId: params.productId, qty: params.qty } : null
+      transferKey.value += 1
+      transferOpen.value = true
+    }
+
+    async function onTransferSuccess(_movementId: string) {
+      transferOpen.value = false
+      await Promise.all([refreshWarehouse(), refreshMovements()])
+      tab.value = 'movements'
+    }
+
     return () => (
       <div>
-        <div class="d-flex align-center mb-4">
+        <div class="d-flex align-center mb-4 flex-wrap ga-2">
           <v-btn icon="mdi-arrow-left" variant="text" to="/warehouses" class="mr-2" />
           <div class="text-h5 font-weight-bold">{warehouse.value?.name ?? '...'}</div>
           <v-spacer />
           {warehouse.value && (
-            <v-chip color={warehouse.value.isActive ? 'success' : 'default'} variant="tonal">
-              {warehouse.value.isActive ? 'Активний' : 'Неактивний'}
-            </v-chip>
+            <>
+              <v-btn
+                color="primary"
+                variant="flat"
+                prepend-icon="mdi-swap-horizontal"
+                onClick={() => openTransfer()}
+              >
+                Нове переміщення
+              </v-btn>
+              <v-chip color={warehouse.value.isActive ? 'success' : 'default'} variant="tonal">
+                {warehouse.value.isActive ? 'Активний' : 'Неактивний'}
+              </v-chip>
+            </>
           )}
         </div>
 
@@ -104,6 +131,26 @@ export default defineComponent({
                     {Number(item.quantity).toLocaleString('uk-UA')}
                   </span>
                 ),
+                'item.actions': ({ item }: any) => (
+                  <div class="d-flex justify-end">
+                    <v-tooltip text="Перемістити цей товар" location="start">
+                      {{
+                        activator: ({ props }: any) => (
+                          <v-btn
+                            {...props}
+                            icon="mdi-swap-horizontal"
+                            variant="text"
+                            size="small"
+                            color="primary"
+                            onClick={() =>
+                              openTransfer({ productId: item.productId, qty: Number(item.quantity) })
+                            }
+                          />
+                        ),
+                      }}
+                    </v-tooltip>
+                  </div>
+                ),
               }}
             </v-data-table>
           </v-card>
@@ -111,7 +158,7 @@ export default defineComponent({
 
         {tab.value === 'movements' && (
           <v-card>
-            <v-card-text class="pb-0">
+            <v-card-text class="pb-0 d-flex flex-wrap align-center ga-2">
               <v-btn-toggle
                 v-model={directionFilter.value}
                 rounded="lg"
@@ -124,6 +171,18 @@ export default defineComponent({
                   </v-btn>
                 ))}
               </v-btn-toggle>
+              <v-spacer />
+              {warehouse.value && (
+                <v-btn
+                  color="primary"
+                  variant="flat"
+                  prepend-icon="mdi-plus"
+                  class="mb-2"
+                  onClick={() => openTransfer()}
+                >
+                  Створити переміщення
+                </v-btn>
+              )}
             </v-card-text>
 
             <v-data-table
@@ -223,6 +282,35 @@ export default defineComponent({
             </v-data-table>
           </v-card>
         )}
+
+        <v-dialog
+          modelValue={transferOpen.value}
+          onUpdate:modelValue={(v) => (transferOpen.value = v)}
+          max-width={960}
+          scrollable
+        >
+          {transferOpen.value && (
+            <v-card>
+              <v-card-title class="d-flex align-center">
+                Нове переміщення
+                <v-spacer />
+                <v-btn icon="mdi-close" variant="text" onClick={() => (transferOpen.value = false)} />
+              </v-card-title>
+              <v-card-text class="pt-2">
+                <MovementEditor
+                  key={transferKey.value}
+                  layout="dialog"
+                  fixedFromWarehouseId={id}
+                  lockFromWarehouse
+                  initialProductId={transferPrefill.value?.productId ?? ''}
+                  initialQty={transferPrefill.value?.qty}
+                  onSuccess={onTransferSuccess}
+                  onCancel={() => (transferOpen.value = false)}
+                />
+              </v-card-text>
+            </v-card>
+          )}
+        </v-dialog>
       </div>
     )
   },
