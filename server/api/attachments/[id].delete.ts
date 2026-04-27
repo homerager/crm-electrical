@@ -10,7 +10,15 @@ export default defineEventHandler(async (event) => {
   const attachment = await prisma.taskAttachment.findUnique({ where: { id } })
   if (!attachment) throw createError({ statusCode: 404, statusMessage: 'Файл не знайдено' })
 
-  if (attachment.userId !== auth.userId && auth.role !== 'ADMIN') {
+  const isAdmin = auth.role === 'ADMIN'
+  if (isAdmin || attachment.userId === auth.userId) {
+    // ok
+  } else if (attachment.commentId) {
+    const c = await prisma.taskComment.findUnique({ where: { id: attachment.commentId } })
+    if (!c || c.userId !== auth.userId) {
+      throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
+    }
+  } else {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 

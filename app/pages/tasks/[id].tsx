@@ -225,6 +225,8 @@ export default defineComponent({
 
     const canDeleteAttachment = (att: any) =>
       att.userId === user.value?.id || user.value?.role === 'ADMIN'
+    const canDeleteCommentAttachment = (att: any, comment: { userId: string }) =>
+      canDeleteAttachment(att) || comment.userId === user.value?.id
 
     // Comments (HTML + reply / edit; файли в коменті — через pre-upload, потім лінк з POST/PUT)
     const commentClient = ref(false)
@@ -967,7 +969,28 @@ export default defineComponent({
                                         {att.filename}
                                       </a>
                                     </div>
-                                    <div class="text-caption text-disabled">{formatSize(att.size)}</div>
+                                    <div class="d-flex align-center mt-1">
+                                      <span class="text-caption text-disabled" style="flex: 1">
+                                        {formatSize(att.size)}
+                                      </span>
+                                      <v-btn
+                                        icon="mdi-download"
+                                        size="x-small"
+                                        variant="text"
+                                        href={attachmentFileUrl(att.id)}
+                                        download={att.filename}
+                                        onClick={(e: Event) => e.stopPropagation()}
+                                      />
+                                      {canDeleteCommentAttachment(att, c) && (
+                                        <v-btn
+                                          icon="mdi-delete"
+                                          size="x-small"
+                                          variant="text"
+                                          color="error"
+                                          onClick={() => deleteAttachment(att.id)}
+                                        />
+                                      )}
+                                    </div>
                                   </div>
                                 </v-card>
                               ))}
