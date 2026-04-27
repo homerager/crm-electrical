@@ -42,6 +42,7 @@ export default defineComponent({
     const roleOptions = [
       { title: 'Адміністратор', value: 'ADMIN' },
       { title: 'Комірник', value: 'STOREKEEPER' },
+      { title: 'Користувач', value: 'USER' },
     ]
 
     function openEdit(item: any) {
@@ -213,16 +214,23 @@ export default defineComponent({
                     </v-tooltip>
                   )
               ),
-              'item.role': ({ item }: any) => (
-                <v-chip
-                  size="small"
-                  color={item.role === 'ADMIN' ? 'primary' : 'secondary'}
-                  variant="tonal"
-                  prepend-icon={item.role === 'ADMIN' ? 'mdi-shield-account' : 'mdi-account-hard-hat'}
-                >
-                  {item.role === 'ADMIN' ? 'Адміністратор' : 'Комірник'}
-                </v-chip>
-              ),
+              'item.role': ({ item }: any) => {
+                const r = item.role as string
+                const isAdminR = r === 'ADMIN'
+                const isUserR = r === 'USER'
+                const label = isAdminR ? 'Адміністратор' : isUserR ? 'Користувач' : 'Комірник'
+                const icon = isAdminR ? 'mdi-shield-account' : isUserR ? 'mdi-account' : 'mdi-account-hard-hat'
+                return (
+                  <v-chip
+                    size="small"
+                    color={isAdminR ? 'primary' : isUserR ? 'teal' : 'secondary'}
+                    variant="tonal"
+                    prepend-icon={icon}
+                  >
+                    {label}
+                  </v-chip>
+                )
+              },
               'item.isActive': ({ item }: any) => (
                 <v-chip size="small" color={item.isActive ? 'success' : 'error'} variant="tonal">
                   {item.isActive ? 'Активний' : 'Деактивований'}

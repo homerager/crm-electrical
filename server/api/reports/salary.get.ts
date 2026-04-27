@@ -1,6 +1,9 @@
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
+  if (auth.role === 'USER') {
+    throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
+  }
 
   const query = getQuery(event)
   const from = query.from ? new Date(query.from as string) : undefined

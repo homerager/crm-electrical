@@ -26,9 +26,11 @@ export default defineComponent({
       if (!name) return ''
       return typeof name === 'string' ? name : String(name)
     })
-    const userRoleLabel = computed(() =>
-      user.value?.role === 'ADMIN' ? 'Адміністратор' : 'Комірник',
-    )
+    const userRoleLabel = computed(() => {
+      if (user.value?.role === 'ADMIN') return 'Адміністратор'
+      if (user.value?.role === 'USER') return 'Користувач'
+      return 'Комірник'
+    })
 
     const navItems = computed(() => {
       const base = [
