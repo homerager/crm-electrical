@@ -1,3 +1,5 @@
+import ProjectGantt from '~/components/ProjectGantt/index'
+
 const STATUSES = [
   { value: 'TODO', label: 'До виконання', color: 'blue-grey', icon: 'mdi-circle-outline' },
   { value: 'IN_PROGRESS', label: 'В роботі', color: 'blue', icon: 'mdi-progress-clock' },
@@ -27,7 +29,7 @@ export default defineComponent({
 
     const { isAdmin } = useAuth()
 
-    const viewMode = ref<'kanban' | 'list'>('kanban')
+    const viewMode = ref<'kanban' | 'list' | 'gantt'>('kanban')
     const filterStatus = ref('')
     const filterPriority = ref('')
     const filterAssignee = ref('')
@@ -240,12 +242,21 @@ export default defineComponent({
                 size="small"
                 icon="mdi-view-column"
                 onClick={() => { viewMode.value = 'kanban' }}
+                title="Канбан"
               />
               <v-btn
                 variant={viewMode.value === 'list' ? 'tonal' : 'outlined'}
                 size="small"
                 icon="mdi-format-list-bulleted"
                 onClick={() => { viewMode.value = 'list' }}
+                title="Список"
+              />
+              <v-btn
+                variant={viewMode.value === 'gantt' ? 'tonal' : 'outlined'}
+                size="small"
+                icon="mdi-chart-gantt"
+                onClick={() => { viewMode.value = 'gantt' }}
+                title="Діаграма Ганта"
               />
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
@@ -282,6 +293,15 @@ export default defineComponent({
               )}
             </div>
           </v-card>
+
+          {/* Gantt */}
+          {viewMode.value === 'gantt' && (
+            <ProjectGantt
+              tasks={tasks.value}
+              loading={pending.value}
+              projectColor={project.value.color}
+            />
+          )}
 
           {/* Kanban */}
           {viewMode.value === 'kanban' && (
