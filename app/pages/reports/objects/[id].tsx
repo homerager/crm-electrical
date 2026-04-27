@@ -15,12 +15,25 @@ export default defineComponent({
     })
     const summary = computed(() => report.value?.summary ?? [])
     const movements = computed(() => report.value?.movements ?? [])
+    const summaryTotalAmount = computed(() => Number(report.value?.summaryTotalAmount) || 0)
+    const summaryHasMissingPrice = computed(() => report.value?.summaryHasMissingPrice === true)
+
+    const uah = (n: number) =>
+      `₴${n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
     const summaryHeaders = [
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },
-      { title: 'Загальна кількість', key: 'totalQuantity', align: 'end' as const, width: 180 },
+      { title: 'Загальна кількість', key: 'totalQuantity', align: 'end' as const, width: 160 },
       { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 100 },
+      {
+        title: 'Сер. ціна, ₴',
+        key: 'averageUnitPrice',
+        align: 'end' as const,
+        width: 120,
+        sortable: false,
+      },
+      { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 130, sortable: false },
     ]
 
     const movementHeaders = [
@@ -78,7 +91,21 @@ export default defineComponent({
                   {summary.value.length} позицій
                 </v-chip>
               </v-card-title>
-              <v-data-table headers={summaryHeaders} items={summary.value} hide-default-footer>
+              {summaryHasMissingPrice.value && (
+                <v-card-text class="text-body-2 text-medium-emphasis pt-0">
+                  Сума за оцінкою: для кожного відпуску береться остання ціна з накладної на той самий
+                  склад, звідки відпущено товар. Для деяких залишків ціна в накладних не знайдена — у
+                  таблиці &quot;Сер. ціна&quot; стоїть &quot;—&quot; і рядок може бути оцінений
+                  неповно.
+                </v-card-text>
+              )}
+              <v-data-table
+                class="object-report-summary"
+                headers={summaryHeaders}
+                items={summary.value}
+                hide-default-footer
+                items-per-page={-1}
+              >
                 {{
                   'item.product.sku': ({ item }: any) => (
                     <span>{item.product?.sku || '—'}</span>
@@ -86,8 +113,24 @@ export default defineComponent({
                   'item.totalQuantity': ({ item }: any) => (
                     <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
                   ),
+                  'item.averageUnitPrice': ({ item }: any) =>
+                    item.averageUnitPrice == null ? (
+                      <span class="text-medium-emphasis">—</span>
+                    ) : (
+                      <span>{uah(item.averageUnitPrice)}</span>
+                    ),
+                  'item.totalAmount': ({ item }: any) => (
+                    <strong>{uah(Number(item.totalAmount) || 0)}</strong>
+                  ),
                 }}
               </v-data-table>
+              <v-divider />
+              <v-card-text class="d-flex justify-end py-3">
+                <div class="text-h6">
+                  <span class="text-medium-emphasis text-body-1">Всього за матеріалами: </span>
+                  <span class="font-weight-bold">{uah(summaryTotalAmount.value)}</span>
+                </div>
+              </v-card-text>
             </v-card>
 
             <v-card>

@@ -1,4 +1,3 @@
-
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
 
@@ -15,26 +14,69 @@ export default defineEventHandler(async (event) => {
     orderBy: { date: 'desc' },
   })
 
-  const productMap = new Map<string, { product: any; totalQuantity: number; unit: string }>()
+  const priceCache = new Map<string, number | null>()
+
+  async function latestInvoiceUnitPrice(
+    productId: string,
+    warehouseId: string,
+  ): Promise<number | null> {
+    const cacheKey = `${productId}:${warehouseId}`
+    if (priceCache.has(cacheKey)) return priceCache.get(cacheKey) ?? null
+    const line = await prisma.invoiceItem.findFirst({
+      where: { productId, invoice: { warehouseId } },
+      orderBy: { invoice: { date: 'desc' } },
+      select: { pricePerUnit: true },
+    })
+    const p = line != null ? Number(line.pricePerUnit) : null
+    priceCache.set(cacheKey, p)
+    return p
+  }
+
+  const productMap = new Map<
+    string,
+    {
+      product: any
+      totalQuantity: number
+      unit: string
+      totalAmount: number
+      hasMissingPrice: boolean
+    }
+  >()
 
   for (const movement of movements) {
+    const warehouseId = movement.fromWarehouseId
     for (const item of movement.items) {
       const key = item.productId
+      const qty = Number(item.quantity)
+      const price = await latestInvoiceUnitPrice(item.productId, warehouseId)
+      const lineAmount = price != null ? qty * price : 0
+
       if (productMap.has(key)) {
-        productMap.get(key)!.totalQuantity += Number(item.quantity)
+        const row = productMap.get(key)!
+        row.totalQuantity += qty
+        row.totalAmount += lineAmount
+        if (price == null) row.hasMissingPrice = true
       } else {
         productMap.set(key, {
           product: item.product,
-          totalQuantity: Number(item.quantity),
+          totalQuantity: qty,
           unit: item.product.unit,
+          totalAmount: lineAmount,
+          hasMissingPrice: price == null,
         })
       }
     }
   }
 
-  const summary = Array.from(productMap.values()).sort((a, b) =>
-    a.product.name.localeCompare(b.product.name),
-  )
+  const summary = Array.from(productMap.values())
+    .map((row) => ({
+      ...row,
+      averageUnitPrice: row.hasMissingPrice ? null : row.totalQuantity > 0 ? row.totalAmount / row.totalQuantity : 0,
+    }))
+    .sort((a, b) => a.product.name.localeCompare(b.product.name))
 
-  return { object, movements, summary }
+  const summaryTotalAmount = summary.reduce((s, r) => s + r.totalAmount, 0)
+  const summaryHasMissingPrice = summary.some((r) => r.hasMissingPrice)
+
+  return { object, movements, summary, summaryTotalAmount, summaryHasMissingPrice }
 })

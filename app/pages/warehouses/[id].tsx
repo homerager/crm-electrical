@@ -1,3 +1,5 @@
+import MovementEditor from '../../components/MovementEditor'
+
 export default defineComponent({
   name: 'WarehouseDetailPage',
   setup() {
