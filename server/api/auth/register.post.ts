@@ -9,10 +9,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, email, password, role } = body
+  const { name, email, password, role, phone, jobTitleId } = body
 
   if (!name || !email || !password) {
     throw createError({ statusCode: 400, statusMessage: 'Всі поля обовʼязкові' })
+  }
+
+  let resolvedJobTitleId: string | null = null
+  if (jobTitleId) {
+    const jt = await prisma.jobTitle.findUnique({ where: { id: jobTitleId } })
+    if (!jt) {
+      throw createError({ statusCode: 400, statusMessage: 'Невідома посада' })
+    }
+    resolvedJobTitleId = jt.id
   }
 
   const existing = await prisma.user.findUnique({ where: { email } })
@@ -28,8 +37,18 @@ export default defineEventHandler(async (event) => {
       email,
       passwordHash,
       role: (role as Role) || 'STOREKEEPER',
+      phone: typeof phone === 'string' ? phone.trim() || null : null,
+      jobTitleId: resolvedJobTitleId,
     },
-    select: { id: true, name: true, email: true, role: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      phone: true,
+      jobTitleId: true,
+      jobTitle: { select: { id: true, name: true } },
+    },
   })
 
   return { user }

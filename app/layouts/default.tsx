@@ -32,6 +32,12 @@ export default defineComponent({
       return 'Комірник'
     })
 
+    const userDrawerSubtitle = computed(() => {
+      const role = userRoleLabel.value
+      const jt = user.value?.jobTitle?.name
+      return jt ? `${role} · ${jt}` : role
+    })
+
     const navItems = computed(() => {
       const base = [
         { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
@@ -50,6 +56,7 @@ export default defineComponent({
         base.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
         base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
         base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
+        base.push({ title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' })
       }
       return base
     })
@@ -103,7 +110,7 @@ export default defineComponent({
                     <v-list-item
                       prepend-icon="mdi-account-circle"
                       title={userName.value}
-                      subtitle={userRoleLabel.value}
+                      subtitle={userDrawerSubtitle.value}
                     />
                   )}
                   <v-list-item
@@ -180,6 +187,7 @@ function getPageTitle(path: string): string {
     '/reports': 'Репорти',
     '/tasks': 'Завдання',
     '/users': 'Користувачі',
+    '/job-titles': 'Посади',
   }
   for (const [key, val] of Object.entries(titles)) {
     if (path === key || (key !== '/' && path.startsWith(key))) return val

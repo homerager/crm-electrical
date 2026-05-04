@@ -4,6 +4,7 @@ export interface AuthUser {
   email: string
   role: 'ADMIN' | 'STOREKEEPER' | 'USER'
   isActive: boolean
+  jobTitle?: { id: string; name: string } | null
 }
 
 export function useAuth() {

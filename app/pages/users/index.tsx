@@ -14,14 +14,30 @@ export default defineComponent({
     const { data, refresh, pending } = useFetch('/api/users')
     const users = computed(() => (data.value as any)?.users ?? [])
 
+    const { data: jobTitlesData, refresh: refreshJobTitles } = useFetch('/api/job-titles')
+    const jobTitleItems = computed(() => (jobTitlesData.value as any)?.jobTitles ?? [])
+
     const createDialog = ref(false)
     const editDialog = ref(false)
     const saving = ref(false)
     const error = ref('')
     const editItem = ref<any>(null)
 
-    const createForm = reactive({ name: '', email: '', password: '', role: 'STOREKEEPER', phone: '' })
-    const editForm = reactive({ name: '', role: 'STOREKEEPER', isActive: true, phone: '' })
+    const createForm = reactive({
+      name: '',
+      email: '',
+      password: '',
+      role: 'STOREKEEPER',
+      phone: '',
+      jobTitleId: null as string | null,
+    })
+    const editForm = reactive({
+      name: '',
+      role: 'STOREKEEPER',
+      isActive: true,
+      phone: '',
+      jobTitleId: null as string | null,
+    })
 
     const webhookLoading = ref(false)
     const webhookStatus = ref<{ ok: boolean; msg: string } | null>(null)
@@ -52,6 +68,7 @@ export default defineComponent({
         role: item.role,
         isActive: item.isActive,
         phone: item.phone ?? '',
+        jobTitleId: item.jobTitleId ?? null,
       })
       error.value = ''
       editDialog.value = true
@@ -63,19 +80,24 @@ export default defineComponent({
       try {
         await $fetch('/api/auth/register', {
           method: 'POST',
-          body: createForm,
+          body: {
+            name: createForm.name,
+            email: createForm.email,
+            password: createForm.password,
+            role: createForm.role,
+            phone: createForm.phone,
+            jobTitleId: createForm.jobTitleId || undefined,
+          },
         })
-        // Save phone separately if provided
-        if (createForm.phone) {
-          const created = await $fetch<any>('/api/users').then((r: any) =>
-            r.users.find((u: any) => u.email === createForm.email)
-          )
-          if (created) {
-            await $fetch(`/api/users/${created.id}`, { method: 'PUT', body: { phone: createForm.phone } })
-          }
-        }
         createDialog.value = false
-        Object.assign(createForm, { name: '', email: '', password: '', role: 'STOREKEEPER', phone: '' })
+        Object.assign(createForm, {
+          name: '',
+          email: '',
+          password: '',
+          role: 'STOREKEEPER',
+          phone: '',
+          jobTitleId: null,
+        })
         await refresh()
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка створення'
@@ -91,7 +113,13 @@ export default defineComponent({
       try {
         await $fetch(`/api/users/${editItem.value.id}`, {
           method: 'PUT',
-          body: editForm,
+          body: {
+            name: editForm.name,
+            role: editForm.role,
+            isActive: editForm.isActive,
+            phone: editForm.phone,
+            jobTitleId: editForm.jobTitleId || null,
+          },
         })
         editDialog.value = false
         await refresh()
@@ -116,6 +144,7 @@ export default defineComponent({
       { title: 'Телефон', key: 'phone', width: 160 },
       { title: 'Telegram', key: 'telegram', width: 130 },
       { title: 'Роль', key: 'role', width: 160 },
+      { title: 'Посада', key: 'jobTitle', width: 180 },
       { title: 'Статус', key: 'isActive', width: 120 },
       { title: 'Реєстрація', key: 'createdAt', width: 140 },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
@@ -126,7 +155,15 @@ export default defineComponent({
         <div class="d-flex align-center mb-4">
           <div class="text-h5 font-weight-bold">Користувачі</div>
           <v-spacer />
-          <v-btn color="primary" prepend-icon="mdi-account-plus" onClick={() => { error.value = ''; createDialog.value = true }}>
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-account-plus"
+            onClick={() => {
+              error.value = ''
+              refreshJobTitles()
+              createDialog.value = true
+            }}
+          >
             Додати користувача
           </v-btn>
         </div>
@@ -214,6 +251,11 @@ export default defineComponent({
                     </v-tooltip>
                   )
               ),
+              'item.jobTitle': ({ item }: any) => (
+                <span class={item.jobTitle?.name ? '' : 'text-disabled'}>
+                  {item.jobTitle?.name ?? '—'}
+                </span>
+              ),
               'item.role': ({ item }: any) => {
                 const r = item.role as string
                 const isAdminR = r === 'ADMIN'
@@ -241,7 +283,16 @@ export default defineComponent({
               ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
-                  <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" onClick={() => openEdit(item)} />
+                  <v-btn
+                    icon="mdi-pencil"
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    onClick={() => {
+                      refreshJobTitles()
+                      openEdit(item)
+                    }}
+                  />
                   {item.id !== currentUser.value?.id && (
                     <v-btn
                       icon={item.isActive ? 'mdi-account-off' : 'mdi-account-check'}
@@ -283,6 +334,19 @@ export default defineComponent({
                   style="flex:1"
                 />
               </div>
+              <v-autocomplete
+                v-model={createForm.jobTitleId}
+                label="Посада"
+                items={jobTitleItems.value}
+                item-title="name"
+                item-value="id"
+                clearable
+                variant="outlined"
+                density="compact"
+                class="mb-2"
+                hide-details="auto"
+                no-data-text="Немає посад — створіть у розділі «Посади»"
+              />
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />
@@ -324,6 +388,19 @@ export default defineComponent({
                   style="flex:1"
                 />
               </div>
+              <v-autocomplete
+                v-model={editForm.jobTitleId}
+                label="Посада"
+                items={jobTitleItems.value}
+                item-title="name"
+                item-value="id"
+                clearable
+                variant="outlined"
+                density="compact"
+                class="mb-4"
+                hide-details="auto"
+                no-data-text="Немає посад — створіть у розділі «Посади»"
+              />
               {editItem.value?.telegramChatId && (
                 <v-chip color="success" variant="tonal" prepend-icon="mdi-send-check" class="mb-4">
                   Telegram підключено

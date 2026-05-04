@@ -49,17 +49,31 @@ enum TaskPriority {
   URGENT
 }
 
+model JobTitle {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("job_titles")
+}
+
 model User {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
-  email          String   @unique
+  email          String    @unique
   passwordHash   String
-  role           Role     @default(STOREKEEPER)
-  isActive       Boolean  @default(true)
+  role           Role      @default(STOREKEEPER)
+  isActive       Boolean   @default(true)
   phone          String?
   telegramChatId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  jobTitleId     String?
+  jobTitle       JobTitle? @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   invoices      Invoice[]
   movements     Movement[]

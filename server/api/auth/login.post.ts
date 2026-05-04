@@ -10,7 +10,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Email та пароль обовʼязкові' })
   }
 
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+      passwordHash: true,
+      jobTitle: { select: { id: true, name: true } },
+    },
+  })
   if (!user || !user.isActive) {
     throw createError({ statusCode: 401, statusMessage: 'Невірні облікові дані' })
   }
@@ -40,6 +51,8 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      isActive: user.isActive,
+      jobTitle: user.jobTitle,
     },
   }
 })
