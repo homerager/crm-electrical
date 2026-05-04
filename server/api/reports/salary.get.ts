@@ -1,7 +1,9 @@
+import { isStrictAdmin } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (auth.role === 'USER') {
+  if (!isStrictAdmin(auth.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 
@@ -23,7 +25,7 @@ export default defineEventHandler(async (event) => {
   const timeLogs = await prisma.timeLog.findMany({
     where,
     include: {
-      user: { select: { id: true, name: true } },
+      user: { select: { id: true, name: true, hourlyRate: true } },
       task: {
         select: {
           id: true,
@@ -41,22 +43,36 @@ export default defineEventHandler(async (event) => {
     userId: string
     userName: string
     totalHours: number
+    hourlyRate: number | null
+    totalAmount: number | null
     logs: typeof timeLogs
   }>()
 
   for (const log of timeLogs) {
     const uid = log.userId
+    const rate = log.user.hourlyRate != null ? Number(log.user.hourlyRate) : null
     if (!userMap.has(uid)) {
       userMap.set(uid, {
         userId: uid,
         userName: log.user.name,
         totalHours: 0,
+        hourlyRate: rate,
+        totalAmount: null,
         logs: [],
       })
     }
     const entry = userMap.get(uid)!
+    if (entry.hourlyRate == null && rate != null) {
+      entry.hourlyRate = rate
+    }
     entry.totalHours += log.hours
     entry.logs.push(log)
+  }
+
+  for (const entry of userMap.values()) {
+    if (entry.hourlyRate != null) {
+      entry.totalAmount = Math.round(entry.totalHours * entry.hourlyRate * 100) / 100
+    }
   }
 
   const users = Array.from(userMap.values()).sort((a, b) => b.totalHours - a.totalHours)

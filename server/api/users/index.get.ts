@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
       createdAt: true,
       jobTitleId: true,
       jobTitle: { select: { id: true, name: true } },
+      hourlyRate: true,
     },
     orderBy: { createdAt: 'desc' },
   })

@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, email, password, role, phone, jobTitleId } = body
+  const { name, email, password, role, phone, jobTitleId, hourlyRate } = body
 
   if (!name || !email || !password) {
     throw createError({ statusCode: 400, statusMessage: 'Всі поля обовʼязкові' })
@@ -30,6 +30,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'Користувач з таким email вже існує' })
   }
 
+  let createHourlyRate: number | null = null
+  if (hourlyRate !== undefined && hourlyRate !== null && hourlyRate !== '') {
+    const n = typeof hourlyRate === 'number' ? hourlyRate : Number(String(hourlyRate).replace(',', '.'))
+    if (!Number.isFinite(n) || n < 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Некоректна ставка (грн/год)' })
+    }
+    createHourlyRate = n
+  }
+
   const passwordHash = await bcrypt.hash(password, 12)
 
   const user = await prisma.user.create({
@@ -40,6 +49,7 @@ export default defineEventHandler(async (event) => {
       role: (role as Role) || 'STOREKEEPER',
       phone: typeof phone === 'string' ? phone.trim() || null : null,
       jobTitleId: resolvedJobTitleId,
+      ...(createHourlyRate !== null && { hourlyRate: createHourlyRate }),
     },
     select: {
       id: true,
@@ -49,6 +59,7 @@ export default defineEventHandler(async (event) => {
       phone: true,
       jobTitleId: true,
       jobTitle: { select: { id: true, name: true } },
+      hourlyRate: true,
     },
   })
 

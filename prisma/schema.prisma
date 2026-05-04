@@ -74,6 +74,8 @@ model User {
   telegramChatId String?
   jobTitleId     String?
   jobTitle       JobTitle? @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
+  /// Погодинна ставка (грн/год) для зарплатного звіту
+  hourlyRate     Decimal?  @db.Decimal(12, 2)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

@@ -30,6 +30,7 @@ export default defineComponent({
       role: 'STOREKEEPER',
       phone: '',
       jobTitleId: null as string | null,
+      hourlyRate: '',
     })
     const editForm = reactive({
       name: '',
@@ -37,6 +38,7 @@ export default defineComponent({
       isActive: true,
       phone: '',
       jobTitleId: null as string | null,
+      hourlyRate: '',
     })
 
     const webhookLoading = ref(false)
@@ -71,6 +73,7 @@ export default defineComponent({
         isActive: item.isActive,
         phone: item.phone ?? '',
         jobTitleId: item.jobTitleId ?? null,
+        hourlyRate: item.hourlyRate != null && item.hourlyRate !== '' ? String(item.hourlyRate) : '',
       })
       error.value = ''
       editDialog.value = true
@@ -89,6 +92,7 @@ export default defineComponent({
             role: createForm.role,
             phone: createForm.phone,
             jobTitleId: createForm.jobTitleId || undefined,
+            ...(createForm.hourlyRate.trim() !== '' && { hourlyRate: createForm.hourlyRate.trim() }),
           },
         })
         createDialog.value = false
@@ -99,6 +103,7 @@ export default defineComponent({
           role: 'STOREKEEPER',
           phone: '',
           jobTitleId: null,
+          hourlyRate: '',
         })
         await refresh()
       } catch (e: any) {
@@ -121,6 +126,7 @@ export default defineComponent({
             isActive: editForm.isActive,
             phone: editForm.phone,
             jobTitleId: editForm.jobTitleId || null,
+            hourlyRate: editForm.hourlyRate.trim() === '' ? null : editForm.hourlyRate.trim(),
           },
         })
         editDialog.value = false
@@ -147,6 +153,7 @@ export default defineComponent({
       { title: 'Telegram', key: 'telegram', width: 130 },
       { title: 'Роль', key: 'role', width: 160 },
       { title: 'Посада', key: 'jobTitle', width: 180 },
+      { title: 'Ставка', key: 'hourlyRate', width: 110 },
       { title: 'Статус', key: 'isActive', width: 120 },
       { title: 'Реєстрація', key: 'createdAt', width: 140 },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
@@ -256,6 +263,13 @@ export default defineComponent({
               'item.jobTitle': ({ item }: any) => (
                 <span class={item.jobTitle?.name ? '' : 'text-disabled'}>
                   {item.jobTitle?.name ?? '—'}
+                </span>
+              ),
+              'item.hourlyRate': ({ item }: any) => (
+                <span class={item.hourlyRate != null && item.hourlyRate !== '' ? '' : 'text-disabled'}>
+                  {item.hourlyRate != null && item.hourlyRate !== ''
+                    ? `${Number(item.hourlyRate).toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₴/год`
+                    : '—'}
                 </span>
               ),
               'item.role': ({ item }: any) => {
@@ -369,9 +383,20 @@ export default defineComponent({
                 clearable
                 variant="outlined"
                 density="compact"
-                class="mb-2"
+                class="mb-4"
                 hide-details="auto"
                 no-data-text="Немає посад — створіть у розділі «Посади»"
+              />
+              <v-text-field
+                v-model={createForm.hourlyRate}
+                label="Ставка (грн/год)"
+                type="text"
+                inputmode="decimal"
+                placeholder="напр. 350"
+                prepend-inner-icon="mdi-currency-uah"
+                hint="Для зарплатного звіту за годинами"
+                persistent-hint
+                class="mb-2"
               />
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
@@ -426,6 +451,17 @@ export default defineComponent({
                 class="mb-4"
                 hide-details="auto"
                 no-data-text="Немає посад — створіть у розділі «Посади»"
+              />
+              <v-text-field
+                v-model={editForm.hourlyRate}
+                label="Ставка (грн/год)"
+                type="text"
+                inputmode="decimal"
+                placeholder="напр. 350"
+                prepend-inner-icon="mdi-currency-uah"
+                hint="Залиште порожнім, щоб скинути"
+                persistent-hint
+                class="mb-4"
               />
               {editItem.value?.telegramChatId && (
                 <v-chip color="success" variant="tonal" prepend-icon="mdi-send-check" class="mb-4">

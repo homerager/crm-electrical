@@ -9,7 +9,20 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { role, isActive, name, phone, jobTitleId } = body
+  const { role, isActive, name, phone, jobTitleId, hourlyRate } = body
+
+  let resolvedHourlyRate: number | null | undefined
+  if (hourlyRate !== undefined) {
+    if (hourlyRate === null || hourlyRate === '') {
+      resolvedHourlyRate = null
+    } else {
+      const n = typeof hourlyRate === 'number' ? hourlyRate : Number(String(hourlyRate).replace(',', '.'))
+      if (!Number.isFinite(n) || n < 0) {
+        throw createError({ statusCode: 400, statusMessage: 'Некоректна ставка (грн/год)' })
+      }
+      resolvedHourlyRate = n
+    }
+  }
 
   let resolvedJobTitleId: string | null | undefined
   if (jobTitleId !== undefined) {
@@ -32,6 +45,7 @@ export default defineEventHandler(async (event) => {
       ...(name !== undefined && { name }),
       ...(phone !== undefined && { phone: phone?.trim() || null }),
       ...(resolvedJobTitleId !== undefined && { jobTitleId: resolvedJobTitleId }),
+      ...(resolvedHourlyRate !== undefined && { hourlyRate: resolvedHourlyRate }),
     },
     select: {
       id: true,
@@ -43,6 +57,7 @@ export default defineEventHandler(async (event) => {
       telegramChatId: true,
       jobTitleId: true,
       jobTitle: { select: { id: true, name: true } },
+      hourlyRate: true,
     },
   })
 

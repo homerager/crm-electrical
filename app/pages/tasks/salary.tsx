@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'SalaryReportPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'admin'] })
+    definePageMeta({ middleware: ['auth', 'strict-admin'] })
     useHead({ title: 'Зарплатний звіт' })
 
     // Default: current month
@@ -34,6 +34,10 @@ export default defineComponent({
     const grandTotal = computed(() =>
       userRows.value.reduce((s: number, u: any) => s + u.totalHours, 0),
     )
+    const grandSalary = computed(() =>
+      userRows.value.reduce((s: number, u: any) => s + (typeof u.totalAmount === 'number' ? u.totalAmount : 0), 0),
+    )
+    const hasSalaryTotals = computed(() => userRows.value.some((u: any) => u.hourlyRate != null))
 
     function formatDate(d: string) {
       if (!d) return '—'
@@ -58,10 +62,12 @@ export default defineComponent({
 
     function exportCSV() {
       const rows: string[][] = [
-        ['Виконавець', 'Дата', 'Завдання', 'Проєкт', 'Обʼєкт', 'Опис', 'Годин'],
+        ['Виконавець', 'Дата', 'Завдання', 'Проєкт', 'Обʼєкт', 'Опис', 'Годин', 'Ставка грн/год', 'Сума грн'],
       ]
       for (const u of userRows.value) {
+        const rateNum = u.hourlyRate != null ? Number(u.hourlyRate) : null
         for (const log of u.logs) {
+          const lineSum = rateNum != null ? (log.hours * rateNum).toFixed(2) : ''
           rows.push([
             u.userName,
             formatDate(log.date),
@@ -70,9 +76,21 @@ export default defineComponent({
             log.task?.object?.name ?? '—',
             log.description ?? '—',
             String(log.hours),
+            rateNum != null ? String(rateNum) : '',
+            lineSum,
           ])
         }
-        rows.push([u.userName, '', '', '', '', 'РАЗОМ:', String(Number(u.totalHours).toFixed(2))])
+        rows.push([
+          u.userName,
+          '',
+          '',
+          '',
+          '',
+          'РАЗОМ:',
+          String(Number(u.totalHours).toFixed(2)),
+          u.hourlyRate != null ? String(Number(u.hourlyRate)) : '',
+          u.totalAmount != null ? String(u.totalAmount) : '',
+        ])
         rows.push([])
       }
 
@@ -167,6 +185,16 @@ export default defineComponent({
                 <div class="text-body-2 mt-1">Записів часу</div>
               </v-card>
             </v-col>
+            {hasSalaryTotals.value && (
+              <v-col cols={12} sm={4} md={3}>
+                <v-card color="teal" variant="tonal" class="pa-4 text-center">
+                  <div class="text-h4 font-weight-bold">
+                    {grandSalary.value.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₴
+                  </div>
+                  <div class="text-body-2 mt-1">Нараховано (за ставкою)</div>
+                </v-card>
+              </v-col>
+            )}
           </v-row>
         )}
 
@@ -197,9 +225,24 @@ export default defineComponent({
                 <div class="text-subtitle-1 font-weight-bold">{u.userName}</div>
                 <div class="text-caption text-medium-emphasis">{u.logs.length} записів</div>
               </div>
-              <v-chip color="primary" variant="tonal" size="large" class="font-weight-bold px-4">
-                {Number(u.totalHours).toFixed(2)} год
-              </v-chip>
+              <div class="d-flex align-center flex-wrap" style="gap:8px; justify-content:flex-end">
+                <v-chip color="primary" variant="tonal" size="large" class="font-weight-bold px-4">
+                  {Number(u.totalHours).toFixed(2)} год
+                </v-chip>
+                {u.hourlyRate != null && (
+                  <v-chip color="teal" variant="tonal" size="large" class="font-weight-bold px-4">
+                    {Number(u.totalAmount).toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₴
+                    <span class="text-caption ms-1 text-medium-emphasis">
+                      ({Number(u.hourlyRate).toLocaleString('uk-UA')} ₴/год)
+                    </span>
+                  </v-chip>
+                )}
+                {u.hourlyRate == null && (
+                  <v-chip size="small" variant="outlined" color="medium-emphasis">
+                    Ставка не задана
+                  </v-chip>
+                )}
+              </div>
               <v-icon>{expandedUser.value === u.userId ? 'mdi-chevron-up' : 'mdi-chevron-down'}</v-icon>
             </div>
 
