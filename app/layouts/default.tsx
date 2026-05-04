@@ -113,41 +113,6 @@ export default defineComponent({
                 </v-list>
               </>
             ),
-            append: () => (
-              <>
-                <v-divider />
-                <v-list density="compact" nav class="pa-2">
-                  {user.value && (
-                    <v-list-item
-                      prepend-icon="mdi-account-circle"
-                      title={userName.value}
-                      subtitle={userDrawerSubtitle.value}
-                    />
-                  )}
-                  <v-list-item
-                    prepend-icon={theme.value === 'light' ? 'mdi-weather-night' : 'mdi-weather-sunny'}
-                    title="Тема"
-                    onClick={toggleTheme}
-                    rounded="lg"
-                  />
-                  <v-list-item
-                    prepend-icon="mdi-send"
-                    title="Telegram бот"
-                    href="https://t.me/proelectric_crm_bot"
-                    target="_blank"
-                    rounded="lg"
-                    base-color="primary"
-                  />
-                  <v-list-item
-                    prepend-icon="mdi-logout"
-                    title="Вийти"
-                    onClick={logout}
-                    rounded="lg"
-                    base-color="error"
-                  />
-                </v-list>
-              </>
-            ),
           }}
         </v-navigation-drawer>
 
@@ -165,9 +130,54 @@ export default defineComponent({
             append: () => (
               <>
                 {user.value && (
-                  <v-chip class="mr-3" prepend-icon="mdi-account-circle" variant="tonal" color="primary">
-                    {userName.value}
-                  </v-chip>
+                  <v-menu location="bottom end" offset={8}>
+                    {{
+                      activator: ({ props }: { props: Record<string, unknown> }) => (
+                        <v-btn
+                          {...props}
+                          class="mr-2 text-none"
+                          prepend-icon="mdi-account-circle"
+                          variant="tonal"
+                          color="primary"
+                          rounded="lg"
+                        >
+                          {userName.value}
+                        </v-btn>
+                      ),
+                      default: () => (
+                        <v-list density="compact" nav class="py-1" min-width={240}>
+                          <v-list-item
+                            prepend-icon="mdi-account-circle"
+                            title={userName.value}
+                            subtitle={userDrawerSubtitle.value}
+                          />
+                          <v-divider class="my-1" />
+                          <v-list-item
+                            prepend-icon={theme.value === 'light' ? 'mdi-weather-night' : 'mdi-weather-sunny'}
+                            title="Тема"
+                            onClick={toggleTheme}
+                            rounded="lg"
+                          />
+                          <v-list-item
+                            prepend-icon="mdi-send"
+                            title="Telegram бот"
+                            href="https://t.me/proelectric_crm_bot"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            rounded="lg"
+                            base-color="primary"
+                          />
+                          <v-list-item
+                            prepend-icon="mdi-logout"
+                            title="Вийти"
+                            onClick={logout}
+                            rounded="lg"
+                            base-color="error"
+                          />
+                        </v-list>
+                      ),
+                    }}
+                  </v-menu>
                 )}
               </>
             ),
