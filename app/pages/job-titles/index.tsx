@@ -4,10 +4,10 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Посади' })
 
-    const { isPrivileged } = useAuth()
+    const { isAdmin } = useAuth()
     const router = useRouter()
 
-    if (!isPrivileged.value) {
+    if (!isAdmin.value) {
       router.push('/')
     }
 

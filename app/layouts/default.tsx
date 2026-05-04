@@ -63,11 +63,11 @@ export default defineComponent({
       ]
       if (isPrivileged.value) {
         base.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
-        base.push({ title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' })
       }
       if (isAdmin.value) {
         base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
         base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
+        base.push({ title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' })
       }
       return base
     })
