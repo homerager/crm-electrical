@@ -60,6 +60,7 @@ export default defineComponent({
       { title: 'Менеджер', value: 'MANAGER' },
       { title: 'Комірник', value: 'STOREKEEPER' },
       { title: 'Користувач', value: 'USER' },
+      { title: 'Працівник', value: 'EMPLOYEE' },
     ]
 
     function openEdit(item: any) {
@@ -262,24 +263,35 @@ export default defineComponent({
                 const isAdminR = r === 'ADMIN'
                 const isManagerR = r === 'MANAGER'
                 const isUserR = r === 'USER'
+                const isEmployeeR = r === 'EMPLOYEE'
                 const label = isAdminR
                   ? 'Адміністратор'
                   : isManagerR
                     ? 'Менеджер'
                     : isUserR
                       ? 'Користувач'
-                      : 'Комірник'
+                      : isEmployeeR
+                        ? 'Працівник'
+                        : 'Комірник'
                 const icon = isAdminR
                   ? 'mdi-shield-account'
                   : isManagerR
                     ? 'mdi-account-tie'
                     : isUserR
                       ? 'mdi-account'
-                      : 'mdi-account-hard-hat'
+                      : isEmployeeR
+                        ? 'mdi-badge-account-horizontal-outline'
+                        : 'mdi-account-hard-hat'
                 return (
                   <v-chip
                     size="small"
-                    color={isAdminR ? 'primary' : isManagerR ? 'deep-purple' : isUserR ? 'teal' : 'secondary'}
+                    color={
+                      isAdminR ? 'primary'
+                        : isManagerR ? 'deep-purple'
+                          : isUserR ? 'teal'
+                            : isEmployeeR ? 'blue-grey'
+                              : 'secondary'
+                    }
                     variant="tonal"
                     prepend-icon={icon}
                   >

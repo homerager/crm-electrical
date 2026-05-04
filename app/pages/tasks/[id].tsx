@@ -29,7 +29,13 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
 
     const route = useRoute()
-    const { user, isPrivileged } = useAuth()
+    const { user, isPrivileged, isEmployee } = useAuth()
+
+    const assigneesUrl = computed(() =>
+      isPrivileged.value ? '/api/users' : '/api/users/list',
+    )
+    const { data: usersData } = useFetch(assigneesUrl, { watch: [assigneesUrl] })
+    const { data: objectsData } = useFetch('/api/objects', { skip: () => isEmployee.value })
     const id = computed(() => route.params.id as string)
 
     const { data, refresh, pending } = useFetch(() => `/api/tasks/${id.value}`)
@@ -37,9 +43,11 @@ export default defineComponent({
 
     useHead(computed(() => ({ title: task.value?.title ?? 'Завдання' })))
 
-    const { data: usersData } = useFetch('/api/users')
-    const { data: objectsData } = useFetch('/api/objects')
-    const users = computed(() => (usersData.value as any)?.users ?? [])
+    const users = computed(() => {
+      const v = usersData.value as any
+      if (Array.isArray(v)) return v
+      return v?.users ?? []
+    })
     const objects = computed(() => (objectsData.value as any)?.objects ?? [])
 
     // Edit task
@@ -534,9 +542,11 @@ export default defineComponent({
                       </v-chip>
                     )}
                     <v-spacer />
-                    <v-btn size="small" color="primary" prepend-icon="mdi-plus" onClick={openSubTask}>
-                      Додати
-                    </v-btn>
+                    {!isEmployee.value && (
+                      <v-btn size="small" color="primary" prepend-icon="mdi-plus" onClick={openSubTask}>
+                        Додати
+                      </v-btn>
+                    )}
                   </v-card-title>
 
                   {(t.subTasks ?? []).length > 0 && (
@@ -1176,12 +1186,14 @@ export default defineComponent({
                     items={[{ value: '', title: 'Не призначено' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
                     style="flex:1"
                   />
-                  <v-select
-                    v-model={editForm.objectId}
-                    label="Обʼєкт"
-                    items={[{ value: '', title: 'Без обʼєкту' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
-                    style="flex:1"
-                  />
+                  {!isEmployee.value && (
+                    <v-select
+                      v-model={editForm.objectId}
+                      label="Обʼєкт"
+                      items={[{ value: '', title: 'Без обʼєкту' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
+                      style="flex:1"
+                    />
+                  )}
                 </div>
                 <div class="d-flex gap-4">
                   <v-text-field

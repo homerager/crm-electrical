@@ -5,6 +5,10 @@ export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
 
+  if (auth.role === 'EMPLOYEE') {
+    throw createError({ statusCode: 403, statusMessage: 'Працівник не може створювати завдання' })
+  }
+
   const body = await readBody(event)
   const { title, description, priority, assignedToId, objectId, parentId, projectId, dueDate, estimatedHours } = body
 

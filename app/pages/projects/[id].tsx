@@ -27,6 +27,8 @@ export default defineComponent({
     const router = useRouter()
     const projectId = computed(() => route.params.id as string)
 
+    const { isEmployee } = useAuth()
+
     const viewMode = ref<'kanban' | 'list' | 'gantt'>('kanban')
     const filterStatus = ref('')
     const filterPriority = ref('')
@@ -68,7 +70,7 @@ export default defineComponent({
       })),
     })
 
-    const { data: objectsData } = useFetch('/api/objects')
+    const { data: objectsData } = useFetch('/api/objects', { skip: () => isEmployee.value })
 
     const tasks = computed(() => (tasksData.value as any)?.tasks ?? [])
     const projectMembers = computed(() => project.value?.members ?? [])
@@ -257,9 +259,11 @@ export default defineComponent({
                 title="Діаграма Ганта"
               />
             </div>
-            <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
-              Нове завдання
-            </v-btn>
+            {!isEmployee.value && (
+              <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
+                Нове завдання
+              </v-btn>
+            )}
           </div>
 
           {/* Filters */}
@@ -460,7 +464,8 @@ export default defineComponent({
                     variant="outlined" density="compact" style="flex:1"
                   />
                   <v-select
-                    v-model={form.assignedToId} label="Виконавець"
+                    v-model={form.assignedToId}
+                    label="Виконавець"
                     items={[{ value: '', title: 'Не призначено' }, ...memberUsers.value.map((u: any) => ({ value: u.id, title: u.name }))]}
                     variant="outlined" density="compact" style="flex:1"
                   />
@@ -470,7 +475,8 @@ export default defineComponent({
                   <v-text-field v-model={form.estimatedHours} label="Плановий час (год)" type="number" variant="outlined" density="compact" style="flex:1" />
                 </div>
                 <v-select
-                  v-model={form.objectId} label="Обʼєкт"
+                  v-model={form.objectId}
+                  label="Обʼєкт"
                   items={[{ value: '', title: 'Не вказано' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
                   variant="outlined" density="compact"
                 />

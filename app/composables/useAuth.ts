@@ -2,7 +2,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'STOREKEEPER' | 'USER'
+  role: 'ADMIN' | 'MANAGER' | 'STOREKEEPER' | 'USER' | 'EMPLOYEE'
   isActive: boolean
   jobTitle?: { id: string; name: string } | null
 }
@@ -18,6 +18,7 @@ export function useAuth() {
   const isPrivileged = computed(
     () => user.value?.role === 'ADMIN' || user.value?.role === 'MANAGER',
   )
+  const isEmployee = computed(() => user.value?.role === 'EMPLOYEE')
 
   async function fetchMe() {
     try {
@@ -51,5 +52,5 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
-  return { user, isLoggedIn, isAdmin, isPrivileged, initialized, fetchMe, login, logout }
+  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, initialized, fetchMe, login, logout }
 }

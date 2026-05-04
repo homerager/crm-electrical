@@ -26,7 +26,13 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Завдання' })
 
-    const { isPrivileged } = useAuth()
+    const { isPrivileged, isEmployee } = useAuth()
+
+    const assigneesUrl = computed(() =>
+      isPrivileged.value ? '/api/users' : '/api/users/list',
+    )
+    const { data: usersData } = useFetch(assigneesUrl, { watch: [assigneesUrl] })
+    const { data: objectsData } = useFetch('/api/objects', { skip: () => isEmployee.value })
 
     const viewMode = ref<'kanban' | 'list'>('kanban')
     const filterStatus = ref('')
@@ -62,11 +68,12 @@ export default defineComponent({
       })),
     })
 
-    const { data: usersData } = useFetch('/api/users')
-    const { data: objectsData } = useFetch('/api/objects')
-
     const tasks = computed(() => (tasksData.value as any)?.tasks ?? [])
-    const users = computed(() => (usersData.value as any)?.users ?? [])
+    const users = computed(() => {
+      const v = usersData.value as any
+      if (Array.isArray(v)) return v
+      return v?.users ?? []
+    })
     const objects = computed(() => (objectsData.value as any)?.objects ?? [])
 
     const tasksByStatus = computed(() => {
@@ -227,9 +234,11 @@ export default defineComponent({
               onClick={() => { viewMode.value = 'list' }}
             />
           </div>
-          <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
-            Нове завдання
-          </v-btn>
+          {!isEmployee.value && (
+            <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
+              Нове завдання
+            </v-btn>
+          )}
         </div>
 
         {/* Filters */}

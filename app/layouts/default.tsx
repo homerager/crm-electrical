@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'DefaultLayout',
   setup() {
-    const { user, isAdmin, isPrivileged, logout } = useAuth()
+    const { user, isAdmin, isPrivileged, isEmployee, logout } = useAuth()
     const route = useRoute()
     const slots = useSlots()
     const drawer = ref(true)
@@ -30,6 +30,7 @@ export default defineComponent({
       if (user.value?.role === 'ADMIN') return 'Адміністратор'
       if (user.value?.role === 'MANAGER') return 'Менеджер'
       if (user.value?.role === 'USER') return 'Користувач'
+      if (user.value?.role === 'EMPLOYEE') return 'Працівник'
       return 'Комірник'
     })
 
@@ -40,6 +41,13 @@ export default defineComponent({
     })
 
     const navItems = computed(() => {
+      if (isEmployee.value) {
+        return [
+          { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
+          { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
+          { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
+        ]
+      }
       const base = [
         { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
         { title: 'Склади', icon: 'mdi-warehouse', to: '/warehouses' },
@@ -189,6 +197,7 @@ function getPageTitle(path: string): string {
     '/movements': 'Переміщення',
     '/reports': 'Репорти',
     '/tasks': 'Завдання',
+    '/projects': 'Проєкти',
     '/users': 'Користувачі',
     '/job-titles': 'Посади',
   }

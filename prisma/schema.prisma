@@ -12,6 +12,7 @@ enum Role {
   MANAGER
   STOREKEEPER
   USER
+  EMPLOYEE
 }
 
 enum ObjectStatus {
