@@ -16,6 +16,7 @@ export default defineComponent({
 
     const deleteDialog = ref(false)
     const deleting = ref(false)
+    const pdfPreviewDialog = ref(false)
 
     async function confirmDelete() {
       deleting.value = true
@@ -61,6 +62,17 @@ export default defineComponent({
             </>
           )}
           <v-spacer />
+          {invoice.value && (
+            <v-btn
+              class="mr-2"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-file-pdf-box"
+              onClick={() => (pdfPreviewDialog.value = true)}
+            >
+            Переглянути PDF
+            </v-btn>
+          )}
           {isPrivileged.value && invoice.value && (
             <v-btn color="error" variant="outlined" prepend-icon="mdi-delete" onClick={() => (deleteDialog.value = true)}>
               Видалити
@@ -115,6 +127,38 @@ export default defineComponent({
             </v-col>
           </v-row>
         )}
+
+        <v-dialog v-model={pdfPreviewDialog.value} max-width={960} scrollable>
+          <v-card>
+            <v-card-title class="d-flex align-center flex-wrap gap-2">
+              <span>Перегляд PDF</span>
+              <v-chip size="small" variant="tonal">
+                №{invoice.value?.number}
+              </v-chip>
+              <v-spacer />
+              <v-btn
+                color="primary"
+                variant="elevated"
+                prepend-icon="mdi-download"
+                tag="a"
+                href={`/api/invoices/${id}/pdf`}
+              >
+                Завантажити PDF
+              </v-btn>
+              <v-btn variant="text" icon="mdi-close" aria-label="Закрити" onClick={() => (pdfPreviewDialog.value = false)} />
+            </v-card-title>
+            <v-divider />
+            <v-card-text class="pa-0 pdf-preview-dialog__body">
+              {pdfPreviewDialog.value ? (
+                <iframe
+                  title="Перегляд накладної PDF"
+                  src={`/api/invoices/${id}/pdf?inline=1`}
+                  class="pdf-preview-dialog__iframe"
+                />
+              ) : null}
+            </v-card-text>
+          </v-card>
+        </v-dialog>
 
         <v-dialog v-model={deleteDialog.value} max-width={400}>
           <v-card>

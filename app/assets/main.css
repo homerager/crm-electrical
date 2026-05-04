@@ -91,3 +91,15 @@
 .gap-4 {
   gap: 16px;
 }
+
+.pdf-preview-dialog__body {
+  min-height: 50vh;
+  background: #525659;
+}
+
+.pdf-preview-dialog__iframe {
+  display: block;
+  width: 100%;
+  height: min(72vh, 720px);
+  border: 0;
+}
