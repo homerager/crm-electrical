@@ -172,9 +172,33 @@ export default defineEventHandler(async (event) => {
       }
     }
   }
-  const consumedSummary = Array.from(consumedMap.values()).sort((a, b) =>
-    a.product.name.localeCompare(b.product.name),
-  )
+
+  const inboundValuationByProductId = new Map(summary.map((row) => [row.product.id, row]))
+
+  const consumedSummary = Array.from(consumedMap.values())
+    .map((row) => {
+      const inbound = inboundValuationByProductId.get(row.product.id)
+      let averageUnitPrice: number | null = null
+      let totalAmount = 0
+      let hasMissingPrice = true
+
+      if (inbound && inbound.averageUnitPrice != null) {
+        averageUnitPrice = inbound.averageUnitPrice
+        totalAmount = Math.round(averageUnitPrice * row.totalQuantity * 100) / 100
+        hasMissingPrice = false
+      }
+
+      return {
+        ...row,
+        averageUnitPrice,
+        totalAmount,
+        hasMissingPrice,
+      }
+    })
+    .sort((a, b) => a.product.name.localeCompare(b.product.name))
+
+  const consumedTotalAmount = consumedSummary.reduce((s, r) => s + r.totalAmount, 0)
+  const consumedHasMissingPrice = consumedSummary.some((r) => r.hasMissingPrice)
 
   return {
     object,
@@ -184,6 +208,8 @@ export default defineEventHandler(async (event) => {
     summaryHasMissingPrice,
     stockOnSite,
     consumedSummary,
+    consumedTotalAmount,
+    consumedHasMissingPrice,
     writeOffMovements,
     returnMovements,
     laborByUser,

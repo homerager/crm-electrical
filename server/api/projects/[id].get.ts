@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
     where: { id },
     include: {
       createdBy: { select: { id: true, name: true } },
+      defaultObject: { select: { id: true, name: true } },
       members: {
         include: {
           user: { select: { id: true, name: true } },

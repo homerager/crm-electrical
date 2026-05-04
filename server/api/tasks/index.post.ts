@@ -29,13 +29,22 @@ export default defineEventHandler(async (event) => {
     if (!member) throw createError({ statusCode: 403, message: 'Ви не є учасником цього проєкту' })
   }
 
+  let resolvedObjectId = objectId || null
+  if (projectId && !resolvedObjectId) {
+    const proj = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { defaultObjectId: true },
+    })
+    resolvedObjectId = proj?.defaultObjectId ?? null
+  }
+
   const task = await prisma.task.create({
     data: {
       title: title.trim(),
       description: description?.trim() || null,
       priority: priority || 'MEDIUM',
       assignedToId: assignedToId || null,
-      objectId: objectId || null,
+      objectId: resolvedObjectId,
       projectId: projectId || null,
       parentId: parentId || null,
       dueDate: dueDate ? new Date(dueDate) : null,

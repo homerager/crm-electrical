@@ -7,10 +7,17 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, description, color, memberIds } = body
+  const { name, description, color, memberIds, defaultObjectId } = body
 
   if (!name?.trim()) {
     throw createError({ statusCode: 400, message: 'Назва проєкту обовʼязкова' })
+  }
+
+  let resolvedDefaultObjectId: string | null = null
+  if (defaultObjectId) {
+    const obj = await prisma.constructionObject.findUnique({ where: { id: defaultObjectId } })
+    if (!obj) throw createError({ statusCode: 400, message: 'Обʼєкт не знайдено' })
+    resolvedDefaultObjectId = defaultObjectId
   }
 
   const project = await prisma.project.create({
@@ -18,6 +25,7 @@ export default defineEventHandler(async (event) => {
       name: name.trim(),
       description: description || null,
       color: color || '#1976D2',
+      defaultObjectId: resolvedDefaultObjectId,
       createdById: auth.userId,
       members: {
         create: [
@@ -30,6 +38,7 @@ export default defineEventHandler(async (event) => {
     },
     include: {
       createdBy: { select: { id: true, name: true } },
+      defaultObject: { select: { id: true, name: true } },
       members: {
         include: {
           user: { select: { id: true, name: true } },

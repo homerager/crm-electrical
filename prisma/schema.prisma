@@ -127,6 +127,8 @@ model ConstructionObject {
   stock     ObjectStock[]
   tasks     Task[]
   timeLogs  TimeLog[]
+  /// Проєкти, де цей обʼєкт обраний як типовий для нових завдань
+  projectsWithDefaultObject Project[]
 
   @@map("construction_objects")
 }
@@ -349,17 +351,20 @@ model TaskComment {
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  color       String   @default("#1976D2")
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  color            String   @default("#1976D2")
+  createdById      String
+  /// Типовий будівельний обʼєкт для нових завдань у цьому проєкті
+  defaultObjectId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  createdBy User            @relation(fields: [createdById], references: [id])
-  members   ProjectMember[]
-  tasks     Task[]
+  createdBy     User                 @relation(fields: [createdById], references: [id])
+  defaultObject ConstructionObject? @relation(fields: [defaultObjectId], references: [id], onDelete: SetNull)
+  members       ProjectMember[]
+  tasks         Task[]
 
   @@map("projects")
 }

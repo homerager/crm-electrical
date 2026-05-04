@@ -27,6 +27,8 @@ export default defineComponent({
 
     const stockOnSite = computed(() => report.value?.stockOnSite ?? [])
     const consumedSummary = computed(() => report.value?.consumedSummary ?? [])
+    const consumedTotalAmount = computed(() => Number(report.value?.consumedTotalAmount) || 0)
+    const consumedHasMissingPrice = computed(() => report.value?.consumedHasMissingPrice === true)
     const writeOffMovements = computed(() => report.value?.writeOffMovements ?? [])
     const returnMovements = computed(() => report.value?.returnMovements ?? [])
 
@@ -64,10 +66,18 @@ export default defineComponent({
     ]
 
     const consumedHeaders = [
-      { title: 'Товар', key: 'product.name' },
-      { title: 'Артикул', key: 'product.sku', width: 120 },
-      { title: 'Списано', key: 'totalQuantity', align: 'end' as const, width: 140 },
-      { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 100 },
+      { title: 'Товар', key: 'product.name', minWidth: 160 },
+      { title: 'Артикул', key: 'product.sku', width: 112 },
+      { title: 'Списано', key: 'totalQuantity', align: 'end' as const, width: 96 },
+      { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 88 },
+      {
+        title: 'Ціна за одиницю, ₴',
+        key: 'averageUnitPrice',
+        align: 'end' as const,
+        width: 138,
+        sortable: false,
+      },
+      { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 118, sortable: false },
     ]
 
     const writeOffLogHeaders = [
@@ -110,6 +120,8 @@ export default defineComponent({
       COMPLETED: 'primary',
       SUSPENDED: 'warning',
     }
+
+    const writeOffLogOpen = ref(false)
 
     return () => (
       <div>
@@ -161,7 +173,7 @@ export default defineComponent({
                   items-per-page={-1}
                 >
                   {{
-                    'item.product.sku': ({ item }: any) => <span>{item.product?.sku || '—'}</span>,
+                    'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
                     'item.quantity': ({ item }: any) => (
                       <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
                     ),
@@ -195,7 +207,7 @@ export default defineComponent({
               >
                 {{
                   'item.product.sku': ({ item }: any) => (
-                    <span>{item.product?.sku || '—'}</span>
+                    <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
                   ),
                   'item.totalQuantity': ({ item }: any) => (
                     <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
@@ -221,13 +233,33 @@ export default defineComponent({
             </v-card>
 
             <v-card class="mb-4">
-              <v-card-title class="d-flex align-center">
+              <v-card-title class="d-flex align-center flex-wrap gap-2">
                 <v-icon class="mr-2" icon="mdi-minus-circle-outline" />
                 Списано з обʼєкта (факт використання)
-                <v-chip class="ml-3" size="small" variant="tonal" color="error">
+                <v-chip size="small" variant="tonal" color="error">
                   {consumedSummary.value.length} позицій
                 </v-chip>
+                <v-spacer />
+                {writeOffMovements.value.length > 0 && (
+                  <v-btn
+                    color="error"
+                    variant="tonal"
+                    size="small"
+                    prepend-icon="mdi-history"
+                    class="no-print"
+                    onClick={() => (writeOffLogOpen.value = true)}
+                  >
+                    Журнал списань
+                  </v-btn>
+                )}
               </v-card-title>
+              {consumedSummary.value.length > 0 && consumedHasMissingPrice.value && (
+                <v-card-text class="text-body-2 text-medium-emphasis pt-0">
+                  Оцінка вартості списань: для кожного товару використовується середньозважена ціна з відпусків на
+                  обʼєкт (ті самі накладні, що й у блоці вище). Якщо для товару не вдалося відновити ціну —
+                  колонки показують «—», загальна сума рахує лише рядки з відомою ціною.
+                </v-card-text>
+              )}
               {consumedSummary.value.length === 0 ? (
                 <v-card-text>
                   <v-alert type="info" variant="tonal" density="compact">
@@ -241,16 +273,65 @@ export default defineComponent({
                     items={consumedSummary.value}
                     hide-default-footer
                     items-per-page={-1}
+                    density="compact"
                   >
                     {{
-                      'item.product.sku': ({ item }: any) => <span>{item.product?.sku || '—'}</span>,
+                      'item.product.name': ({ item }: any) => (
+                        <span class="text-body-2">{item.product?.name ?? '—'}</span>
+                      ),
+                      'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
                       'item.totalQuantity': ({ item }: any) => (
                         <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
                       ),
+                      'item.averageUnitPrice': ({ item }: any) =>
+                        item.averageUnitPrice == null ? (
+                          <span class="text-medium-emphasis">—</span>
+                        ) : (
+                          <span>{uah(item.averageUnitPrice)}</span>
+                        ),
+                      'item.totalAmount': ({ item }: any) =>
+                        item.hasMissingPrice ? (
+                          <span class="text-medium-emphasis">—</span>
+                        ) : (
+                          <strong>{uah(Number(item.totalAmount) || 0)}</strong>
+                        ),
                     }}
                   </v-data-table>
-                  <v-card-title class="text-subtitle-1 pt-4">Журнал списань</v-card-title>
-                  <v-data-table headers={writeOffLogHeaders} items={writeOffMovements.value} hide-default-footer>
+                  <v-divider />
+                  <v-card-text class="d-flex justify-end py-3">
+                    <div class="text-h6">
+                      <span class="text-medium-emphasis text-body-1">Всього за списаннями (оцінка): </span>
+                      <span class="font-weight-bold">{uah(consumedTotalAmount.value)}</span>
+                    </div>
+                  </v-card-text>
+                </>
+              )}
+            </v-card>
+
+            <v-dialog v-model={writeOffLogOpen.value} max-width={720} scrollable class="no-print">
+              <v-card>
+                <v-card-title class="d-flex align-center flex-wrap gap-2">
+                  <v-icon icon="mdi-history" class="mr-1" />
+                  Журнал списань
+                  <v-chip size="small" variant="tonal" color="error">
+                    {writeOffMovements.value.length}
+                  </v-chip>
+                  <v-spacer />
+                  <v-btn
+                    icon="mdi-close"
+                    variant="text"
+                    aria-label="Закрити"
+                    onClick={() => (writeOffLogOpen.value = false)}
+                  />
+                </v-card-title>
+                <v-divider />
+                <v-card-text class="px-0 pt-2">
+                  <v-data-table
+                    headers={writeOffLogHeaders}
+                    items={writeOffMovements.value}
+                    hide-default-footer
+                    density="compact"
+                  >
                     {{
                       'item.date': ({ item }: any) => (
                         <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
@@ -263,9 +344,15 @@ export default defineComponent({
                       ),
                     }}
                   </v-data-table>
-                </>
-              )}
-            </v-card>
+                </v-card-text>
+                <v-divider />
+                <v-card-actions class="justify-end">
+                  <v-btn variant="text" onClick={() => (writeOffLogOpen.value = false)}>
+                    Закрити
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
 
             <v-card class="mb-4">
               <v-card-title class="d-flex align-center">

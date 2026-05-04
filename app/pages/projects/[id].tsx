@@ -87,7 +87,16 @@ export default defineComponent({
     })
 
     function openCreate() {
-      Object.assign(form, { title: '', description: '', priority: 'MEDIUM', assignedToId: '', objectId: '', dueDate: '', estimatedHours: '' })
+      const defObj = project.value?.defaultObject?.id ?? project.value?.defaultObjectId ?? ''
+      Object.assign(form, {
+        title: '',
+        description: '',
+        priority: 'MEDIUM',
+        assignedToId: '',
+        objectId: defObj || '',
+        dueDate: '',
+        estimatedHours: '',
+      })
       taskError.value = ''
       taskDialog.value = true
     }

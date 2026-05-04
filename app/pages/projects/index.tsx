@@ -10,7 +10,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Проєкти' })
 
-    const { isPrivileged } = useAuth()
+    const { isPrivileged, isEmployee } = useAuth()
     const dialog = ref(false)
     const editDialog = ref(false)
     const deleteDialog = ref(false)
@@ -25,6 +25,7 @@ export default defineComponent({
       description: '',
       color: '#1976D2',
       memberIds: [] as string[],
+      defaultObjectId: '' as string,
     })
 
     const { data: projectsData, refresh } = useFetch('/api/projects')
@@ -33,11 +34,18 @@ export default defineComponent({
     const { data: usersData } = useFetch('/api/users/list')
     const users = computed(() => (usersData.value as any[]) ?? [])
 
+    const { data: objectsData } = useFetch('/api/objects', {
+      skip: () => isEmployee.value,
+      // OpenAPI-typed useFetch omits Nuxt's `skip` in options inference for this route.
+    } as Parameters<typeof useFetch>[1])
+    const objects = computed(() => (objectsData.value as any)?.objects ?? [])
+
     function openCreate() {
       form.name = ''
       form.description = ''
       form.color = '#1976D2'
       form.memberIds = []
+      form.defaultObjectId = ''
       error.value = ''
       dialog.value = true
     }
@@ -48,6 +56,7 @@ export default defineComponent({
       form.description = project.description ?? ''
       form.color = project.color ?? '#1976D2'
       form.memberIds = project.members.map((m: any) => m.user.id)
+      form.defaultObjectId = project.defaultObject?.id ?? ''
       error.value = ''
       editDialog.value = true
     }
@@ -64,7 +73,13 @@ export default defineComponent({
       try {
         await $fetch('/api/projects', {
           method: 'POST',
-          body: { name: form.name, description: form.description, color: form.color, memberIds: form.memberIds },
+          body: {
+            name: form.name,
+            description: form.description,
+            color: form.color,
+            memberIds: form.memberIds,
+            defaultObjectId: form.defaultObjectId || null,
+          },
         })
         dialog.value = false
         await refresh()
@@ -83,7 +98,12 @@ export default defineComponent({
       try {
         await $fetch(`/api/projects/${id}`, {
           method: 'PUT',
-          body: { name: form.name, description: form.description, color: form.color },
+          body: {
+            name: form.name,
+            description: form.description,
+            color: form.color,
+            defaultObjectId: form.defaultObjectId || null,
+          },
         })
 
         // Sync members: add new, remove removed
@@ -157,6 +177,21 @@ export default defineComponent({
               ))}
             </div>
           </div>
+          {!isEmployee.value && (
+            <v-autocomplete
+              v-model={form.defaultObjectId}
+              label="Обʼєкт за замовчуванням для завдань"
+              items={objects.value}
+              itemTitle="name"
+              itemValue="id"
+              clearable
+              variant="outlined"
+              density="compact"
+              class="mb-4"
+              hint="Нові завдання в проєкті отримають цей обʼєкт, якщо не обрано інший"
+              persistentHint
+            />
+          )}
           <v-autocomplete
             v-model={form.memberIds}
             label="Учасники"
@@ -219,6 +254,12 @@ export default defineComponent({
                     <v-icon size="16" color="medium-emphasis">mdi-checkbox-marked-circle-outline</v-icon>
                     <span class="text-body-2">{project._count?.tasks ?? 0} завдань</span>
                   </div>
+                  {project.defaultObject && (
+                    <div class="d-flex align-center mb-3 text-body-2 text-medium-emphasis" style="gap:8px">
+                      <v-icon size="16">mdi-map-marker-outline</v-icon>
+                      <span class="text-truncate" title={project.defaultObject.name}>{project.defaultObject.name}</span>
+                    </div>
+                  )}
                   <div class="d-flex" style="gap:-8px">
                     {project.members.slice(0, 5).map((m: any) => (
                       <v-avatar
