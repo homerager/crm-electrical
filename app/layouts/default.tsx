@@ -7,13 +7,22 @@ export default defineComponent({
     const route = useRoute()
     const slots = useSlots()
     const display = useDisplay()
+    /**
+     * На SSR у Vuetify `display.width === 0` → `smAndDown` завжди true → рендериться temporary drawer + інший layout,
+     * після гідрації на десктопі стан інший — «не клікається» до повного клієнтського оновлення (як після HMR).
+     * На сервері завжди десктопний режим (permanent), реальну ширину застосовуємо лише в браузері.
+     */
+    const drawerOverlayMode = computed(() => {
+      if (import.meta.server) return false
+      return display.smAndDown.value
+    })
     const drawer = ref(true)
     const rail = ref(false)
 
     watch(
-      () => display.mobile.value,
-      (isMobile) => {
-        if (isMobile) {
+      () => drawerOverlayMode.value,
+      (narrow) => {
+        if (narrow) {
           rail.value = false
           drawer.value = false
         } else {
@@ -26,7 +35,7 @@ export default defineComponent({
     watch(
       () => route.fullPath,
       () => {
-        if (display.mobile.value) drawer.value = false
+        if (drawerOverlayMode.value) drawer.value = false
       },
     )
 
@@ -101,10 +110,12 @@ export default defineComponent({
 
         {/* Navigation Drawer — all content in named slots to avoid [object Object] */}
         <v-navigation-drawer
-          v-model={drawer.value}
-          rail={display.mobile.value ? false : rail.value}
-          temporary={display.mobile.value}
-          permanent={!display.mobile.value}
+          modelValue={drawer.value}
+          onUpdate:modelValue={(v: boolean) => { drawer.value = v }}
+          rail={drawerOverlayMode.value ? false : rail.value}
+          temporary={drawerOverlayMode.value}
+          permanent={!drawerOverlayMode.value}
+          mobile={false}
         >
           {{
             default: () => (
@@ -116,7 +127,7 @@ export default defineComponent({
                 >
                   {{
                     append: () =>
-                      !display.mobile.value
+                      !drawerOverlayMode.value
                         ? (
                             <v-btn
                               variant="text"

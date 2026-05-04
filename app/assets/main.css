@@ -43,6 +43,11 @@
   max-width: 100%;
 }
 
+/* Відступ іконка ↔ текст у сайдбарі (дефолт Vuetify ~32px через .v-list-item__spacer) */
+.v-navigation-drawer {
+  --v-list-prepend-gap: 10px;
+}
+
 .v-table > .v-table__wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
