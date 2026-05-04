@@ -15,8 +15,13 @@ export default defineComponent({
     })
     const summary = computed(() => report.value?.summary ?? [])
     const movements = computed(() => report.value?.movements ?? [])
+    const laborByUser = computed(() => report.value?.laborByUser ?? [])
     const summaryTotalAmount = computed(() => Number(report.value?.summaryTotalAmount) || 0)
     const summaryHasMissingPrice = computed(() => report.value?.summaryHasMissingPrice === true)
+    const laborTotalHours = computed(() => Number(report.value?.laborTotalHours) || 0)
+    const laborTotalAmount = computed(() => Number(report.value?.laborTotalAmount) || 0)
+    const laborHasMissingRate = computed(() => report.value?.laborHasMissingRate === true)
+    const laborLogCount = computed(() => Number(report.value?.laborLogCount) || 0)
 
     const uah = (n: number) =>
       `₴${n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -43,6 +48,16 @@ export default defineComponent({
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Примітки', key: 'notes' },
     ]
+
+    const laborHeaders = [
+      { title: 'Працівник', key: 'userName' },
+      { title: 'Години', key: 'totalHours', align: 'end' as const, width: 120, sortable: false },
+      { title: 'Ставка, ₴/год', key: 'hourlyRate', align: 'end' as const, width: 130, sortable: false },
+      { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 130, sortable: false },
+    ]
+
+    const hoursStr = (h: number) =>
+      h.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 
     function printReport() {
       window.print()
@@ -129,6 +144,53 @@ export default defineComponent({
                 <div class="text-h6">
                   <span class="text-medium-emphasis text-body-1">Всього за матеріалами: </span>
                   <span class="font-weight-bold">{uah(summaryTotalAmount.value)}</span>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <v-card class="mb-4">
+              <v-card-title class="d-flex align-center">
+                <v-icon class="mr-2" icon="mdi-account-clock-outline" />
+                Праця на обʼєкті
+                <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
+                  {laborLogCount.value} записів часу · {laborByUser.value.length} працівників
+                </v-chip>
+              </v-card-title>
+              {laborHasMissingRate.value && (
+                <v-card-text class="text-body-2 text-medium-emphasis pt-0">
+                  Для деяких працівників не задана погодинна ставка в профілі — колонка «Сума» для них
+                  показує «—»; загальна сума враховує лише рядки з відомою ставкою.
+                </v-card-text>
+              )}
+              <v-data-table
+                headers={laborHeaders}
+                items={laborByUser.value}
+                hide-default-footer
+                items-per-page={-1}
+              >
+                {{
+                  'item.totalHours': ({ item }: any) => <strong>{hoursStr(Number(item.totalHours) || 0)}</strong>,
+                  'item.hourlyRate': ({ item }: any) =>
+                    item.hourlyRate == null ? (
+                      <span class="text-medium-emphasis">—</span>
+                    ) : (
+                      <span>{uah(Number(item.hourlyRate))}</span>
+                    ),
+                  'item.totalAmount': ({ item }: any) =>
+                    item.totalAmount == null ? (
+                      <span class="text-medium-emphasis">—</span>
+                    ) : (
+                      <strong>{uah(Number(item.totalAmount))}</strong>
+                    ),
+                }}
+              </v-data-table>
+              <v-divider />
+              <v-card-text class="d-flex justify-end py-3">
+                <div class="text-h6">
+                  <span class="text-medium-emphasis text-body-1">Всього годин: </span>
+                  <span class="font-weight-bold mr-4">{hoursStr(laborTotalHours.value)}</span>
+                  <span class="text-medium-emphasis text-body-1">Всього за працею (оцінка): </span>
+                  <span class="font-weight-bold">{uah(laborTotalAmount.value)}</span>
                 </div>
               </v-card-text>
             </v-card>

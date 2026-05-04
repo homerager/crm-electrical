@@ -78,5 +78,60 @@ export default defineEventHandler(async (event) => {
   const summaryTotalAmount = summary.reduce((s, r) => s + r.totalAmount, 0)
   const summaryHasMissingPrice = summary.some((r) => r.hasMissingPrice)
 
-  return { object, movements, summary, summaryTotalAmount, summaryHasMissingPrice }
+  const timeLogs = await prisma.timeLog.findMany({
+    where: { task: { objectId: id } },
+    include: {
+      user: { select: { id: true, name: true, hourlyRate: true } },
+    },
+    orderBy: [{ userId: 'asc' }, { date: 'desc' }],
+  })
+
+  type LaborRow = {
+    userId: string
+    userName: string
+    totalHours: number
+    hourlyRate: number | null
+    totalAmount: number | null
+  }
+
+  const laborMap = new Map<string, LaborRow>()
+  for (const log of timeLogs) {
+    const uid = log.userId
+    const rate = log.user.hourlyRate != null ? Number(log.user.hourlyRate) : null
+    if (!laborMap.has(uid)) {
+      laborMap.set(uid, {
+        userId: uid,
+        userName: log.user.name,
+        totalHours: 0,
+        hourlyRate: rate,
+        totalAmount: null,
+      })
+    }
+    const entry = laborMap.get(uid)!
+    if (entry.hourlyRate == null && rate != null) entry.hourlyRate = rate
+    entry.totalHours += log.hours
+  }
+  for (const entry of laborMap.values()) {
+    if (entry.hourlyRate != null) {
+      entry.totalAmount = Math.round(entry.totalHours * entry.hourlyRate * 100) / 100
+    }
+  }
+
+  const laborByUser = Array.from(laborMap.values()).sort((a, b) => b.totalHours - a.totalHours)
+  const laborTotalHours = laborByUser.reduce((s, r) => s + r.totalHours, 0)
+  const laborTotalAmount = laborByUser.reduce((s, r) => s + (typeof r.totalAmount === 'number' ? r.totalAmount : 0), 0)
+  const laborHasMissingRate = laborByUser.some((r) => r.hourlyRate == null)
+
+  return {
+    object,
+    movements,
+    summary,
+    summaryTotalAmount,
+    summaryHasMissingPrice,
+    laborByUser,
+    laborTotalHours,
+    laborTotalAmount,
+    laborHasMissingRate,
+    laborLogCount: timeLogs.length,
+  }
 })
