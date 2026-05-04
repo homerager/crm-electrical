@@ -45,6 +45,7 @@ export default defineEventHandler(async (event) => {
 
   for (const movement of movements) {
     const warehouseId = movement.fromWarehouseId
+    if (!warehouseId) continue
     for (const item of movement.items) {
       const key = item.productId
       const qty = Number(item.quantity)
@@ -127,12 +128,64 @@ export default defineEventHandler(async (event) => {
   const laborTotalAmount = laborByUser.reduce((s, r) => s + (typeof r.totalAmount === 'number' ? r.totalAmount : 0), 0)
   const laborHasMissingRate = laborByUser.some((r) => r.hourlyRate == null)
 
+  const stockOnSite = await prisma.objectStock.findMany({
+    where: { objectId: id, quantity: { gt: 0 } },
+    include: { product: true },
+    orderBy: { product: { name: 'asc' } },
+  })
+
+  const writeOffMovements = await prisma.movement.findMany({
+    where: { objectId: id, type: 'OBJECT_WRITE_OFF' },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      items: { include: { product: true } },
+    },
+    orderBy: { date: 'desc' },
+  })
+
+  const returnMovements = await prisma.movement.findMany({
+    where: { objectId: id, type: 'OBJECT_TO_WAREHOUSE' },
+    include: {
+      toWarehouse: true,
+      createdBy: { select: { id: true, name: true } },
+      items: { include: { product: true } },
+    },
+    orderBy: { date: 'desc' },
+  })
+
+  const consumedMap = new Map<
+    string,
+    { product: { id: string; name: string; sku: string | null; unit: string }; totalQuantity: number; unit: string }
+  >()
+  for (const movement of writeOffMovements) {
+    for (const item of movement.items) {
+      const key = item.productId
+      const qty = Number(item.quantity)
+      if (consumedMap.has(key)) {
+        consumedMap.get(key)!.totalQuantity += qty
+      } else {
+        consumedMap.set(key, {
+          product: item.product,
+          totalQuantity: qty,
+          unit: item.product.unit,
+        })
+      }
+    }
+  }
+  const consumedSummary = Array.from(consumedMap.values()).sort((a, b) =>
+    a.product.name.localeCompare(b.product.name),
+  )
+
   return {
     object,
     movements,
     summary,
     summaryTotalAmount,
     summaryHasMissingPrice,
+    stockOnSite,
+    consumedSummary,
+    writeOffMovements,
+    returnMovements,
     laborByUser,
     laborTotalHours,
     laborTotalAmount,

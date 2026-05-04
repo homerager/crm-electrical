@@ -1,3 +1,38 @@
+function movementDetailMeta(type: string) {
+  switch (type) {
+    case 'WAREHOUSE_TO_WAREHOUSE':
+      return {
+        title: 'Переміщення між складами',
+        chip: 'Між складами',
+        color: 'primary',
+        icon: 'mdi-swap-horizontal' as const,
+      }
+    case 'WAREHOUSE_TO_OBJECT':
+      return {
+        title: 'Переміщення на обʼєкт',
+        chip: 'На обʼєкт',
+        color: 'warning',
+        icon: 'mdi-truck-delivery' as const,
+      }
+    case 'OBJECT_WRITE_OFF':
+      return {
+        title: 'Списання з обʼєкта',
+        chip: 'Списання',
+        color: 'error',
+        icon: 'mdi-minus-circle-outline' as const,
+      }
+    case 'OBJECT_TO_WAREHOUSE':
+      return {
+        title: 'Повернення на склад',
+        chip: 'Повернення на склад',
+        color: 'success',
+        icon: 'mdi-keyboard-return' as const,
+      }
+    default:
+      return { title: 'Переміщення', chip: type, color: 'grey', icon: 'mdi-help' as const }
+  }
+}
+
 export default defineComponent({
   name: 'MovementDetailPage',
   setup() {
@@ -8,13 +43,12 @@ export default defineComponent({
     const { data, pending } = useFetch(`/api/movements/${id}`)
     const movement = computed(() => (data.value as any)?.movement)
 
+    const meta = computed(() =>
+      movement.value ? movementDetailMeta(movement.value.type) : movementDetailMeta(''),
+    )
+
     useHead({
-      title: computed(() => {
-        if (!movement.value) return 'Переміщення'
-        return movement.value.type === 'WAREHOUSE_TO_WAREHOUSE'
-          ? 'Переміщення між складами'
-          : 'Переміщення на обʼєкт'
-      })
+      title: computed(() => meta.value.title),
     })
 
     const itemHeaders = [
@@ -31,11 +65,11 @@ export default defineComponent({
           {movement.value && (
             <v-chip
               class="ml-3"
-              color={movement.value.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'primary' : 'warning'}
+              color={meta.value.color}
               variant="tonal"
-              prepend-icon={movement.value.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'mdi-swap-horizontal' : 'mdi-truck-delivery'}
+              prepend-icon={meta.value.icon}
             >
-              {movement.value.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'Між складами' : 'На обʼєкт'}
+              {meta.value.chip}
             </v-chip>
           )}
         </div>
@@ -48,12 +82,17 @@ export default defineComponent({
               <v-card class="mb-4">
                 <v-list lines="two">
                   <v-list-item title="Дата" subtitle={new Date(movement.value.date).toLocaleDateString('uk-UA')} prepend-icon="mdi-calendar" />
-                  <v-list-item title="Склад відправлення" subtitle={movement.value.fromWarehouse?.name} prepend-icon="mdi-warehouse" />
-                  {movement.value.toWarehouse && (
+                  {movement.value.fromWarehouse && (
+                    <v-list-item title="Склад відправлення" subtitle={movement.value.fromWarehouse.name} prepend-icon="mdi-warehouse" />
+                  )}
+                  {movement.value.toWarehouse && movement.value.type === 'WAREHOUSE_TO_WAREHOUSE' && (
                     <v-list-item title="Склад призначення" subtitle={movement.value.toWarehouse.name} prepend-icon="mdi-warehouse" />
                   )}
+                  {movement.value.toWarehouse && movement.value.type === 'OBJECT_TO_WAREHOUSE' && (
+                    <v-list-item title="Склад повернення" subtitle={movement.value.toWarehouse.name} prepend-icon="mdi-warehouse" />
+                  )}
                   {movement.value.object && (
-                    <v-list-item title="Обʼєкт призначення" subtitle={movement.value.object.name} prepend-icon="mdi-office-building-outline" />
+                    <v-list-item title="Обʼєкт" subtitle={movement.value.object.name} prepend-icon="mdi-office-building-outline" />
                   )}
                   <v-list-item title="Створив" subtitle={movement.value.createdBy?.name} prepend-icon="mdi-account" />
                   {movement.value.notes && (

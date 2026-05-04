@@ -29,6 +29,10 @@ enum InvoiceType {
 enum MovementType {
   WAREHOUSE_TO_WAREHOUSE
   WAREHOUSE_TO_OBJECT
+  /// Списання залишку на обʼєкті (використано)
+  OBJECT_WRITE_OFF
+  /// Повернення залишку з обʼєкта на склад
+  OBJECT_TO_WAREHOUSE
 }
 
 enum ProjectMemberRole {
@@ -120,6 +124,7 @@ model ConstructionObject {
   updatedAt   DateTime     @updatedAt
 
   movements Movement[]
+  stock     ObjectStock[]
   tasks     Task[]
   timeLogs  TimeLog[]
 
@@ -172,8 +177,9 @@ model Product {
 
   group         ProductGroup?    @relation(fields: [groupId], references: [id])
   stock         WarehouseStock[]
-  invoiceItems  InvoiceItem[]
-  movementItems MovementItem[]
+  invoiceItems   InvoiceItem[]
+  movementItems  MovementItem[]
+  objectStock    ObjectStock[]
 
   @@map("products")
 }
@@ -190,6 +196,21 @@ model WarehouseStock {
 
   @@unique([productId, warehouseId])
   @@map("warehouse_stock")
+}
+
+/// Залишок матеріалів на будівельному обʼєкті (після відпуску зі складу; зменшується при списанні та поверненні)
+model ObjectStock {
+  id        String   @id @default(cuid())
+  objectId  String
+  productId String
+  quantity  Decimal  @default(0) @db.Decimal(12, 3)
+  updatedAt DateTime @updatedAt
+
+  object   ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  product  Product            @relation(fields: [productId], references: [id])
+
+  @@unique([objectId, productId])
+  @@map("object_stock")
 }
 
 model Invoice {
@@ -228,7 +249,8 @@ model InvoiceItem {
 model Movement {
   id              String       @id @default(cuid())
   type            MovementType
-  fromWarehouseId String
+  /// Для списання та повернення з обʼєкта може бути порожнім
+  fromWarehouseId String?
   toWarehouseId   String?
   objectId        String?
   createdById     String
@@ -237,7 +259,7 @@ model Movement {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  fromWarehouse Warehouse           @relation("MovementFrom", fields: [fromWarehouseId], references: [id])
+  fromWarehouse Warehouse?          @relation("MovementFrom", fields: [fromWarehouseId], references: [id])
   toWarehouse   Warehouse?          @relation("MovementTo", fields: [toWarehouseId], references: [id])
   object        ConstructionObject? @relation(fields: [objectId], references: [id])
   createdBy     User                @relation(fields: [createdById], references: [id])

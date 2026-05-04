@@ -1,3 +1,5 @@
+import ObjectStockOps from '../../../components/ObjectStockOps'
+
 export default defineComponent({
   name: 'ObjectReportPage',
   setup() {
@@ -5,7 +7,7 @@ export default defineComponent({
 
     const route = useRoute()
     const id = route.params.id as string
-    const { data, pending } = useFetch(`/api/reports/objects/${id}`)
+    const { data, pending, refresh } = useFetch(`/api/reports/objects/${id}`)
 
     const report = computed(() => data.value as any)
     const object = computed(() => report.value?.object)
@@ -22,6 +24,11 @@ export default defineComponent({
     const laborTotalAmount = computed(() => Number(report.value?.laborTotalAmount) || 0)
     const laborHasMissingRate = computed(() => report.value?.laborHasMissingRate === true)
     const laborLogCount = computed(() => Number(report.value?.laborLogCount) || 0)
+
+    const stockOnSite = computed(() => report.value?.stockOnSite ?? [])
+    const consumedSummary = computed(() => report.value?.consumedSummary ?? [])
+    const writeOffMovements = computed(() => report.value?.writeOffMovements ?? [])
+    const returnMovements = computed(() => report.value?.returnMovements ?? [])
 
     const uah = (n: number) =>
       `₴${n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -44,6 +51,35 @@ export default defineComponent({
     const movementHeaders = [
       { title: 'Дата', key: 'date', width: 120 },
       { title: 'Склад', key: 'fromWarehouse.name' },
+      { title: 'Позицій', key: 'items', sortable: false, width: 100 },
+      { title: 'Автор', key: 'createdBy.name', width: 140 },
+      { title: 'Примітки', key: 'notes' },
+    ]
+
+    const stockOnSiteHeaders = [
+      { title: 'Товар', key: 'product.name' },
+      { title: 'Артикул', key: 'product.sku', width: 120 },
+      { title: 'Залишок', key: 'quantity', align: 'end' as const, width: 140 },
+      { title: 'Одиниця', key: 'product.unit', align: 'center' as const, width: 100 },
+    ]
+
+    const consumedHeaders = [
+      { title: 'Товар', key: 'product.name' },
+      { title: 'Артикул', key: 'product.sku', width: 120 },
+      { title: 'Списано', key: 'totalQuantity', align: 'end' as const, width: 140 },
+      { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 100 },
+    ]
+
+    const writeOffLogHeaders = [
+      { title: 'Дата', key: 'date', width: 120 },
+      { title: 'Автор', key: 'createdBy.name', width: 140 },
+      { title: 'Позицій', key: 'items', sortable: false, width: 100 },
+      { title: 'Примітки', key: 'notes' },
+    ]
+
+    const returnLogHeaders = [
+      { title: 'Дата', key: 'date', width: 120 },
+      { title: 'Склад', key: 'toWarehouse.name' },
       { title: 'Позицій', key: 'items', sortable: false, width: 100 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Примітки', key: 'notes' },
@@ -99,9 +135,45 @@ export default defineComponent({
         {report.value && (
           <>
             <v-card class="mb-4">
+              <v-card-title class="d-flex align-center flex-wrap">
+                <v-icon class="mr-2" icon="mdi-package-variant" />
+                Залишок матеріалів на обʼєкті
+                <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
+                  {stockOnSite.value.length} позицій
+                </v-chip>
+              </v-card-title>
+              <v-card-text class="text-body-2 text-medium-emphasis">
+                Після відпуску зі складу товар обліковується тут. Списання зменшує залишок (використано в
+                роботі); повернення переносить кількість обраного складу.
+              </v-card-text>
+              <ObjectStockOps objectId={id} stockRows={stockOnSite.value} onSuccess={() => refresh()} />
+              {stockOnSite.value.length === 0 ? (
+                <v-card-text>
+                  <v-alert type="info" variant="tonal" density="compact">
+                    Немає залишку на обʼєкті (усі позиції списані або повернуті на склад).
+                  </v-alert>
+                </v-card-text>
+              ) : (
+                <v-data-table
+                  headers={stockOnSiteHeaders}
+                  items={stockOnSite.value}
+                  hide-default-footer
+                  items-per-page={-1}
+                >
+                  {{
+                    'item.product.sku': ({ item }: any) => <span>{item.product?.sku || '—'}</span>,
+                    'item.quantity': ({ item }: any) => (
+                      <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
+                    ),
+                  }}
+                </v-data-table>
+              )}
+            </v-card>
+
+            <v-card class="mb-4">
               <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2" icon="mdi-package-variant-closed" />
-                Використані матеріали (зведення)
+                Відпуск зі складу на обʼєкт (для оцінки вартості)
                 <v-chip class="ml-3" size="small" variant="tonal" color="primary">
                   {summary.value.length} позицій
                 </v-chip>
@@ -146,6 +218,53 @@ export default defineComponent({
                   <span class="font-weight-bold">{uah(summaryTotalAmount.value)}</span>
                 </div>
               </v-card-text>
+            </v-card>
+
+            <v-card class="mb-4">
+              <v-card-title class="d-flex align-center">
+                <v-icon class="mr-2" icon="mdi-minus-circle-outline" />
+                Списано з обʼєкта (факт використання)
+                <v-chip class="ml-3" size="small" variant="tonal" color="error">
+                  {consumedSummary.value.length} позицій
+                </v-chip>
+              </v-card-title>
+              {consumedSummary.value.length === 0 ? (
+                <v-card-text>
+                  <v-alert type="info" variant="tonal" density="compact">
+                    Списань ще не було.
+                  </v-alert>
+                </v-card-text>
+              ) : (
+                <>
+                  <v-data-table
+                    headers={consumedHeaders}
+                    items={consumedSummary.value}
+                    hide-default-footer
+                    items-per-page={-1}
+                  >
+                    {{
+                      'item.product.sku': ({ item }: any) => <span>{item.product?.sku || '—'}</span>,
+                      'item.totalQuantity': ({ item }: any) => (
+                        <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
+                      ),
+                    }}
+                  </v-data-table>
+                  <v-card-title class="text-subtitle-1 pt-4">Журнал списань</v-card-title>
+                  <v-data-table headers={writeOffLogHeaders} items={writeOffMovements.value} hide-default-footer>
+                    {{
+                      'item.date': ({ item }: any) => (
+                        <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
+                      ),
+                      'item.items': ({ item }: any) => (
+                        <v-chip size="small" variant="outlined">{item.items?.length ?? 0}</v-chip>
+                      ),
+                      'item.notes': ({ item }: any) => (
+                        <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                      ),
+                    }}
+                  </v-data-table>
+                </>
+              )}
             </v-card>
 
             <v-card class="mb-4">
@@ -195,10 +314,10 @@ export default defineComponent({
               </v-card-text>
             </v-card>
 
-            <v-card>
+            <v-card class="mb-4">
               <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2" icon="mdi-truck-delivery" />
-                Переміщення на обʼєкт
+                Переміщення на обʼєкт (відпуск зі складу)
               </v-card-title>
               <v-data-table headers={movementHeaders} items={movements.value}>
                 {{
@@ -213,6 +332,34 @@ export default defineComponent({
                   ),
                 }}
               </v-data-table>
+            </v-card>
+
+            <v-card>
+              <v-card-title class="d-flex align-center">
+                <v-icon class="mr-2" icon="mdi-keyboard-return" />
+                Повернення з обʼєкта на склад
+              </v-card-title>
+              {returnMovements.value.length === 0 ? (
+                <v-card-text>
+                  <v-alert type="info" variant="tonal" density="compact">
+                    Повернень ще не було.
+                  </v-alert>
+                </v-card-text>
+              ) : (
+                <v-data-table headers={returnLogHeaders} items={returnMovements.value} hide-default-footer>
+                  {{
+                    'item.date': ({ item }: any) => (
+                      <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
+                    ),
+                    'item.items': ({ item }: any) => (
+                      <v-chip size="small" variant="outlined">{item.items?.length ?? 0}</v-chip>
+                    ),
+                    'item.notes': ({ item }: any) => (
+                      <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                    ),
+                  }}
+                </v-data-table>
+              )}
             </v-card>
           </>
         )}

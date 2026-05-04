@@ -17,7 +17,36 @@ export default defineComponent({
       { title: 'Всі', value: null },
       { title: 'Між складами', value: 'WAREHOUSE_TO_WAREHOUSE' },
       { title: 'На обʼєкт', value: 'WAREHOUSE_TO_OBJECT' },
+      { title: 'Списання з обʼєкта', value: 'OBJECT_WRITE_OFF' },
+      { title: 'Повернення на склад', value: 'OBJECT_TO_WAREHOUSE' },
     ]
+
+    function movementChip(type: string) {
+      switch (type) {
+        case 'WAREHOUSE_TO_WAREHOUSE':
+          return { label: 'Між складами', color: 'primary', icon: 'mdi-swap-horizontal' as const }
+        case 'WAREHOUSE_TO_OBJECT':
+          return { label: 'На обʼєкт', color: 'warning', icon: 'mdi-truck-delivery' as const }
+        case 'OBJECT_WRITE_OFF':
+          return { label: 'Списання', color: 'error', icon: 'mdi-minus-circle-outline' as const }
+        case 'OBJECT_TO_WAREHOUSE':
+          return { label: 'Повернення', color: 'success', icon: 'mdi-keyboard-return' as const }
+        default:
+          return { label: type, color: 'grey', icon: 'mdi-help' as const }
+      }
+    }
+
+    function destinationLabel(item: any) {
+      if (item.type === 'WAREHOUSE_TO_WAREHOUSE') return item.toWarehouse?.name ?? '—'
+      if (item.type === 'WAREHOUSE_TO_OBJECT') return item.object?.name ?? '—'
+      if (item.type === 'OBJECT_WRITE_OFF') return item.object ? `${item.object.name} · списано` : '—'
+      if (item.type === 'OBJECT_TO_WAREHOUSE') {
+        const o = item.object?.name ?? 'Обʼєкт'
+        const w = item.toWarehouse?.name ?? '—'
+        return `${o} → ${w}`
+      }
+      return '—'
+    }
 
     const headers = [
       { title: 'Тип', key: 'type', width: 160 },
@@ -51,26 +80,18 @@ export default defineComponent({
           </v-card-text>
           <v-data-table headers={headers} items={movements.value} loading={pending.value} hover>
             {{
-              'item.type': ({ item }: any) => (
-                <v-chip
-                  size="small"
-                  color={item.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'primary' : 'warning'}
-                  variant="tonal"
-                  prepend-icon={item.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'mdi-swap-horizontal' : 'mdi-truck-delivery'}
-                >
-                  {item.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'Між складами' : 'На обʼєкт'}
-                </v-chip>
-              ),
+              'item.type': ({ item }: any) => {
+                const chip = movementChip(item.type)
+                return (
+                  <v-chip size="small" color={chip.color} variant="tonal" prepend-icon={chip.icon}>
+                    {chip.label}
+                  </v-chip>
+                )
+              },
               'item.date': ({ item }: any) => (
                 <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
               ),
-              'item.destination': ({ item }: any) => (
-                <span>
-                  {item.type === 'WAREHOUSE_TO_WAREHOUSE'
-                    ? item.toWarehouse?.name
-                    : item.object?.name}
-                </span>
-              ),
+              'item.destination': ({ item }: any) => <span>{destinationLabel(item)}</span>,
               'item.items': ({ item }: any) => (
                 <v-chip size="small" variant="outlined">{item.items?.length ?? 0}</v-chip>
               ),
