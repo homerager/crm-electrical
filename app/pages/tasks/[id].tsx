@@ -29,7 +29,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
 
     const route = useRoute()
-    const { user } = useAuth()
+    const { user, isPrivileged } = useAuth()
     const id = computed(() => route.params.id as string)
 
     const { data, refresh, pending } = useFetch(() => `/api/tasks/${id.value}`)
@@ -224,7 +224,7 @@ export default defineComponent({
     }
 
     const canDeleteAttachment = (att: any) =>
-      att.userId === user.value?.id || user.value?.role === 'ADMIN'
+      att.userId === user.value?.id || isPrivileged.value
     const canDeleteCommentAttachment = (att: any, comment: { userId: string }) =>
       canDeleteAttachment(att) || comment.userId === user.value?.id
 
@@ -357,7 +357,7 @@ export default defineComponent({
     }
 
     const canMutateComment = (c: { userId: string }) =>
-      c.userId === user.value?.id || user.value?.role === 'ADMIN'
+      c.userId === user.value?.id || isPrivileged.value
 
     // Sub-tasks
     const subTaskDialog = ref(false)
@@ -423,7 +423,7 @@ export default defineComponent({
     }
 
     const canEditTimeLog = (log: any) =>
-      log.userId === user.value?.id || user.value?.role === 'ADMIN'
+      log.userId === user.value?.id || isPrivileged.value
 
     return () => {
       if (pending.value && !task.value) {

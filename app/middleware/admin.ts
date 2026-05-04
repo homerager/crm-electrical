@@ -1,11 +1,11 @@
 export default defineNuxtRouteMiddleware(async () => {
-  const { isAdmin, fetchMe, initialized } = useAuth()
+  const { isPrivileged, fetchMe, initialized } = useAuth()
 
   if (!initialized.value) {
     await fetchMe()
   }
 
-  if (!isAdmin.value) {
+  if (!isPrivileged.value) {
     return navigateTo('/tasks')
   }
 })

@@ -2,7 +2,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'STOREKEEPER' | 'USER'
+  role: 'ADMIN' | 'MANAGER' | 'STOREKEEPER' | 'USER'
   isActive: boolean
   jobTitle?: { id: string; name: string } | null
 }
@@ -12,7 +12,12 @@ export function useAuth() {
   const initialized = useState<boolean>('auth-initialized', () => false)
 
   const isLoggedIn = computed(() => !!user.value)
+  /** Повний доступ, включно з керуванням користувачами */
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
+  /** Як адмін, але без сторінки/ API користувачів */
+  const isPrivileged = computed(
+    () => user.value?.role === 'ADMIN' || user.value?.role === 'MANAGER',
+  )
 
   async function fetchMe() {
     try {
@@ -46,5 +51,5 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
-  return { user, isLoggedIn, isAdmin, initialized, fetchMe, login, logout }
+  return { user, isLoggedIn, isAdmin, isPrivileged, initialized, fetchMe, login, logout }
 }

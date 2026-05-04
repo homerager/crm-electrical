@@ -1,7 +1,9 @@
+import { isElevatedRole } from '../../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   const projectId = getRouterParam(event, 'id')!
-  const isAdmin = auth?.role === 'ADMIN'
+  const isElevated = isElevatedRole(auth?.role)
   const body = await readBody(event)
   const { userId, role } = body
 
@@ -19,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const requester = project.members.find((m) => m.userId === auth.userId)
-  if (!isAdmin && requester?.role !== 'OWNER') {
+  if (!isElevated && requester?.role !== 'OWNER') {
     throw createError({ statusCode: 403, message: 'Тільки власник або адмін може керувати учасниками' })
   }
 

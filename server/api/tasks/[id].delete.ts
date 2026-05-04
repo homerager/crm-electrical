@@ -1,3 +1,5 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
@@ -7,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const task = await prisma.task.findUnique({ where: { id } })
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Завдання не знайдено' })
 
-  if (task.createdById !== auth.userId && auth.role !== 'ADMIN') {
+  if (task.createdById !== auth.userId && !isElevatedRole(auth.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав для видалення' })
   }
 

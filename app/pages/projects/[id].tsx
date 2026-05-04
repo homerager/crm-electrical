@@ -27,8 +27,6 @@ export default defineComponent({
     const router = useRouter()
     const projectId = computed(() => route.params.id as string)
 
-    const { isAdmin } = useAuth()
-
     const viewMode = ref<'kanban' | 'list' | 'gantt'>('kanban')
     const filterStatus = ref('')
     const filterPriority = ref('')

@@ -1,8 +1,9 @@
 import { setTelegramWebhook } from '../../utils/telegram'
+import { isElevatedRole } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (auth?.role !== 'ADMIN') {
+  if (!isElevatedRole(auth?.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 

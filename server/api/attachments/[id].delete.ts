@@ -1,5 +1,6 @@
 import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
+import { isElevatedRole } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -10,8 +11,8 @@ export default defineEventHandler(async (event) => {
   const attachment = await prisma.taskAttachment.findUnique({ where: { id } })
   if (!attachment) throw createError({ statusCode: 404, statusMessage: 'Файл не знайдено' })
 
-  const isAdmin = auth.role === 'ADMIN'
-  if (isAdmin || attachment.userId === auth.userId) {
+  const isElevated = isElevatedRole(auth.role)
+  if (isElevated || attachment.userId === auth.userId) {
     // ok
   } else if (attachment.commentId) {
     const c = await prisma.taskComment.findUnique({ where: { id: attachment.commentId } })

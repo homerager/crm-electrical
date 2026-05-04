@@ -1,7 +1,9 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (auth?.role !== 'ADMIN') {
-    throw createError({ statusCode: 403, message: 'Тільки адміністратор може створювати проєкти' })
+  if (!isElevatedRole(auth?.role)) {
+    throw createError({ statusCode: 403, message: 'Недостатньо прав для створення проєкту' })
   }
 
   const body = await readBody(event)

@@ -1,13 +1,14 @@
 import { createReadStream, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { sendStream, setResponseHeader } from 'h3'
+import { isElevatedRole } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const id = getRouterParam(event, 'id')!
-  const isAdmin = auth.role === 'ADMIN'
+  const isElevated = isElevatedRole(auth.role)
 
   const attachment = await prisma.taskAttachment.findUnique({
     where: { id },
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Файл не знайдено' })
   }
 
-  if (!isAdmin && attachment.task.projectId) {
+  if (!isElevated && attachment.task.projectId) {
     const member = await prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId: attachment.task.projectId, userId: auth.userId } },
     })

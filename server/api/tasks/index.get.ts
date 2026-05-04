@@ -1,3 +1,5 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
@@ -9,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const objectId = query.objectId as string | undefined
   const projectId = query.projectId as string | undefined
 
-  const isAdmin = auth.role === 'ADMIN'
+  const isElevated = isElevatedRole(auth.role)
 
   const where: any = { parentId: null }
   if (status) where.status = status
@@ -18,7 +20,7 @@ export default defineEventHandler(async (event) => {
   if (objectId) where.objectId = objectId
 
   if (projectId) {
-    if (!isAdmin) {
+    if (!isElevated) {
       const member = await prisma.projectMember.findUnique({
         where: { projectId_userId: { projectId, userId: auth.userId } },
       })
@@ -27,7 +29,7 @@ export default defineEventHandler(async (event) => {
     where.projectId = projectId
   } else {
     // Without specific project filter: show tasks without project + tasks from user's projects
-    if (!isAdmin) {
+    if (!isElevated) {
       const userProjectIds = await prisma.projectMember
         .findMany({ where: { userId: auth.userId }, select: { projectId: true } })
         .then((members) => members.map((m) => m.projectId))

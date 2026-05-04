@@ -1,7 +1,9 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   const id = getRouterParam(event, 'id')!
-  const isAdmin = auth?.role === 'ADMIN'
+  const isElevated = isElevatedRole(auth?.role)
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -13,7 +15,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const member = project.members.find((m) => m.userId === auth.userId)
-  if (!isAdmin && member?.role !== 'OWNER') {
+  if (!isElevated && member?.role !== 'OWNER') {
     throw createError({ statusCode: 403, message: 'Тільки власник або адмін може видалити проєкт' })
   }
 

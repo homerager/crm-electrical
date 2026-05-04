@@ -10,7 +10,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Проєкти' })
 
-    const { isAdmin } = useAuth()
+    const { isPrivileged } = useAuth()
     const dialog = ref(false)
     const editDialog = ref(false)
     const deleteDialog = ref(false)
@@ -181,7 +181,7 @@ export default defineComponent({
             <div class="text-caption text-medium-emphasis">Управління проєктами та доступом</div>
           </div>
           <v-spacer />
-          {isAdmin.value && (
+          {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Новий проєкт
             </v-btn>
@@ -193,7 +193,7 @@ export default defineComponent({
             <v-icon size="64" color="medium-emphasis" class="mb-4">mdi-folder-off-outline</v-icon>
             <div class="text-h6 text-medium-emphasis">Немає проєктів</div>
             <div class="text-body-2 text-medium-emphasis mt-2">Створіть перший проєкт для організації завдань</div>
-            {isAdmin.value && (
+            {isPrivileged.value && (
               <v-btn color="primary" class="mt-4" prepend-icon="mdi-plus" onClick={openCreate}>
                 Створити проєкт
               </v-btn>
@@ -248,7 +248,7 @@ export default defineComponent({
                     icon="mdi-pencil"
                     onClick={() => openEdit(project)}
                   />
-                  {isAdmin.value && (
+                  {isPrivileged.value && (
                     <v-btn
                       size="small"
                       variant="text"

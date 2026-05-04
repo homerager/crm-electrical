@@ -7,7 +7,7 @@ export default defineComponent({
       title: 'Групи товарів'
     })
 
-    const { isAdmin } = useAuth()
+    const { isPrivileged } = useAuth()
     const { data, refresh, pending } = useFetch('/api/product-groups')
     const groups = computed(() => (data.value as any)?.groups ?? [])
 
@@ -82,7 +82,7 @@ export default defineComponent({
         <div class="d-flex align-center mb-4">
           <div class="text-h5 font-weight-bold">Групи товарів</div>
           <v-spacer />
-          {isAdmin.value && (
+          {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати групу
             </v-btn>
@@ -102,7 +102,7 @@ export default defineComponent({
               ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
-                  {isAdmin.value && (
+                  {isPrivileged.value && (
                     <>
                       <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" onClick={() => openEdit(item)} />
                       <v-btn icon="mdi-delete" variant="text" size="small" color="error" onClick={() => openDelete(item)} />

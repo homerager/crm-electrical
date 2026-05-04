@@ -57,6 +57,7 @@ export default defineComponent({
 
     const roleOptions = [
       { title: 'Адміністратор', value: 'ADMIN' },
+      { title: 'Менеджер', value: 'MANAGER' },
       { title: 'Комірник', value: 'STOREKEEPER' },
       { title: 'Користувач', value: 'USER' },
     ]
@@ -259,13 +260,26 @@ export default defineComponent({
               'item.role': ({ item }: any) => {
                 const r = item.role as string
                 const isAdminR = r === 'ADMIN'
+                const isManagerR = r === 'MANAGER'
                 const isUserR = r === 'USER'
-                const label = isAdminR ? 'Адміністратор' : isUserR ? 'Користувач' : 'Комірник'
-                const icon = isAdminR ? 'mdi-shield-account' : isUserR ? 'mdi-account' : 'mdi-account-hard-hat'
+                const label = isAdminR
+                  ? 'Адміністратор'
+                  : isManagerR
+                    ? 'Менеджер'
+                    : isUserR
+                      ? 'Користувач'
+                      : 'Комірник'
+                const icon = isAdminR
+                  ? 'mdi-shield-account'
+                  : isManagerR
+                    ? 'mdi-account-tie'
+                    : isUserR
+                      ? 'mdi-account'
+                      : 'mdi-account-hard-hat'
                 return (
                   <v-chip
                     size="small"
-                    color={isAdminR ? 'primary' : isUserR ? 'teal' : 'secondary'}
+                    color={isAdminR ? 'primary' : isManagerR ? 'deep-purple' : isUserR ? 'teal' : 'secondary'}
                     variant="tonal"
                     prepend-icon={icon}
                   >

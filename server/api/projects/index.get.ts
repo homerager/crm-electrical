@@ -1,9 +1,11 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  const isAdmin = auth?.role === 'ADMIN'
+  const isElevated = isElevatedRole(auth?.role)
 
   const projects = await prisma.project.findMany({
-    where: isAdmin
+    where: isElevated
       ? undefined
       : {
           members: {

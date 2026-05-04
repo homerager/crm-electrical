@@ -1,3 +1,5 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
@@ -7,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const log = await prisma.timeLog.findUnique({ where: { id } })
   if (!log) throw createError({ statusCode: 404, statusMessage: 'Запис не знайдено' })
 
-  if (log.userId !== auth.userId && auth.role !== 'ADMIN') {
+  if (log.userId !== auth.userId && !isElevatedRole(auth.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 

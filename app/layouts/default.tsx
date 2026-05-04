@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'DefaultLayout',
   setup() {
-    const { user, isAdmin, logout } = useAuth()
+    const { user, isAdmin, isPrivileged, logout } = useAuth()
     const route = useRoute()
     const slots = useSlots()
     const drawer = ref(true)
@@ -28,6 +28,7 @@ export default defineComponent({
     })
     const userRoleLabel = computed(() => {
       if (user.value?.role === 'ADMIN') return 'Адміністратор'
+      if (user.value?.role === 'MANAGER') return 'Менеджер'
       if (user.value?.role === 'USER') return 'Користувач'
       return 'Комірник'
     })
@@ -52,11 +53,13 @@ export default defineComponent({
         { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
         { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
       ]
-      if (isAdmin.value) {
+      if (isPrivileged.value) {
         base.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
         base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
-        base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
         base.push({ title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' })
+      }
+      if (isAdmin.value) {
+        base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
       }
       return base
     })

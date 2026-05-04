@@ -1,4 +1,5 @@
 import { sendTelegramMessage, buildTaskCreatedMessage } from '../../utils/telegram'
+import { isElevatedRole } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event) => {
     if (parent.parentId) throw createError({ statusCode: 400, statusMessage: 'Не можна створити підзавдання до підзавдання' })
   }
 
-  if (projectId && auth.role !== 'ADMIN') {
+  if (projectId && !isElevatedRole(auth.role)) {
     const member = await prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId: auth.userId } },
     })

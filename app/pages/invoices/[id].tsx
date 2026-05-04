@@ -4,7 +4,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
 
     const route = useRoute()
-    const { isAdmin } = useAuth()
+    const { isPrivileged } = useAuth()
     const id = route.params.id as string
     const { data, pending } = useFetch(`/api/invoices/${id}`)
     const invoice = computed(() => (data.value as any)?.invoice)
@@ -61,7 +61,7 @@ export default defineComponent({
             </>
           )}
           <v-spacer />
-          {isAdmin.value && invoice.value && (
+          {isPrivileged.value && invoice.value && (
             <v-btn color="error" variant="outlined" prepend-icon="mdi-delete" onClick={() => (deleteDialog.value = true)}>
               Видалити
             </v-btn>

@@ -26,7 +26,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Завдання' })
 
-    const { isAdmin } = useAuth()
+    const { isPrivileged } = useAuth()
 
     const viewMode = ref<'kanban' | 'list'>('kanban')
     const filterStatus = ref('')
@@ -208,7 +208,7 @@ export default defineComponent({
         <div class="d-flex align-center mb-4 gap-2 flex-wrap">
           <div class="text-h5 font-weight-bold">Завдання</div>
           <v-spacer />
-          {isAdmin.value && (
+          {isPrivileged.value && (
             <v-btn variant="outlined" size="small" prepend-icon="mdi-chart-bar" to="/tasks/reports">
               Репорти
             </v-btn>

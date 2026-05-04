@@ -1,9 +1,11 @@
+import { isElevatedRole } from '../../utils/authz'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
 
   const id = getRouterParam(event, 'id')!
-  const isAdmin = auth.role === 'ADMIN'
+  const isElevated = isElevatedRole(auth.role)
 
   const task = await prisma.task.findUnique({
     where: { id },
@@ -42,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Завдання не знайдено' })
 
-  if (!isAdmin && task.projectId) {
+  if (!isElevated && task.projectId) {
     const member = await prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId: task.projectId, userId: auth.userId } },
     })

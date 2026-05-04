@@ -7,7 +7,7 @@ export default defineComponent({
       title: 'Склади'
     })
 
-    const { isAdmin } = useAuth()
+    const { isPrivileged } = useAuth()
     const { data, refresh, pending } = useFetch('/api/warehouses', { query: { includeInactive: 'true' } })
     const warehouses = computed(() => (data.value as any)?.warehouses ?? [])
 
@@ -82,7 +82,7 @@ export default defineComponent({
         <div class="d-flex align-center mb-4">
           <div class="text-h5 font-weight-bold">Склади</div>
           <v-spacer />
-          {isAdmin.value && (
+          {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати склад
             </v-btn>
@@ -105,7 +105,7 @@ export default defineComponent({
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
                   <v-btn icon="mdi-eye" variant="text" size="small" to={`/warehouses/${item.id}`} />
-                  {isAdmin.value && (
+                  {isPrivileged.value && (
                     <>
                       <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" onClick={() => openEdit(item)} />
                       <v-btn icon="mdi-delete" variant="text" size="small" color="error" onClick={() => openDelete(item)} />

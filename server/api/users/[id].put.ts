@@ -1,8 +1,9 @@
 import type { Role } from '@prisma/client'
+import { isStrictAdmin } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (auth?.role !== 'ADMIN') {
+  if (!isStrictAdmin(auth?.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 

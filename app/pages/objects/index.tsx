@@ -19,7 +19,7 @@ export default defineComponent({
       title: 'Будівельні обʼєкти'
     })
 
-    const { isAdmin } = useAuth()
+    const { isPrivileged } = useAuth()
     const { data, refresh, pending } = useFetch('/api/objects')
     const objects = computed(() => (data.value as any)?.objects ?? [])
 
@@ -97,7 +97,7 @@ export default defineComponent({
         <div class="d-flex align-center mb-4">
           <div class="text-h5 font-weight-bold">Будівельні обʼєкти</div>
           <v-spacer />
-          {isAdmin.value && (
+          {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати обʼєкт
             </v-btn>
@@ -118,7 +118,7 @@ export default defineComponent({
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
                   <v-btn icon="mdi-chart-bar" variant="text" size="small" color="info" to={`/reports/objects/${item.id}`} title="Репорт" />
-                  {isAdmin.value && (
+                  {isPrivileged.value && (
                     <>
                       <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" onClick={() => openEdit(item)} />
                       <v-btn icon="mdi-delete" variant="text" size="small" color="error" onClick={() => openDelete(item)} />
