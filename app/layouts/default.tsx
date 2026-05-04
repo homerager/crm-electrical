@@ -94,7 +94,7 @@ export default defineComponent({
         { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
       ]
       if (isPrivileged.value) {
-        base.push({ title: 'Облік часу (вручну)', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
+        base.push({ title: 'Облік часу', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
         base.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
       }
       if (isAdmin.value) {
@@ -253,7 +253,7 @@ function getPageTitle(path: string): string {
     '/movements': 'Переміщення',
     '/reports': 'Репорти',
     '/tasks': 'Завдання',
-    '/time-logs/manual': 'Облік часу (вручну)',
+    '/time-logs/manual': 'Облік часу',
     '/projects': 'Проєкти',
     '/users': 'Користувачі',
     '/job-titles': 'Посади',

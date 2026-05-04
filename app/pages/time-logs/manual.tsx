@@ -10,7 +10,7 @@ export default defineComponent({
   name: 'ManualTimeLogPage',
   setup() {
     definePageMeta({ middleware: ['auth', 'admin'] })
-    useHead({ title: 'Облік часу (вручну)' })
+    useHead({ title: 'Облік часу' })
 
     const listQuery = reactive({
       userId: '' as string,
@@ -202,7 +202,7 @@ export default defineComponent({
     return () => (
       <div>
         <div class="page-toolbar">
-          <div class="text-h5 font-weight-bold">Облік часу (вручну)</div>
+          <div class="text-h5 font-weight-bold">Облік часу</div>
           <v-spacer />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
             Додати запис
