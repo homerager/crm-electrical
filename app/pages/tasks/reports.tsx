@@ -61,7 +61,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4 gap-2 flex-wrap">
+        <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Репорти завдань</div>
           <v-spacer />
           <v-btn variant="outlined" prepend-icon="mdi-arrow-left" to="/tasks" size="small">
@@ -76,35 +76,43 @@ export default defineComponent({
 
         {/* Date filter */}
         <v-card class="mb-5 pa-4">
-          <div class="d-flex align-center flex-wrap" style="gap:16px">
-            <v-text-field
-              v-model={dateFrom.value}
-              label="Від"
-              type="date"
-              density="compact"
-              hide-details
-              style="max-width:180px"
-            />
-            <v-text-field
-              v-model={dateTo.value}
-              label="До"
-              type="date"
-              density="compact"
-              hide-details
-              style="max-width:180px"
-            />
+          <v-row dense align="center">
+            <v-col cols={12} sm="auto">
+              <v-text-field
+                v-model={dateFrom.value}
+                label="Від"
+                type="date"
+                density="compact"
+                hide-details
+                class="w-100"
+                style={{ maxWidth: '220px' }}
+              />
+            </v-col>
+            <v-col cols={12} sm="auto">
+              <v-text-field
+                v-model={dateTo.value}
+                label="До"
+                type="date"
+                density="compact"
+                hide-details
+                class="w-100"
+                style={{ maxWidth: '220px' }}
+              />
+            </v-col>
             {(dateFrom.value || dateTo.value) && (
-              <v-btn
-                variant="text"
-                size="small"
-                color="error"
-                prepend-icon="mdi-filter-remove"
-                onClick={() => { dateFrom.value = ''; dateTo.value = '' }}
-              >
-                Скинути
-              </v-btn>
+              <v-col cols={12} sm="auto">
+                <v-btn
+                  variant="text"
+                  size="small"
+                  color="error"
+                  prepend-icon="mdi-filter-remove"
+                  onClick={() => { dateFrom.value = ''; dateTo.value = '' }}
+                >
+                  Скинути
+                </v-btn>
+              </v-col>
             )}
-          </div>
+          </v-row>
         </v-card>
 
         <div class="d-flex flex-wrap mb-4" style="gap:20px">

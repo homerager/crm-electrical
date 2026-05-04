@@ -111,7 +111,7 @@ export default defineComponent({
     return () => (
       <div>
         {/* Header */}
-        <div class="d-flex align-center mb-5 gap-2 flex-wrap">
+        <div class="page-toolbar mb-5">
           <div>
             <h1 class="text-h5 font-weight-bold">Зарплатний звіт</h1>
             <div class="text-caption text-medium-emphasis">Облік годин виконавців для розрахунку зарплати</div>
@@ -132,38 +132,48 @@ export default defineComponent({
 
         {/* Filters */}
         <v-card class="mb-5 pa-4">
-          <div class="d-flex flex-wrap align-center" style="gap:16px">
-            <v-text-field
-              v-model={dateFrom.value}
-              label="Від"
-              type="date"
-              density="compact"
-              hide-details
-              variant="outlined"
-              style="max-width:180px"
-            />
-            <v-text-field
-              v-model={dateTo.value}
-              label="До"
-              type="date"
-              density="compact"
-              hide-details
-              variant="outlined"
-              style="max-width:180px"
-            />
-            <v-select
-              v-model={filterUserId.value}
-              label="Виконавець"
-              items={[{ value: '', title: 'Всі' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
-              density="compact"
-              hide-details
-              variant="outlined"
-              clearable
-              style="max-width:220px"
-            />
-            <v-btn variant="tonal" size="small" onClick={setCurrentMonth}>Цей місяць</v-btn>
-            <v-btn variant="tonal" size="small" onClick={setPrevMonth}>Минулий місяць</v-btn>
-          </div>
+          <v-row dense align="center">
+            <v-col cols={12} sm={6} md="auto">
+              <v-text-field
+                v-model={dateFrom.value}
+                label="Від"
+                type="date"
+                density="compact"
+                hide-details
+                variant="outlined"
+                class="w-100"
+                style={{ maxWidth: '220px' }}
+              />
+            </v-col>
+            <v-col cols={12} sm={6} md="auto">
+              <v-text-field
+                v-model={dateTo.value}
+                label="До"
+                type="date"
+                density="compact"
+                hide-details
+                variant="outlined"
+                class="w-100"
+                style={{ maxWidth: '220px' }}
+              />
+            </v-col>
+            <v-col cols={12} md={4}>
+              <v-select
+                v-model={filterUserId.value}
+                label="Виконавець"
+                items={[{ value: '', title: 'Всі' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
+                density="compact"
+                hide-details
+                variant="outlined"
+                clearable
+                class="w-100"
+              />
+            </v-col>
+            <v-col cols={12} sm="auto" class="d-flex flex-wrap ga-2">
+              <v-btn variant="tonal" size="small" onClick={setCurrentMonth}>Цей місяць</v-btn>
+              <v-btn variant="tonal" size="small" onClick={setPrevMonth}>Минулий місяць</v-btn>
+            </v-col>
+          </v-row>
         </v-card>
 
         {/* Summary cards */}
@@ -214,8 +224,8 @@ export default defineComponent({
           <v-card key={u.userId} class="mb-4">
             {/* User header row */}
             <div
-              class="d-flex align-center pa-4"
-              style="cursor:pointer; gap:12px"
+              class="d-flex align-center flex-wrap pa-4 ga-3"
+              style="cursor:pointer"
               onClick={() => toggleUser(u.userId)}
             >
               <v-avatar color="primary" size="40" variant="tonal">

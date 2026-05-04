@@ -11,7 +11,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4">
+        <div class="page-toolbar">
           <v-btn icon="mdi-arrow-left" variant="text" to="/movements" class="mr-2" />
           <div class="text-h5 font-weight-bold">Нове переміщення</div>
         </div>

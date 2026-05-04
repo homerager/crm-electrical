@@ -1,11 +1,34 @@
+import { useDisplay } from 'vuetify'
+
 export default defineComponent({
   name: 'DefaultLayout',
   setup() {
     const { user, isAdmin, isPrivileged, isEmployee, logout } = useAuth()
     const route = useRoute()
     const slots = useSlots()
+    const display = useDisplay()
     const drawer = ref(true)
     const rail = ref(false)
+
+    watch(
+      () => display.mobile.value,
+      (isMobile) => {
+        if (isMobile) {
+          rail.value = false
+          drawer.value = false
+        } else {
+          drawer.value = true
+        }
+      },
+      { immediate: true },
+    )
+
+    watch(
+      () => route.fullPath,
+      () => {
+        if (display.mobile.value) drawer.value = false
+      },
+    )
 
     const themeCookie = useCookie<'light' | 'dark'>('crm-theme', {
       default: () => 'dark',
@@ -77,7 +100,12 @@ export default defineComponent({
       <v-app theme={theme.value}>
 
         {/* Navigation Drawer — all content in named slots to avoid [object Object] */}
-        <v-navigation-drawer v-model={drawer.value} rail={rail.value} permanent>
+        <v-navigation-drawer
+          v-model={drawer.value}
+          rail={display.mobile.value ? false : rail.value}
+          temporary={display.mobile.value}
+          permanent={!display.mobile.value}
+        >
           {{
             default: () => (
               <>
@@ -87,13 +115,16 @@ export default defineComponent({
                   nav
                 >
                   {{
-                    append: () => (
-                      <v-btn
-                        variant="text"
-                        icon={rail.value ? 'mdi-chevron-right' : 'mdi-chevron-left'}
-                        onClick={() => (rail.value = !rail.value)}
-                      />
-                    ),
+                    append: () =>
+                      !display.mobile.value
+                        ? (
+                            <v-btn
+                              variant="text"
+                              icon={rail.value ? 'mdi-chevron-right' : 'mdi-chevron-left'}
+                              onClick={() => (rail.value = !rail.value)}
+                            />
+                          )
+                        : null,
                   }}
                 </v-list-item>
 
@@ -123,8 +154,10 @@ export default defineComponent({
             default: () => (
               <>
                 <v-app-bar-nav-icon onClick={() => (drawer.value = !drawer.value)} />
-                <v-app-bar-title>
-                  <span class="text-body-1 font-weight-medium">{getPageTitle(route.path)}</span>
+                <v-app-bar-title class="min-w-0">
+                  <span class="text-body-1 font-weight-medium text-truncate d-block">
+                    {getPageTitle(route.path)}
+                  </span>
                 </v-app-bar-title>
               </>
             ),
@@ -136,7 +169,8 @@ export default defineComponent({
                       activator: ({ props }: { props: Record<string, unknown> }) => (
                         <v-btn
                           {...props}
-                          class="mr-2 text-none"
+                          class="mr-2 text-none text-truncate"
+                          style={{ maxWidth: display.smAndDown.value ? 'min(52vw, 200px)' : undefined }}
                           prepend-icon="mdi-account-circle"
                           variant="tonal"
                           color="primary"
@@ -186,7 +220,7 @@ export default defineComponent({
         </v-app-bar>
 
         <v-main style="background: var(--v-theme-background)">
-          <v-container fluid class="pa-6">
+          <v-container fluid class="pa-4 pa-sm-6">
             {slots.default?.()}
           </v-container>
         </v-main>

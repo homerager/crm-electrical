@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   future: { compatibilityVersion: 4 },
   compatibilityDate: '2024-11-01',
 
+  app: {
+    head: {
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover',
+    },
+  },
+
   devtools: { enabled: true },
 
   build: {

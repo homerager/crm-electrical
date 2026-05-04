@@ -184,7 +184,7 @@ export default defineComponent({
       return (
         <div>
           {/* Header */}
-          <div class="d-flex align-center mb-4 gap-2 flex-wrap">
+          <div class="page-toolbar">
             <div>
               <div class="d-flex align-center gap-2 mb-1">
                 <v-btn

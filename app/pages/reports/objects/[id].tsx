@@ -77,7 +77,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4 no-print">
+        <div class="page-toolbar no-print">
           <v-btn icon="mdi-arrow-left" variant="text" to="/reports" class="mr-2" />
           <div>
             <div class="text-h5 font-weight-bold">{object.value?.name ?? '...'}</div>

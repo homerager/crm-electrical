@@ -99,6 +99,21 @@
 }
 
 /* Сітка на всю ширину блока; пуста зона справа в тон фону, не діркою */
+@media (max-width: 959px) {
+  .gantt-toolbar-controls > .v-spacer {
+    display: none !important;
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+  }
+
+  .gantt-toolbar-controls .v-select {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0 !important;
+  }
+}
+
 .project-gantt .gantt-container {
   width: 100% !important;
   min-width: 100% !important;

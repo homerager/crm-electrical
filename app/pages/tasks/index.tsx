@@ -212,7 +212,7 @@ export default defineComponent({
     return () => (
       <div>
         {/* Header */}
-        <div class="d-flex align-center mb-4 gap-2 flex-wrap">
+        <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Завдання</div>
           <v-spacer />
           {isPrivileged.value && (
@@ -243,46 +243,54 @@ export default defineComponent({
 
         {/* Filters */}
         <v-card class="mb-4 pa-4">
-          <div class="d-flex flex-wrap align-center" style="gap: 16px">
-            <v-select
-              v-model={filterStatus.value}
-              label="Статус"
-              items={[{ value: '', title: 'Всі' }, ...STATUSES.map((s) => ({ value: s.value, title: s.label }))] }
-              density="compact"
-              style="min-width:160px; max-width:200px"
-              clearable
-              hide-details
-            />
-            <v-select
-              v-model={filterPriority.value}
-              label="Пріоритет"
-              items={[{ value: '', title: 'Всі' }, ...PRIORITIES.map((p) => ({ value: p.value, title: p.label }))]}
-              density="compact"
-              style="min-width:160px; max-width:200px"
-              clearable
-              hide-details
-            />
-            <v-select
-              v-model={filterAssignee.value}
-              label="Виконавець"
-              items={[{ value: '', title: 'Всі' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
-              density="compact"
-              style="min-width:180px; max-width:220px"
-              clearable
-              hide-details
-            />
+          <v-row dense>
+            <v-col cols={12} sm={6} md={4}>
+              <v-select
+                v-model={filterStatus.value}
+                label="Статус"
+                items={[{ value: '', title: 'Всі' }, ...STATUSES.map((s) => ({ value: s.value, title: s.label }))] }
+                density="compact"
+                class="w-100"
+                clearable
+                hide-details
+              />
+            </v-col>
+            <v-col cols={12} sm={6} md={4}>
+              <v-select
+                v-model={filterPriority.value}
+                label="Пріоритет"
+                items={[{ value: '', title: 'Всі' }, ...PRIORITIES.map((p) => ({ value: p.value, title: p.label }))]}
+                density="compact"
+                class="w-100"
+                clearable
+                hide-details
+              />
+            </v-col>
+            <v-col cols={12} md={4}>
+              <v-select
+                v-model={filterAssignee.value}
+                label="Виконавець"
+                items={[{ value: '', title: 'Всі' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
+                density="compact"
+                class="w-100"
+                clearable
+                hide-details
+              />
+            </v-col>
             {(filterStatus.value || filterPriority.value || filterAssignee.value) && (
-              <v-btn
-                variant="text"
-                size="small"
-                color="error"
-                prepend-icon="mdi-filter-remove"
-                onClick={() => { filterStatus.value = ''; filterPriority.value = ''; filterAssignee.value = '' }}
-              >
-                Скинути
-              </v-btn>
+              <v-col cols={12} class="d-flex align-center">
+                <v-btn
+                  variant="text"
+                  size="small"
+                  color="error"
+                  prepend-icon="mdi-filter-remove"
+                  onClick={() => { filterStatus.value = ''; filterPriority.value = ''; filterAssignee.value = '' }}
+                >
+                  Скинути
+                </v-btn>
+              </v-col>
             )}
-          </div>
+          </v-row>
         </v-card>
 
         {/* Kanban view */}

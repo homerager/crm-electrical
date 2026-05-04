@@ -175,7 +175,7 @@ export default defineComponent({
 
     return () => (
       <v-container fluid>
-        <div class="d-flex align-center mb-6" style="gap:16px">
+        <div class="page-toolbar mb-6">
           <div class="title-container">
             <h1 class="text-h5 font-weight-bold">Проєкти</h1>
             <div class="text-caption text-medium-emphasis">Управління проєктами та доступом</div>

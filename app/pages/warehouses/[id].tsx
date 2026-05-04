@@ -79,7 +79,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4 flex-wrap ga-2">
+        <div class="page-toolbar ga-2">
           <v-btn icon="mdi-arrow-left" variant="text" to="/warehouses" class="mr-2" />
           <div class="text-h5 font-weight-bold">{warehouse.value?.name ?? '...'}</div>
           <v-spacer />
@@ -110,7 +110,7 @@ export default defineComponent({
           <p class="text-body-1 mb-4">{warehouse.value.description}</p>
         )}
 
-        <v-tabs v-model={tab.value} class="mb-4">
+        <v-tabs v-model={tab.value} class="mb-4" show-arrows>
           <v-tab value="stock" prepend-icon="mdi-package-variant-closed">Залишки</v-tab>
           <v-tab value="movements" prepend-icon="mdi-swap-horizontal">Переміщення</v-tab>
         </v-tabs>

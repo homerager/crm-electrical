@@ -44,7 +44,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4">
+        <div class="page-toolbar">
           <v-btn icon="mdi-arrow-left" variant="text" to="/invoices" class="mr-2" />
           {invoice.value && (
             <>

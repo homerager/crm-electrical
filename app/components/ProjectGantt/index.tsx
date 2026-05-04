@@ -239,7 +239,7 @@ export default defineComponent({
     return () => (
       <v-card variant="outlined" class="project-gantt w-100" data-frappe-gantt-wrap>
         <div
-          class="d-flex flex-wrap align-center pa-3 gap-3 border-b"
+          class="gantt-toolbar-controls d-flex flex-wrap align-center pa-3 gap-3 border-b"
           style={{ borderColor: 'rgba(var(--v-border-color), 0.12)' }}
         >
           <v-chip size="small" variant="tonal" color="default">

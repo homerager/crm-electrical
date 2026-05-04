@@ -466,19 +466,20 @@ export default defineComponent({
             class="px-0 pt-0 pb-4"
           />
 
-          <div class="d-flex align-start" style="gap:16px">
+          <div class="task-detail-layout">
             {/* Main content */}
-            <div style="flex:1; min-width:0; overflow:hidden">
+            <div class="flex-grow-1" style="min-width:0; overflow:hidden">
 
               {/* Title card */}
               <v-card class="mb-4">
                 <v-card-text class="pa-4">
-                  <div class="d-flex align-start gap-2 mb-3">
-                    <div class="text-h6 font-weight-bold" style="flex:1">{t.title}</div>
+                  <div class="d-flex flex-column flex-sm-row align-stretch align-sm-start gap-2 mb-3">
+                    <div class="text-h6 font-weight-bold" style="flex:1; min-width:0">{t.title}</div>
                     <v-btn
                       prepend-icon="mdi-pencil"
                       variant="outlined"
                       size="small"
+                      class="align-self-sm-start"
                       onClick={openEdit}
                     >
                       Редагувати
@@ -532,7 +533,7 @@ export default defineComponent({
               {/* Sub-tasks */}
               {!t.parent && (
                 <v-card class="mb-4">
-                  <v-card-title class="pa-4 pb-0 d-flex align-center">
+                  <v-card-title class="pa-4 pb-0 d-flex flex-wrap align-center ga-2">
                     <v-icon class="mr-2" color="primary">mdi-file-tree</v-icon>
                     Підзавдання
                     <v-chip size="small" class="ml-2" variant="tonal">
@@ -1139,7 +1140,7 @@ export default defineComponent({
             </div>
 
             {/* Sidebar */}
-            <div style="width:280px; flex-shrink:0">
+            <div class="task-detail-sidebar">
               <v-card>
                 <v-list-subheader class="px-4 pt-3">ДЕТАЛІ</v-list-subheader>
                 <v-divider />
@@ -1174,7 +1175,7 @@ export default defineComponent({
                 {editError.value && <v-alert type="error" variant="tonal" class="mb-3">{editError.value}</v-alert>}
                 <v-text-field v-model={editForm.title} label="Назва *" class="mb-3" />
                 <v-textarea v-model={editForm.description} label="Опис" rows={3} class="mb-3" />
-                <div class="d-flex gap-4 mb-3">
+                <div class="d-flex flex-wrap gap-4 mb-3">
                   <v-select
                     v-model={editForm.status}
                     label="Статус"
@@ -1188,7 +1189,7 @@ export default defineComponent({
                     style="flex:1"
                   />
                 </div>
-                <div class="d-flex gap-4 mb-3">
+                <div class="d-flex flex-wrap gap-4 mb-3">
                   <v-select
                     v-model={editForm.assignedToId}
                     label="Виконавець"
@@ -1204,7 +1205,7 @@ export default defineComponent({
                     />
                   )}
                 </div>
-                <div class="d-flex gap-4">
+                <div class="d-flex flex-wrap gap-4">
                   <v-text-field
                     v-model={editForm.dueDate}
                     label="Дедлайн"
@@ -1240,7 +1241,7 @@ export default defineComponent({
                   <v-alert type="error" variant="tonal" class="mb-3">{subTaskError.value}</v-alert>
                 )}
                 <v-text-field v-model={subTaskForm.title} label="Назва *" class="mb-4" autofocus />
-                <div class="d-flex mb-2" style="gap:16px">
+                <div class="d-flex flex-wrap mb-2" style="gap:16px">
                   <v-select
                     v-model={subTaskForm.priority}
                     label="Пріоритет"

@@ -79,7 +79,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4">
+        <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Групи товарів</div>
           <v-spacer />
           {isPrivileged.value && (

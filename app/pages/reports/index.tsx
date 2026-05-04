@@ -43,7 +43,7 @@ export default defineComponent({
       <div>
         <div class="text-h5 font-weight-bold mb-4">Репорти</div>
 
-        <v-tabs v-model={activeTab.value} class="mb-4">
+        <v-tabs v-model={activeTab.value} class="mb-4" show-arrows>
           <v-tab value="stock" prepend-icon="mdi-warehouse">Залишки на складах</v-tab>
           <v-tab value="objects" prepend-icon="mdi-office-building-outline">По обʼєктах</v-tab>
         </v-tabs>

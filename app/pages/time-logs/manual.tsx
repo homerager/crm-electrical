@@ -201,7 +201,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <div class="d-flex align-center mb-4 flex-wrap gap-2">
+        <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Облік часу (вручну)</div>
           <v-spacer />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
@@ -226,56 +226,68 @@ export default defineComponent({
 
         <v-card class="mb-4">
           <v-card-title class="text-subtitle-1">Фільтри</v-card-title>
-          <v-card-text class="d-flex flex-wrap gap-3 pb-2">
-            <v-select
-              v-model={listQuery.userId}
-              label="Користувач"
-              items={[{ value: '', title: 'Усі' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
-              item-title="title"
-              item-value="value"
-              clearable
-              style="min-width:200px; max-width:260px"
-              density="compact"
-              variant="outlined"
-              hide-details
-              onUpdate:modelValue={() => (listQuery.page = 1)}
-            />
-            <v-select
-              v-model={listQuery.objectId}
-              label="Обʼєкт"
-              items={[{ value: '', title: 'Усі' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
-              item-title="title"
-              item-value="value"
-              clearable
-              style="min-width:200px; max-width:280px"
-              density="compact"
-              variant="outlined"
-              hide-details
-              onUpdate:modelValue={() => (listQuery.page = 1)}
-            />
-            <v-text-field
-              v-model={listQuery.from}
-              label="Від"
-              type="date"
-              density="compact"
-              variant="outlined"
-              hide-details
-              style="max-width:160px"
-              onUpdate:modelValue={() => (listQuery.page = 1)}
-            />
-            <v-text-field
-              v-model={listQuery.to}
-              label="До"
-              type="date"
-              density="compact"
-              variant="outlined"
-              hide-details
-              style="max-width:160px"
-              onUpdate:modelValue={() => (listQuery.page = 1)}
-            />
-            <v-btn variant="tonal" prepend-icon="mdi-refresh" loading={listPending.value} onClick={() => refreshLogs()}>
-              Оновити
-            </v-btn>
+          <v-card-text class="pb-2">
+            <v-row dense>
+              <v-col cols={12} sm={6} md={4}>
+                <v-select
+                  v-model={listQuery.userId}
+                  label="Користувач"
+                  items={[{ value: '', title: 'Усі' }, ...users.value.map((u: any) => ({ value: u.id, title: u.name }))]}
+                  item-title="title"
+                  item-value="value"
+                  clearable
+                  class="w-100"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  onUpdate:modelValue={() => (listQuery.page = 1)}
+                />
+              </v-col>
+              <v-col cols={12} sm={6} md={4}>
+                <v-select
+                  v-model={listQuery.objectId}
+                  label="Обʼєкт"
+                  items={[{ value: '', title: 'Усі' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
+                  item-title="title"
+                  item-value="value"
+                  clearable
+                  class="w-100"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  onUpdate:modelValue={() => (listQuery.page = 1)}
+                />
+              </v-col>
+              <v-col cols={12} sm={6} md={2}>
+                <v-text-field
+                  v-model={listQuery.from}
+                  label="Від"
+                  type="date"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  class="w-100"
+                  onUpdate:modelValue={() => (listQuery.page = 1)}
+                />
+              </v-col>
+              <v-col cols={12} sm={6} md={2}>
+                <v-text-field
+                  v-model={listQuery.to}
+                  label="До"
+                  type="date"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  class="w-100"
+                  onUpdate:modelValue={() => (listQuery.page = 1)}
+                />
+              </v-col>
+              <v-col cols={12} class="d-flex align-center">
+                <v-btn variant="tonal" prepend-icon="mdi-refresh" loading={listPending.value} onClick={() => refreshLogs()}>
+                  Оновити
+                </v-btn>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-card>
 
