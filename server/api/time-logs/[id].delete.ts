@@ -6,10 +6,15 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
 
-  const log = await prisma.timeLog.findUnique({ where: { id } })
+  const log = await prisma.timeLog.findUnique({
+    where: { id },
+    include: { task: { select: { assignedToId: true } } },
+  })
   if (!log) throw createError({ statusCode: 404, statusMessage: 'Запис не знайдено' })
 
-  if (log.userId !== auth.userId && !isElevatedRole(auth.role)) {
+  const isAssigneeOfTask = log.task?.assignedToId === auth.userId
+  const isOwnLog = log.userId === auth.userId
+  if (!isOwnLog && !isElevatedRole(auth.role) && !isAssigneeOfTask) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 

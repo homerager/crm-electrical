@@ -79,7 +79,12 @@ export default defineEventHandler(async (event) => {
   const summaryHasMissingPrice = summary.some((r) => r.hasMissingPrice)
 
   const timeLogs = await prisma.timeLog.findMany({
-    where: { task: { objectId: id } },
+    where: {
+      OR: [
+        { task: { objectId: id, status: 'DONE' } },
+        { objectId: id, taskId: null },
+      ],
+    },
     include: {
       user: { select: { id: true, name: true, hourlyRate: true } },
     },

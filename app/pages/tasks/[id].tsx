@@ -430,8 +430,10 @@ export default defineComponent({
       return new Date(t.dueDate) < new Date()
     }
 
-    const canEditTimeLog = (log: any) =>
-      log.userId === user.value?.id || isPrivileged.value
+    const canEditTimeLog = (log: any, taskRow: any) =>
+      log.userId === user.value?.id
+      || taskRow?.assignedToId === user.value?.id
+      || isPrivileged.value
 
     return () => {
       if (pending.value && !task.value) {
@@ -661,6 +663,8 @@ export default defineComponent({
                     size="small"
                     color="primary"
                     prepend-icon="mdi-plus"
+                    disabled={!t.assignedToId}
+                    title={t.assignedToId ? undefined : 'Призначте виконавця завдання'}
                     onClick={openTimeLog}
                   >
                     Додати
@@ -695,6 +699,11 @@ export default defineComponent({
                         default: () => (
                           <div>
                             <div class="text-body-2 font-weight-medium">{log.user.name}</div>
+                            {log.createdBy && (
+                              <div class="text-caption text-medium-emphasis">
+                                Записав: {log.createdBy.name}
+                              </div>
+                            )}
                             {log.description && (
                               <div class="text-caption text-disabled">{log.description}</div>
                             )}
@@ -706,7 +715,7 @@ export default defineComponent({
                               <div class="text-body-2 font-weight-bold">{log.hours}г</div>
                               <div class="text-caption text-disabled">{formatDate(log.date)}</div>
                             </div>
-                            {canEditTimeLog(log) && (
+                            {canEditTimeLog(log, t) && (
                               <v-btn
                                 icon="mdi-delete"
                                 size="x-small"
@@ -1268,6 +1277,12 @@ export default defineComponent({
               <v-card-title class="pa-4">Додати час</v-card-title>
               <v-card-text class="pa-4 pt-0">
                 {timeLogError.value && <v-alert type="error" variant="tonal" class="mb-3">{timeLogError.value}</v-alert>}
+                {task.value?.assignedToId && (
+                  <v-alert type="info" variant="tonal" density="compact" class="mb-3">
+                    Години будуть зараховані на виконавця:{' '}
+                    <strong>{task.value?.assignee?.name ?? '—'}</strong>
+                  </v-alert>
+                )}
                 <v-text-field
                   v-model={timeLogForm.hours}
                   label="Кількість годин *"

@@ -83,7 +83,8 @@ model User {
   movements     Movement[]
   createdTasks  Task[]     @relation("TaskCreatedBy")
   assignedTasks Task[]     @relation("TaskAssignedTo")
-  timeLogs      TimeLog[]
+  timeLogs          TimeLog[] @relation("TimeLogWork")
+  timeLogsCreated   TimeLog[] @relation("TimeLogCreatedBy")
   comments        TaskComment[]
   attachments     TaskAttachment[]
   projectsCreated Project[]
@@ -120,6 +121,7 @@ model ConstructionObject {
 
   movements Movement[]
   tasks     Task[]
+  timeLogs  TimeLog[]
 
   @@map("construction_objects")
 }
@@ -281,15 +283,20 @@ model Task {
 
 model TimeLog {
   id          String   @id @default(cuid())
-  taskId      String
+  taskId      String?
+  objectId    String?
   userId      String
+  /// Хто створив запис (на кого години — userId)
+  createdById String?
   hours       Float
   description String?
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
+  task      Task?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  object    ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  user      User                @relation("TimeLogWork", fields: [userId], references: [id])
+  createdBy User?               @relation("TimeLogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@map("time_logs")
 }

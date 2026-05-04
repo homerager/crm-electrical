@@ -13,11 +13,17 @@ export default defineEventHandler(async (event) => {
 
   const isElevated = isElevatedRole(auth.role)
 
-  const where: any = { parentId: null }
+  const where: any = {}
+  if (isElevated && objectId) {
+    where.objectId = objectId
+  }
+  else {
+    where.parentId = null
+    if (objectId) where.objectId = objectId
+  }
   if (status) where.status = status
   if (priority) where.priority = priority
   if (assignedToId) where.assignedToId = assignedToId
-  if (objectId) where.objectId = objectId
 
   if (projectId) {
     if (!isElevated) {

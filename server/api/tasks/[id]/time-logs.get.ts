@@ -6,7 +6,10 @@ export default defineEventHandler(async (event) => {
 
   const timeLogs = await prisma.timeLog.findMany({
     where: { taskId },
-    include: { user: { select: { id: true, name: true } } },
+    include: {
+      user: { select: { id: true, name: true } },
+      createdBy: { select: { id: true, name: true } },
+    },
     orderBy: { date: 'desc' },
   })
 

@@ -48,6 +48,7 @@ export default defineComponent({
     const timeLogsHeaders = [
       { title: 'Дата', key: 'date', width: 120 },
       { title: 'Виконавець', key: 'user', width: 160 },
+      { title: 'Записав', key: 'createdBy', width: 140 },
       { title: 'Завдання', key: 'task' },
       { title: 'Опис', key: 'description' },
       { title: 'Годин', key: 'hours', width: 90, align: 'end' as const },
@@ -223,11 +224,22 @@ export default defineComponent({
             {{
               'item.date': ({ item }: any) => formatDate(item.date),
               'item.user': ({ item }: any) => item.user?.name ?? '—',
-              'item.task': ({ item }: any) => (
-                <v-btn variant="text" class="text-none px-0" size="small" to={`/tasks/${item.taskId}`}>
-                  {item.task?.title ?? '—'}
-                </v-btn>
+              'item.createdBy': ({ item }: any) => (
+                <span class="text-body-2">{item.createdBy?.name ?? '—'}</span>
               ),
+              'item.task': ({ item }: any) =>
+                item.taskId && item.task ? (
+                  <v-btn variant="text" class="text-none px-0" size="small" to={`/tasks/${item.taskId}`}>
+                    {item.task.title}
+                  </v-btn>
+                ) : item.object ? (
+                  <span class="text-body-2">
+                    {item.object.name}
+                    <span class="text-caption text-disabled"> (без завдання)</span>
+                  </span>
+                ) : (
+                  <span class="text-medium-emphasis">—</span>
+                ),
               'item.description': ({ item }: any) => (
                 <span class="text-body-2 text-disabled">{item.description ?? '—'}</span>
               ),

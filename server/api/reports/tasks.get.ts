@@ -13,6 +13,11 @@ export default defineEventHandler(async (event) => {
     ? { date: { ...(from && { gte: from }), ...(to && { lte: to }) } }
     : {}
 
+  const timeLogWhere = {
+    ...dateFilter,
+    OR: [{ task: { status: 'DONE' as const } }, { taskId: null, objectId: { not: null } }],
+  }
+
   const [tasksByStatus, tasksByPriority, timeByUser, recentTimeLogs] = await Promise.all([
     prisma.task.groupBy({
       by: ['status'],
@@ -24,14 +29,16 @@ export default defineEventHandler(async (event) => {
     }),
     prisma.timeLog.groupBy({
       by: ['userId'],
-      where: dateFilter,
+      where: timeLogWhere,
       _sum: { hours: true },
     }),
     prisma.timeLog.findMany({
-      where: dateFilter,
+      where: timeLogWhere,
       include: {
         user: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, name: true } },
         task: { select: { id: true, title: true } },
+        object: { select: { id: true, name: true } },
       },
       orderBy: { date: 'desc' },
       take: 50,

@@ -18,14 +18,19 @@ export default defineEventHandler(async (event) => {
     ? { date: { ...(from && { gte: from }), ...(to && { lte: to }) } }
     : {}
 
-  const where: any = { ...dateFilter }
+  const where: any = {
+    ...dateFilter,
+    OR: [{ task: { status: 'DONE' } }, { taskId: null, objectId: { not: null } }],
+  }
   if (userId) where.userId = userId
 
-  // All time logs in range (with task and user)
+  // Time logs for completed tasks only (with task and user)
   const timeLogs = await prisma.timeLog.findMany({
     where,
     include: {
       user: { select: { id: true, name: true, hourlyRate: true } },
+      createdBy: { select: { id: true, name: true } },
+      object: { select: { id: true, name: true } },
       task: {
         select: {
           id: true,

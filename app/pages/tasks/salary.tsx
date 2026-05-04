@@ -62,7 +62,7 @@ export default defineComponent({
 
     function exportCSV() {
       const rows: string[][] = [
-        ['Виконавець', 'Дата', 'Завдання', 'Проєкт', 'Обʼєкт', 'Опис', 'Годин', 'Ставка грн/год', 'Сума грн'],
+        ['Виконавець', 'Дата', 'Записав', 'Завдання', 'Проєкт', 'Обʼєкт', 'Опис', 'Годин', 'Ставка грн/год', 'Сума грн'],
       ]
       for (const u of userRows.value) {
         const rateNum = u.hourlyRate != null ? Number(u.hourlyRate) : null
@@ -71,9 +71,10 @@ export default defineComponent({
           rows.push([
             u.userName,
             formatDate(log.date),
-            log.task?.title ?? '—',
+            log.createdBy?.name ?? '—',
+            log.task?.title ?? (log.object?.name ? '(без завдання)' : '—'),
             log.task?.project?.name ?? '—',
-            log.task?.object?.name ?? '—',
+            log.task?.object?.name ?? log.object?.name ?? '—',
             log.description ?? '—',
             String(log.hours),
             rateNum != null ? String(rateNum) : '',
@@ -82,6 +83,7 @@ export default defineComponent({
         }
         rows.push([
           u.userName,
+          '',
           '',
           '',
           '',
@@ -253,6 +255,7 @@ export default defineComponent({
                 <v-data-table
                   headers={[
                     { title: 'Дата', key: 'date', width: 110 },
+                    { title: 'Записав', key: 'createdBy', width: 120 },
                     { title: 'Завдання', key: 'task' },
                     { title: 'Проєкт', key: 'project', width: 160 },
                     { title: 'Обʼєкт', key: 'object', width: 160 },
@@ -268,11 +271,17 @@ export default defineComponent({
                     'item.date': ({ item }: any) => (
                       <span class="text-body-2">{formatDate(item.date)}</span>
                     ),
-                    'item.task': ({ item }: any) => (
-                      <NuxtLink to={`/tasks/${item.taskId}`} class="text-primary text-decoration-none">
-                        {item.task?.title ?? '—'}
-                      </NuxtLink>
+                    'item.createdBy': ({ item }: any) => (
+                      <span class="text-body-2">{item.createdBy?.name ?? '—'}</span>
                     ),
+                    'item.task': ({ item }: any) =>
+                      item.taskId && item.task ? (
+                        <NuxtLink to={`/tasks/${item.taskId}`} class="text-primary text-decoration-none">
+                          {item.task.title}
+                        </NuxtLink>
+                      ) : (
+                        <span class="text-body-2 text-medium-emphasis">—</span>
+                      ),
                     'item.project': ({ item }: any) => {
                       const p = item.task?.project
                       if (!p) return <span class="text-disabled">—</span>
@@ -284,7 +293,7 @@ export default defineComponent({
                       )
                     },
                     'item.object': ({ item }: any) => (
-                      <span class="text-body-2">{item.task?.object?.name ?? '—'}</span>
+                      <span class="text-body-2">{item.task?.object?.name ?? item.object?.name ?? '—'}</span>
                     ),
                     'item.description': ({ item }: any) => (
                       <span class="text-body-2 text-medium-emphasis">{item.description ?? '—'}</span>
@@ -294,7 +303,7 @@ export default defineComponent({
                     ),
                     bottom: () => (
                       <tr style="background: rgba(var(--v-theme-primary), 0.05)">
-                        <td colspan={5} class="pa-3 text-right font-weight-bold">Разом:</td>
+                        <td colspan={6} class="pa-3 text-right font-weight-bold">Разом:</td>
                         <td class="pa-3 text-right">
                           <strong class="text-primary">{Number(u.totalHours).toFixed(2)}г</strong>
                         </td>

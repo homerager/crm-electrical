@@ -15,7 +15,10 @@ export default defineEventHandler(async (event) => {
       object: { select: { id: true, name: true } },
       project: { select: { id: true, name: true, color: true } },
       timeLogs: {
-        include: { user: { select: { id: true, name: true } } },
+        include: {
+          user: { select: { id: true, name: true } },
+          createdBy: { select: { id: true, name: true } },
+        },
         orderBy: { date: 'desc' },
       },
       comments: {
