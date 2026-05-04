@@ -1,4 +1,5 @@
 import { isElevatedRole } from '../../utils/authz'
+import { emptyToNull } from '../../utils/strings'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -7,12 +8,37 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, contactPerson, phone, email, address, notes } = body
+  const {
+    name,
+    contactPerson,
+    phone,
+    email,
+    address,
+    notes,
+    taxCode,
+    iban,
+    bankName,
+    bankMfo,
+    paymentNotes,
+  } = body
 
-  if (!name) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
+  const nameTrimmed = typeof name === 'string' ? name.trim() : ''
+  if (!nameTrimmed) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
 
   const contractor = await prisma.contractor.create({
-    data: { name, contactPerson, phone, email, address, notes },
+    data: {
+      name: nameTrimmed,
+      contactPerson: emptyToNull(contactPerson),
+      phone: emptyToNull(phone),
+      email: emptyToNull(email),
+      address: emptyToNull(address),
+      notes: emptyToNull(notes),
+      taxCode: emptyToNull(taxCode),
+      iban: emptyToNull(iban),
+      bankName: emptyToNull(bankName),
+      bankMfo: emptyToNull(bankMfo),
+      paymentNotes: emptyToNull(paymentNotes),
+    },
   })
 
   return { contractor }

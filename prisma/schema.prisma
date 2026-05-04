@@ -134,6 +134,12 @@ model Contractor {
   email         String?
   address       String?
   notes         String?
+  /// ЄДРПОУ (юрособа) або ІПН (ФОП)
+  taxCode       String?
+  iban          String?
+  bankName      String?
+  bankMfo       String?
+  paymentNotes  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

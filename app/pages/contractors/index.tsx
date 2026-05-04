@@ -18,11 +18,35 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', contactPerson: '', phone: '', email: '', address: '', notes: '' })
+    const form = reactive({
+      name: '',
+      contactPerson: '',
+      phone: '',
+      email: '',
+      address: '',
+      notes: '',
+      taxCode: '',
+      iban: '',
+      bankName: '',
+      bankMfo: '',
+      paymentNotes: '',
+    })
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', contactPerson: '', phone: '', email: '', address: '', notes: '' })
+      Object.assign(form, {
+        name: '',
+        contactPerson: '',
+        phone: '',
+        email: '',
+        address: '',
+        notes: '',
+        taxCode: '',
+        iban: '',
+        bankName: '',
+        bankMfo: '',
+        paymentNotes: '',
+      })
       dialog.value = true
     }
 
@@ -35,8 +59,17 @@ export default defineComponent({
         email: item.email || '',
         address: item.address || '',
         notes: item.notes || '',
+        taxCode: item.taxCode || '',
+        iban: item.iban || '',
+        bankName: item.bankName || '',
+        bankMfo: item.bankMfo || '',
+        paymentNotes: item.paymentNotes || '',
       })
       dialog.value = true
+    }
+
+    function contractorHasPayment(item: any) {
+      return !!(item?.taxCode || item?.iban || item?.bankName || item?.bankMfo || item?.paymentNotes)
     }
 
     function openDelete(item: any) {
@@ -78,6 +111,7 @@ export default defineComponent({
       { title: 'Контактна особа', key: 'contactPerson' },
       { title: 'Телефон', key: 'phone' },
       { title: 'Email', key: 'email' },
+      { title: 'Реквізити', key: 'payment', sortable: false, align: 'center' as const, width: 88 },
       { title: 'Адреса', key: 'address' },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
     ]
@@ -107,6 +141,21 @@ export default defineComponent({
                   ? <a href={`mailto:${item.email}`} class="text-decoration-none">{item.email}</a>
                   : <span class="text-medium-emphasis">—</span>
               ),
+              'item.payment': ({ item }: any) => (
+                contractorHasPayment(item)
+                  ? (
+                      <v-tooltip text="Заповнені платіжні реквізити" location="bottom">
+                        {{
+                          activator: ({ props }: any) => (
+                            <span {...props} class="d-inline-flex align-center justify-center" style={{ width: '100%' }}>
+                              <v-icon color="success" size="small">mdi-bank-check</v-icon>
+                            </span>
+                          ),
+                        }}
+                      </v-tooltip>
+                    )
+                  : <span class="text-medium-emphasis">—</span>
+              ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
                   {isPrivileged.value && (
@@ -121,7 +170,7 @@ export default defineComponent({
           </v-data-table>
         </v-card>
 
-        <v-dialog v-model={dialog.value} max-width={560}>
+        <v-dialog v-model={dialog.value} max-width={640} scrollable>
           <v-card>
             <v-card-title>{editItem.value ? 'Редагувати контрагента' : 'Новий контрагент'}</v-card-title>
             <v-card-text>
@@ -137,7 +186,24 @@ export default defineComponent({
                 </v-col>
               </v-row>
               <v-text-field v-model={form.address} label="Адреса" class="mb-3 mt-3" />
-              <v-textarea v-model={form.notes} label="Примітки" rows={2} />
+              <v-textarea v-model={form.notes} label="Примітки" rows={2} class="mb-2" />
+
+              <v-divider class="my-4" />
+              <div class="text-subtitle-2 mb-3 d-flex align-center gap-2">
+                <v-icon size="small" color="primary">mdi-bank-outline</v-icon>
+                Платіжна інформація
+              </div>
+              <v-text-field v-model={form.taxCode} label="ЄДРПОУ / ІПН" class="mb-3" hint="Для юрособи — ЄДРПОУ, для ФОП — ІПН" persistent-hint />
+              <v-text-field v-model={form.iban} label="IBAN" class="mb-4 mt-4" prepend-inner-icon="mdi-numeric" autocomplete="off" />
+              <v-row>
+                <v-col cols={12} md={8}>
+                  <v-text-field v-model={form.bankName} label="Назва банку" prepend-inner-icon="mdi-bank" />
+                </v-col>
+                <v-col cols={12} md={4}>
+                  <v-text-field v-model={form.bankMfo} label="МФО" maxlength={6} autocomplete="off" />
+                </v-col>
+              </v-row>
+              <v-textarea v-model={form.paymentNotes} label="Додаткові реквізити" rows={2} hint="Напр., SWIFT, кореспондентський рахунок" persistent-hint class="mt-2" />
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />

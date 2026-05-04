@@ -12,7 +12,7 @@ export type InvoiceForPdf = Prisma.InvoiceGetPayload<{
 }>
 
 function fmtMoney(n: number): string {
-  return `${n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴`
+  return n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function fmtQty(n: number): string {
@@ -61,8 +61,8 @@ export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buf
       { text: 'Товар', style: 'th' },
       { text: 'Артикул', style: 'th' },
       { text: 'К-сть', style: 'th', alignment: 'right' },
-      { text: 'Ціна', style: 'th', alignment: 'right' },
-      { text: 'Сума', style: 'th', alignment: 'right' },
+      { text: 'Ціна, грн.', style: 'th', alignment: 'right' },
+      { text: 'Сума, грн.', style: 'th', alignment: 'right' },
     ],
   ]
 
@@ -91,21 +91,38 @@ export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buf
     { text: fmtMoney(total), alignment: 'right', bold: true },
   ])
 
+  const infoStack: Record<string, unknown>[] = [
+    { text: [{ text: 'Дата: ', bold: true }, dateStr] },
+    { text: [{ text: 'Склад: ', bold: true }, invoice.warehouse.name] },
+    { text: [{ text: 'Контрагент: ', bold: true }, invoice.contractor?.name || '—'] },
+  ]
+
+  const pay = invoice.contractor
+  if (pay && (pay.taxCode || pay.iban || pay.bankName || pay.bankMfo || pay.paymentNotes)) {
+    infoStack.push({
+      text: 'Платіжні реквізити',
+      bold: true,
+      margin: [0, 6, 0, 2],
+      fontSize: 9,
+    })
+    if (pay.taxCode) {
+      infoStack.push({ text: [{ text: 'ЄДРПОУ / ІПН: ', bold: true }, pay.taxCode], fontSize: 9 })
+    }
+    if (pay.iban) infoStack.push({ text: [{ text: 'IBAN: ', bold: true }, pay.iban], fontSize: 9 })
+    if (pay.bankName) infoStack.push({ text: [{ text: 'Банк: ', bold: true }, pay.bankName], fontSize: 9 })
+    if (pay.bankMfo) infoStack.push({ text: [{ text: 'МФО: ', bold: true }, pay.bankMfo], fontSize: 9 })
+    if (pay.paymentNotes) {
+      infoStack.push({ text: [{ text: 'Додатково: ', bold: true }, pay.paymentNotes], fontSize: 9 })
+    }
+  }
+
+  infoStack.push({ text: [{ text: 'Створив: ', bold: true }, invoice.createdBy.name] })
+
   const stack: Record<string, unknown>[] = [
     { text: `Накладна №${invoice.number}`, style: 'title' },
     { text: typeLabel, style: 'subtitle', margin: [0, 2, 0, 12] },
     {
-      columns: [
-        {
-          width: '*',
-          stack: [
-            { text: [{ text: 'Дата: ', bold: true }, dateStr] },
-            { text: [{ text: 'Склад: ', bold: true }, invoice.warehouse.name] },
-            { text: [{ text: 'Контрагент: ', bold: true }, invoice.contractor?.name || '—'] },
-            { text: [{ text: 'Створив: ', bold: true }, invoice.createdBy.name] },
-          ],
-        },
-      ],
+      columns: [{ width: '*', stack: infoStack }],
     },
   ]
 
@@ -119,7 +136,7 @@ export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buf
   stack.push({
     table: {
       headerRows: 1,
-      widths: [26, '*', 72, 62, 62, 72],
+      widths: [26, '*', 72, 62, 74, 76],
       dontBreakRows: true,
       body: rows,
     },
