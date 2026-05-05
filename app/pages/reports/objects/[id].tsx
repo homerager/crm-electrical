@@ -52,8 +52,8 @@ export default defineComponent({
 
     const movementHeaders = [
       { title: 'Дата', key: 'date', width: 120 },
-      { title: 'Склад', key: 'fromWarehouse.name' },
-      { title: 'Позицій', key: 'items', sortable: false, width: 100 },
+      { title: 'Склад', key: 'fromWarehouse.name', width: 160 },
+      { title: 'Позиції', key: 'itemsPreview', sortable: false, minWidth: 220 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Примітки', key: 'notes' },
     ]
@@ -89,8 +89,8 @@ export default defineComponent({
 
     const returnLogHeaders = [
       { title: 'Дата', key: 'date', width: 120 },
-      { title: 'Склад', key: 'toWarehouse.name' },
-      { title: 'Позицій', key: 'items', sortable: false, width: 100 },
+      { title: 'Склад', key: 'toWarehouse.name', width: 160 },
+      { title: 'Позиції', key: 'itemsPreview', sortable: false, minWidth: 220 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Примітки', key: 'notes' },
     ]
@@ -107,6 +107,23 @@ export default defineComponent({
 
     function printReport() {
       window.print()
+    }
+
+    function movementLineItemsCell(items: any[] | undefined) {
+      const list = items ?? []
+      if (!list.length) return <span class="text-medium-emphasis">—</span>
+      return (
+        <div class="d-flex flex-column gap-1">
+          {list.map((it: any, i: number) => (
+            <div key={i} class="text-body-2">
+              <span class="font-weight-medium">{it.product?.name ?? '—'}</span>
+              {' — '}
+              <span>{Number(it.quantity).toLocaleString('uk-UA')}</span>
+              {it.product?.unit ? <> {it.product.unit}</> : null}
+            </div>
+          ))}
+        </div>
+      )
     }
 
     const STATUS_LABELS: Record<string, string> = {
@@ -411,9 +428,7 @@ export default defineComponent({
                   'item.date': ({ item }: any) => (
                     <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
                   ),
-                  'item.items': ({ item }: any) => (
-                    <v-chip size="small" variant="outlined">{item.items?.length ?? 0}</v-chip>
-                  ),
+                  'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
                   'item.notes': ({ item }: any) => (
                     <span class="text-medium-emphasis">{item.notes || '—'}</span>
                   ),
@@ -438,9 +453,7 @@ export default defineComponent({
                     'item.date': ({ item }: any) => (
                       <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
                     ),
-                    'item.items': ({ item }: any) => (
-                      <v-chip size="small" variant="outlined">{item.items?.length ?? 0}</v-chip>
-                    ),
+                    'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
                     'item.notes': ({ item }: any) => (
                       <span class="text-medium-emphasis">{item.notes || '—'}</span>
                     ),
