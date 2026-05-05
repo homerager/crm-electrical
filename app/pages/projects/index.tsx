@@ -28,8 +28,14 @@ export default defineComponent({
       defaultObjectId: '' as string,
     })
 
-    const { data: projectsData, refresh } = useFetch('/api/projects')
+    const { data: projectsData, refresh, pending: projectsPending } = useFetch('/api/projects')
     const projects = computed(() => (projectsData.value as any[]) ?? [])
+    const projectsInitialLoading = computed(
+      () => projectsPending.value && projectsData.value == null,
+    )
+    const projectsRefreshing = computed(
+      () => projectsPending.value && projectsData.value != null,
+    )
 
     const { data: usersData } = useFetch('/api/users/list')
     const users = computed(() => (usersData.value as any[]) ?? [])
@@ -223,86 +229,104 @@ export default defineComponent({
           )}
         </div>
 
-        {projects.value.length === 0 && (
-          <v-card class="text-center pa-12" variant="outlined">
-            <v-icon size="64" color="medium-emphasis" class="mb-4">mdi-folder-off-outline</v-icon>
-            <div class="text-h6 text-medium-emphasis">Немає проєктів</div>
-            <div class="text-body-2 text-medium-emphasis mt-2">Створіть перший проєкт для організації завдань</div>
-            {isPrivileged.value && (
-              <v-btn color="primary" class="mt-4" prepend-icon="mdi-plus" onClick={openCreate}>
-                Створити проєкт
-              </v-btn>
-            )}
-          </v-card>
+        {projectsRefreshing.value && (
+          <v-progress-linear indeterminate color="primary" class="mb-4" />
         )}
 
-        <v-row>
-          {projects.value.map((project: any) => (
-            <v-col key={project.id} cols={12} sm={6} md={4} lg={3}>
-              <v-card
-                class="h-100"
-                style="cursor:pointer"
-                onClick={() => router.push(`/projects/${project.id}`)}
-              >
-                <div style={{ height: '6px', background: project.color, borderRadius: '4px 4px 0 0' }} />
-                <v-card-title class="pt-4 pb-1">{project.name}</v-card-title>
-                {project.description && (
-                  <v-card-subtitle>{project.description}</v-card-subtitle>
+        {projectsInitialLoading.value ? (
+          <div
+            class="d-flex flex-column justify-center align-center gap-4 py-16"
+            style="min-height: 280px"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <v-progress-circular indeterminate color="primary" size="56" width="4" />
+            <span class="text-body-1 text-medium-emphasis">Завантаження проєктів…</span>
+          </div>
+        ) : (
+          <>
+            {projects.value.length === 0 && (
+              <v-card class="text-center pa-12" variant="outlined">
+                <v-icon size="64" color="medium-emphasis" class="mb-4">mdi-folder-off-outline</v-icon>
+                <div class="text-h6 text-medium-emphasis">Немає проєктів</div>
+                <div class="text-body-2 text-medium-emphasis mt-2">Створіть перший проєкт для організації завдань</div>
+                {isPrivileged.value && (
+                  <v-btn color="primary" class="mt-4" prepend-icon="mdi-plus" onClick={openCreate}>
+                    Створити проєкт
+                  </v-btn>
                 )}
-                <v-card-text>
-                  <div class="d-flex align-center mb-3" style="gap:8px">
-                    <v-icon size="16" color="medium-emphasis">mdi-checkbox-marked-circle-outline</v-icon>
-                    <span class="text-body-2">{project._count?.tasks ?? 0} завдань</span>
-                  </div>
-                  {project.defaultObject && (
-                    <div class="d-flex align-center mb-3 text-body-2 text-medium-emphasis" style="gap:8px">
-                      <v-icon size="16">mdi-map-marker-outline</v-icon>
-                      <span class="text-truncate" title={project.defaultObject.name}>{project.defaultObject.name}</span>
-                    </div>
-                  )}
-                  <div class="d-flex" style="gap:-8px">
-                    {project.members.slice(0, 5).map((m: any) => (
-                      <v-avatar
-                        key={m.user.id}
-                        size="28"
-                        color={project.color}
-                        style="border: 2px solid rgba(0,0,0,0.2); margin-left: -4px"
-                        title={m.user.name}
-                      >
-                        <span class="text-caption" style="color:white;font-weight:700">
-                          {m.user.name?.charAt(0)?.toUpperCase()}
-                        </span>
-                      </v-avatar>
-                    ))}
-                    {project.members.length > 5 && (
-                      <v-avatar size="28" color="grey" style="border: 2px solid rgba(0,0,0,0.2); margin-left: -4px">
-                        <span class="text-caption" style="color:white">+{project.members.length - 5}</span>
-                      </v-avatar>
-                    )}
-                  </div>
-                </v-card-text>
-                <v-card-actions onClick={(e: MouseEvent) => e.stopPropagation()}>
-                  <v-spacer />
-                  <v-btn
-                    size="small"
-                    variant="text"
-                    icon="mdi-pencil"
-                    onClick={() => openEdit(project)}
-                  />
-                  {isPrivileged.value && (
-                    <v-btn
-                      size="small"
-                      variant="text"
-                      color="error"
-                      icon="mdi-delete"
-                      onClick={() => openDelete(project)}
-                    />
-                  )}
-                </v-card-actions>
               </v-card>
-            </v-col>
-          ))}
-        </v-row>
+            )}
+
+            <v-row>
+              {projects.value.map((project: any) => (
+                <v-col key={project.id} cols={12} sm={6} md={4} lg={3}>
+                  <v-card
+                    class="h-100"
+                    style="cursor:pointer"
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                  >
+                    <div style={{ height: '6px', background: project.color, borderRadius: '4px 4px 0 0' }} />
+                    <v-card-title class="pt-4 pb-1">{project.name}</v-card-title>
+                    {project.description && (
+                      <v-card-subtitle>{project.description}</v-card-subtitle>
+                    )}
+                    <v-card-text>
+                      <div class="d-flex align-center mb-3" style="gap:8px">
+                        <v-icon size="16" color="medium-emphasis">mdi-checkbox-marked-circle-outline</v-icon>
+                        <span class="text-body-2">{project._count?.tasks ?? 0} завдань</span>
+                      </div>
+                      {project.defaultObject && (
+                        <div class="d-flex align-center mb-3 text-body-2 text-medium-emphasis" style="gap:8px">
+                          <v-icon size="16">mdi-map-marker-outline</v-icon>
+                          <span class="text-truncate" title={project.defaultObject.name}>{project.defaultObject.name}</span>
+                        </div>
+                      )}
+                      <div class="d-flex" style="gap:-8px">
+                        {project.members.slice(0, 5).map((m: any) => (
+                          <v-avatar
+                            key={m.user.id}
+                            size="28"
+                            color={project.color}
+                            style="border: 2px solid rgba(0,0,0,0.2); margin-left: -4px"
+                            title={m.user.name}
+                          >
+                            <span class="text-caption" style="color:white;font-weight:700">
+                              {m.user.name?.charAt(0)?.toUpperCase()}
+                            </span>
+                          </v-avatar>
+                        ))}
+                        {project.members?.length > 5 && (
+                          <v-avatar size="28" color="grey" style="border: 2px solid rgba(0,0,0,0.2); margin-left: -4px">
+                            <span class="text-caption" style="color:white">+{project.members.length - 5}</span>
+                          </v-avatar>
+                        )}
+                      </div>
+                    </v-card-text>
+                    <v-card-actions onClick={(e: MouseEvent) => e.stopPropagation()}>
+                      <v-spacer />
+                      <v-btn
+                        size="small"
+                        variant="text"
+                        icon="mdi-pencil"
+                        onClick={() => openEdit(project)}
+                      />
+                      {isPrivileged.value && (
+                        <v-btn
+                          size="small"
+                          variant="text"
+                          color="error"
+                          icon="mdi-delete"
+                          onClick={() => openDelete(project)}
+                        />
+                      )}
+                    </v-card-actions>
+                  </v-card>
+                </v-col>
+              ))}
+            </v-row>
+          </>
+        )}
 
         {/* Create dialog */}
         <v-dialog v-model={dialog.value} max-width={560} persistent>
