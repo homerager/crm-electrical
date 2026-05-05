@@ -29,13 +29,11 @@ export default defineComponent({
     const route = useRoute()
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: objectsData } = useFetch('/api/objects')
-    const { data: productsData } = useFetch('/api/products')
 
     const warehouses = computed(() => (warehousesData.value as any)?.warehouses ?? [])
     const objects = computed(
       () => (objectsData.value as any)?.objects?.filter((o: any) => o.status === 'ACTIVE') ?? [],
     )
-    const products = computed(() => (productsData.value as any)?.products ?? [])
 
     const form = reactive({
       type: 'WAREHOUSE_TO_WAREHOUSE' as 'WAREHOUSE_TO_WAREHOUSE' | 'WAREHOUSE_TO_OBJECT',
@@ -46,9 +44,54 @@ export default defineComponent({
       notes: '',
     })
 
+    const { data: productsData } = useFetch(() => {
+      if (form.type === 'WAREHOUSE_TO_OBJECT' && form.objectId) {
+        return `/api/products?forObjectId=${encodeURIComponent(form.objectId)}`
+      }
+      return '/api/products'
+    })
+
+    const products = computed(() => (productsData.value as any)?.products ?? [])
+
     const items = ref<MovementItemRow[]>([])
     const saving = ref(false)
     const error = ref('')
+
+    function maxMovableQty(stock: any | undefined): number {
+      if (!stock) return 0
+      const rawFree = stock.freeOnWarehouse ?? stock.quantity
+      const free = Number(rawFree)
+      if (!Number.isFinite(free) || free < 0) return 0
+      if (form.type === 'WAREHOUSE_TO_WAREHOUSE') return free
+      if (form.type === 'WAREHOUSE_TO_OBJECT' && form.objectId) {
+        const capRaw = stock.maxMovableToSelectedObject
+        if (capRaw !== undefined && capRaw !== null) {
+          const cap = Number(capRaw)
+          if (Number.isFinite(cap)) return cap
+        }
+        return free
+      }
+      return free
+    }
+
+    /** Доступна кількість з актуального списку товарів (не з відфільтрованого autocomplete). */
+    function maxQtyForProductId(productId: string): number {
+      if (!productId || !form.fromWarehouseId) return 0
+      if (form.type === 'WAREHOUSE_TO_OBJECT' && !form.objectId) return 0
+      const p = products.value.find((x: any) => x.id === productId)
+      if (!p) return 0
+      const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
+      return maxMovableQty(stock)
+    }
+
+    function refreshRowAvailability(index: number) {
+      const row = items.value[index]
+      if (!row?.productId) return
+      const q = maxQtyForProductId(row.productId)
+      row._availableQty = q
+      const p = products.value.find((x: any) => x.id === row.productId)
+      row._product = p ? { ...p, availableQty: q } : undefined
+    }
 
     const typeOptions = [
       { title: 'Між складами', value: 'WAREHOUSE_TO_WAREHOUSE' as const, icon: 'mdi-swap-horizontal' },
@@ -57,10 +100,11 @@ export default defineComponent({
 
     const availableProducts = computed(() => {
       if (!form.fromWarehouseId) return []
+      if (form.type === 'WAREHOUSE_TO_OBJECT' && !form.objectId) return []
       return products.value
         .map((p: any) => {
           const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-          return { ...p, availableQty: stock ? Number(stock.quantity) : 0 }
+          return { ...p, availableQty: maxMovableQty(stock) }
         })
         .filter((p: any) => p.availableQty > 0)
     })
@@ -77,13 +121,8 @@ export default defineComponent({
       items.value.splice(index, 1)
     }
 
-    function onProductChange(index: number, productId: string) {
-      const product = availableProducts.value.find((p: any) => p.id === productId)
-      const row = items.value[index]
-      if (row) {
-        row._product = product
-        row._availableQty = product?.availableQty ?? 0
-      }
+    function onProductChange(index: number) {
+      refreshRowAvailability(index)
     }
 
     const productQueryApplied = ref(false)
@@ -154,7 +193,7 @@ export default defineComponent({
           return
         }
         const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-        const availableQty = stock ? Number(stock.quantity) : 0
+        const availableQty = maxMovableQty(stock)
         if (availableQty <= 0) {
           productQueryApplied.value = true
           return
@@ -207,7 +246,7 @@ export default defineComponent({
           return
         }
         const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-        const availableQty = stock ? Number(stock.quantity) : 0
+        const availableQty = maxMovableQty(stock)
         if (availableQty <= 0) {
           initialLineApplied.value = true
           return
@@ -230,6 +269,17 @@ export default defineComponent({
       { immediate: true },
     )
 
+    watch(
+      () => [form.type, form.objectId, form.fromWarehouseId, productsData.value] as const,
+      () => {
+        const raw = (productsData.value as any)?.products
+        if (!Array.isArray(raw) || raw.length === 0) return
+        items.value.forEach((row, index) => {
+          if (row.productId) refreshRowAvailability(index)
+        })
+      },
+    )
+
     async function save() {
       error.value = ''
       if (!form.fromWarehouseId || !form.date) {
@@ -247,6 +297,22 @@ export default defineComponent({
       if (items.value.length === 0) {
         error.value = 'Додайте хоча б один товар'
         return
+      }
+      for (const row of items.value) {
+        if (!row.productId) {
+          error.value = 'Оберіть товар у кожному рядку'
+          return
+        }
+        const q = Number(row.quantity)
+        if (!Number.isFinite(q) || q <= 0) {
+          error.value = 'Перевірте кількість у рядках'
+          return
+        }
+        const max = maxQtyForProductId(row.productId)
+        if (q > max + 1e-9) {
+          error.value = `Кількість перевищує доступну для одного з товарів (макс. ${max})`
+          return
+        }
       }
 
       saving.value = true
@@ -277,218 +343,227 @@ export default defineComponent({
     const sideCols = computed(() => (isDialog.value ? 12 : 4))
 
     return () => (
-      <v-row>
-        {error.value && !isDialog.value && (
-          <v-col cols={12}>
-            <v-alert
-              type="error"
-              variant="tonal"
-              class="mb-4"
-              closable
-              onUpdate:modelValue={() => (error.value = '')}
-            >
-              {error.value}
-            </v-alert>
-          </v-col>
-        )}
-        {error.value && isDialog.value && (
-          <v-col cols={12}>
-            <v-alert
-              type="error"
-              variant="tonal"
-              class="mb-2"
-              closable
-              onUpdate:modelValue={() => (error.value = '')}
-            >
-              {error.value}
-            </v-alert>
-          </v-col>
-        )}
-
-        <v-col cols={12} md={mainCols.value}>
-          <v-card class="mb-4">
-            <v-card-title>Основні дані</v-card-title>
-            <v-card-text>
-              <v-row>
-                <v-col cols={12}>
-                  <v-btn-toggle v-model={form.type} rounded="lg" mandatory class="mb-4" disabled={saving.value}>
-                    {typeOptions.map((opt) => (
-                      <v-btn key={opt.value} value={opt.value} prepend-icon={opt.icon} size="small">
-                        {opt.title}
-                      </v-btn>
-                    ))}
-                  </v-btn-toggle>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col cols={12} md={6}>
-                  {props.lockFromWarehouse && props.fixedFromWarehouseId ? (
-                    <v-text-field
-                      modelValue={fromWarehouseName.value}
-                      label="Склад відправлення *"
-                      readonly
-                      disabled={saving.value}
-                      prepend-inner-icon="mdi-warehouse"
-                    />
-                  ) : (
-                    <v-select
-                      v-model={form.fromWarehouseId}
-                      label="Склад відправлення *"
-                      items={warehouses.value}
-                      item-title="name"
-                      item-value="id"
-                      prepend-inner-icon="mdi-warehouse"
-                      onChange={onWarehouseChange}
-                      disabled={saving.value}
-                    />
-                  )}
-                </v-col>
-                <v-col cols={12} md={6}>
-                  {form.type === 'WAREHOUSE_TO_WAREHOUSE' ? (
-                    <v-select
-                      v-model={form.toWarehouseId}
-                      label="Склад призначення *"
-                      items={warehouses.value.filter((w: any) => w.id !== form.fromWarehouseId)}
-                      item-title="name"
-                      item-value="id"
-                      prepend-inner-icon="mdi-warehouse"
-                      disabled={saving.value}
-                    />
-                  ) : (
-                    <v-select
-                      v-model={form.objectId}
-                      label="Будівельний обʼєкт *"
-                      items={objects.value}
-                      item-title="name"
-                      item-value="id"
-                      prepend-inner-icon="mdi-office-building-outline"
-                      disabled={saving.value}
-                    />
-                  )}
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col cols={12} md={4}>
-                  <v-text-field v-model={form.date} label="Дата *" type="date" disabled={saving.value} />
-                </v-col>
-                <v-col cols={12} md={8}>
-                  <v-text-field v-model={form.notes} label="Примітки" disabled={saving.value} />
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-
-          <v-card>
-            <v-card-title class="d-flex align-center">
-              Товари для переміщення
-              <v-spacer />
-              <v-btn
-                size="small"
-                color="primary"
-                prepend-icon="mdi-plus"
-                disabled={!form.fromWarehouseId || saving.value}
-                onClick={addItem}
+      <div class="movement-editor">
+        <v-row>
+          {error.value && !isDialog.value && (
+            <v-col cols={12}>
+              <v-alert
+                type="error"
+                variant="tonal"
+                class="mb-4"
+                closable
+                onUpdate:modelValue={() => (error.value = '')}
               >
-                Додати товар
-              </v-btn>
-            </v-card-title>
-            <v-card-text>
-              {!form.fromWarehouseId && (
-                <v-alert type="info" variant="tonal">Спочатку оберіть склад відправлення</v-alert>
-              )}
-              {form.fromWarehouseId && availableProducts.value.length === 0 && (
-                <v-alert type="warning" variant="tonal">На обраному складі немає товарів</v-alert>
-              )}
-              {items.value.map((item, index) => (
-                <v-row key={index} align="center" class="mb-2">
-                  <v-col cols={12} md={6}>
-                    <v-autocomplete
-                      v-model={item.productId}
-                      label="Товар *"
-                      items={availableProducts.value}
-                      item-title="name"
-                      item-value="id"
-                      hide-details
-                      onChange={(val: string) => onProductChange(index, val)}
-                      disabled={saving.value}
-                    />
-                  </v-col>
-                  <v-col cols={12} md={4}>
-                    <v-text-field
-                      v-model={item.quantity}
-                      label="Кількість *"
-                      type="number"
-                      min={0.001}
-                      step={0.001}
-                      hide-details
-                      suffix={item._product?.unit || ''}
-                      hint={item._availableQty !== undefined ? `Доступно: ${item._availableQty}` : ''}
-                      persistent-hint
-                      disabled={saving.value}
-                    />
-                  </v-col>
-                  <v-col cols={12} md={2}>
-                    <v-btn
-                      icon="mdi-delete"
-                      variant="text"
-                      color="error"
-                      size="small"
-                      disabled={saving.value}
-                      onClick={() => removeItem(index)}
-                    />
+                {error.value}
+              </v-alert>
+            </v-col>
+          )}
+          {error.value && isDialog.value && (
+            <v-col cols={12}>
+              <v-alert
+                type="error"
+                variant="tonal"
+                class="mb-2"
+                closable
+                onUpdate:modelValue={() => (error.value = '')}
+              >
+                {error.value}
+              </v-alert>
+            </v-col>
+          )}
+        </v-row>
+        <v-row>
+          <v-col cols={12} md={mainCols.value}>
+            <v-card class="mb-4">
+              <v-card-title>Основні дані</v-card-title>
+              <v-card-text>
+                <v-row>
+                  <v-col cols={12}>
+                    <v-btn-toggle v-model={form.type} rounded="lg" mandatory class="mb-4 gap-3" disabled={saving.value}>
+                      {typeOptions.map((opt) => (
+                        <v-btn key={opt.value} value={opt.value} prepend-icon={opt.icon} size="small">
+                          {opt.title}
+                        </v-btn>
+                      ))}
+                    </v-btn-toggle>
                   </v-col>
                 </v-row>
-              ))}
-            </v-card-text>
-            {isDialog.value && (
-              <v-card-actions class="d-flex flex-wrap justify-end gap-2 px-4 pb-4">
-                <v-btn variant="text" disabled={saving.value} onClick={() => emit('cancel')}>
-                  Скасувати
-                </v-btn>
-                <v-btn color="primary" variant="flat" loading={saving.value} onClick={save}>
-                  Зберегти
-                </v-btn>
-              </v-card-actions>
-            )}
-          </v-card>
-        </v-col>
-
-        {!isDialog.value && (
-          <v-col cols={12} md={sideCols.value}>
-            <v-card>
-              <v-card-title>Підсумок</v-card-title>
-              <v-card-text>
-                <div class="d-flex justify-space-between mb-2">
-                  <span class="text-medium-emphasis">Позицій:</span>
-                  <strong>{items.value.length}</strong>
-                </div>
-                <div class="d-flex justify-space-between mb-2">
-                  <span class="text-medium-emphasis">Тип:</span>
-                  <v-chip
-                    size="small"
-                    color={form.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'primary' : 'warning'}
-                    variant="tonal"
-                  >
-                    {form.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'Між складами' : 'На обʼєкт'}
-                  </v-chip>
-                </div>
+                <v-row>
+                  <v-col cols={12} md={6}>
+                    {props.lockFromWarehouse && props.fixedFromWarehouseId ? (
+                      <v-text-field
+                        modelValue={fromWarehouseName.value}
+                        label="Склад відправлення *"
+                        readonly
+                        disabled={saving.value}
+                        prepend-inner-icon="mdi-warehouse"
+                      />
+                    ) : (
+                      <v-select
+                        v-model={form.fromWarehouseId}
+                        label="Склад відправлення *"
+                        items={warehouses.value}
+                        item-title="name"
+                        item-value="id"
+                        prepend-inner-icon="mdi-warehouse"
+                        onChange={onWarehouseChange}
+                        disabled={saving.value}
+                      />
+                    )}
+                  </v-col>
+                  <v-col cols={12} md={6}>
+                    {form.type === 'WAREHOUSE_TO_WAREHOUSE' ? (
+                      <v-select
+                        v-model={form.toWarehouseId}
+                        label="Склад призначення *"
+                        items={warehouses.value.filter((w: any) => w.id !== form.fromWarehouseId)}
+                        item-title="name"
+                        item-value="id"
+                        prepend-inner-icon="mdi-warehouse"
+                        disabled={saving.value}
+                      />
+                    ) : (
+                      <v-select
+                        v-model={form.objectId}
+                        label="Будівельний обʼєкт *"
+                        items={objects.value}
+                        item-title="name"
+                        item-value="id"
+                        prepend-inner-icon="mdi-office-building-outline"
+                        disabled={saving.value}
+                      />
+                    )}
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col cols={12} md={4}>
+                    <v-text-field v-model={form.date} label="Дата *" type="date" disabled={saving.value} />
+                  </v-col>
+                  <v-col cols={12} md={8}>
+                    <v-text-field v-model={form.notes} label="Примітки" disabled={saving.value} />
+                  </v-col>
+                </v-row>
               </v-card-text>
-              <v-card-actions>
+            </v-card>
+            <v-card>
+              <v-card-title class="d-flex align-center">
+                Товари для переміщення
+                <v-spacer />
                 <v-btn
-                  block
+                  size="small"
                   color="primary"
-                  variant="flat"
-                  size="large"
-                  loading={saving.value}
-                  onClick={save}
+                  prepend-icon="mdi-plus"
+                  disabled={!form.fromWarehouseId || saving.value}
+                  onClick={addItem}
                 >
-                  Зберегти переміщення
+                  Додати товар
                 </v-btn>
-              </v-card-actions>
+              </v-card-title>
+              <v-card-text>
+                {!form.fromWarehouseId && (
+                  <v-alert type="info" variant="tonal">Спочатку оберіть склад відправлення</v-alert>
+                )}
+                {form.type === 'WAREHOUSE_TO_OBJECT' && !form.objectId && form.fromWarehouseId && (
+                  <v-alert type="info" variant="tonal" class="mb-2">
+                    Оберіть будівельний обʼєкт, щоб показати доступні кількості з урахуванням резервів під обʼєкти.
+                  </v-alert>
+                )}
+                {form.fromWarehouseId && availableProducts.value.length === 0 && (
+                  <v-alert type="warning" variant="tonal">На обраному складі немає товарів</v-alert>
+                )}
+                {items.value.map((item, index) => (
+                  <v-row key={index} align="center" class="mb-2">
+                    <v-col cols={12} md={6}>
+                      <v-autocomplete
+                        modelValue={item.productId}
+                        onUpdate:modelValue={(val: string) => {
+                          item.productId = val
+                          onProductChange(index)
+                        }}
+                        label="Товар *"
+                        items={availableProducts.value}
+                        item-title="name"
+                        item-value="id"
+                        hide-details
+                        disabled={saving.value}
+                      />
+                    </v-col>
+                    <v-col cols={12} md={4}>
+                      <v-text-field
+                        v-model={item.quantity}
+                        label="Кількість *"
+                        type="number"
+                        min={0.001}
+                        step={0.001}
+                        hide-details
+                        suffix={item._product?.unit || ''}
+                        hint={item._availableQty !== undefined ? `Доступно: ${item._availableQty}` : ''}
+                        persistent-hint
+                        disabled={saving.value}
+                      />
+                    </v-col>
+                    <v-col cols={12} md={2}>
+                      <v-btn
+                        icon="mdi-delete"
+                        variant="text"
+                        color="error"
+                        size="small"
+                        disabled={saving.value}
+                        onClick={() => removeItem(index)}
+                      />
+                    </v-col>
+                  </v-row>
+                ))}
+              </v-card-text>
+              {isDialog.value && (
+                <v-card-actions class="d-flex flex-wrap justify-end gap-2 px-4 pb-4">
+                  <v-btn variant="text" disabled={saving.value} onClick={() => emit('cancel')}>
+                    Скасувати
+                  </v-btn>
+                  <v-btn color="primary" variant="flat" loading={saving.value} onClick={save}>
+                    Зберегти
+                  </v-btn>
+                </v-card-actions>
+              )}
             </v-card>
           </v-col>
-        )}
-      </v-row>
+          {!isDialog.value && (
+            <v-col cols={12} md={sideCols.value}>
+              <v-card>
+                <v-card-title>Підсумок</v-card-title>
+                <v-card-text>
+                  <div class="d-flex justify-space-between mb-2">
+                    <span class="text-medium-emphasis">Позицій:</span>
+                    <strong>{items.value.length}</strong>
+                  </div>
+                  <div class="d-flex justify-space-between mb-2">
+                    <span class="text-medium-emphasis">Тип:</span>
+                    <v-chip
+                      size="small"
+                      color={form.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'primary' : 'warning'}
+                      variant="tonal"
+                    >
+                      {form.type === 'WAREHOUSE_TO_WAREHOUSE' ? 'Між складами' : 'На обʼєкт'}
+                    </v-chip>
+                  </div>
+                </v-card-text>
+                <v-card-actions>
+                  <v-btn
+                    block
+                    color="primary"
+                    variant="flat"
+                    size="large"
+                    loading={saving.value}
+                    onClick={save}
+                  >
+                    Зберегти переміщення
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          )}
+        </v-row>
+      </div>
     )
   },
 })

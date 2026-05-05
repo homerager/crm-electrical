@@ -1,3 +1,4 @@
+import ObjectReservationOps from '../../../components/ObjectReservationOps'
 import ObjectStockOps from '../../../components/ObjectStockOps'
 
 export default defineComponent({
@@ -26,6 +27,9 @@ export default defineComponent({
     const laborLogCount = computed(() => Number(report.value?.laborLogCount) || 0)
 
     const stockOnSite = computed(() => report.value?.stockOnSite ?? [])
+    const warehouseReservations = computed(
+      () => (report.value?.warehouseReservations ?? []).filter((r: any) => Number(r.quantity) > 0),
+    )
     const consumedSummary = computed(() => report.value?.consumedSummary ?? [])
     const consumedTotalAmount = computed(() => Number(report.value?.consumedTotalAmount) || 0)
     const consumedHasMissingPrice = computed(() => report.value?.consumedHasMissingPrice === true)
@@ -62,6 +66,14 @@ export default defineComponent({
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },
       { title: 'Залишок', key: 'quantity', align: 'end' as const, width: 140 },
+      { title: 'Одиниця', key: 'product.unit', align: 'center' as const, width: 100 },
+    ]
+
+    const reservationHeaders = [
+      { title: 'Склад', key: 'warehouse.name', width: 180 },
+      { title: 'Товар', key: 'product.name' },
+      { title: 'Артикул', key: 'product.sku', width: 120 },
+      { title: 'Зарезервовано', key: 'quantity', align: 'end' as const, width: 140 },
       { title: 'Одиниця', key: 'product.unit', align: 'center' as const, width: 100 },
     ]
 
@@ -163,6 +175,48 @@ export default defineComponent({
 
         {report.value && (
           <>
+            <v-card class="mb-4">
+              <v-card-title class="d-flex align-center flex-wrap">
+                <v-icon class="mr-2" icon="mdi-lock-outline" />
+                Резерв на складах під цей обʼєкт
+                <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
+                  {warehouseReservations.value.length} позицій
+                </v-chip>
+              </v-card-title>
+              <v-card-text class="text-body-2 text-medium-emphasis">
+                Товар залишається на складі; інші не можуть перемістити зарезервовану кількість на інший склад. При
+                відпуску на цей обʼєкт резерв автоматично зменшується.
+              </v-card-text>
+              <ObjectReservationOps
+                objectId={id}
+                reservationRows={warehouseReservations.value}
+                onSuccess={() => refresh()}
+              />
+              {warehouseReservations.value.length === 0 ? (
+                <v-card-text>
+                  <v-alert type="info" variant="tonal" density="compact">
+                    Немає активних резервів на складах для цього обʼєкта.
+                  </v-alert>
+                </v-card-text>
+              ) : (
+                <v-data-table
+                  headers={reservationHeaders}
+                  items={warehouseReservations.value}
+                  hide-default-footer
+                  items-per-page={-1}
+                >
+                  {{
+                    'item.product.sku': ({ item }: any) => (
+                      <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
+                    ),
+                    'item.quantity': ({ item }: any) => (
+                      <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
+                    ),
+                  }}
+                </v-data-table>
+              )}
+            </v-card>
+
             <v-card class="mb-4">
               <v-card-title class="d-flex align-center flex-wrap">
                 <v-icon class="mr-2" icon="mdi-package-variant" />

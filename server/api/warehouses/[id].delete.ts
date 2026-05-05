@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
           invoices: true,
           movementsFrom: true,
           movementsTo: true,
+          objectStockReservations: true,
         },
       },
       stock: { select: { quantity: true } },
@@ -46,6 +47,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 409,
       statusMessage: 'Неможливо видалити: на складі є залишки товарів.',
+    })
+  }
+
+  if (warehouse._count.objectStockReservations > 0) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Неможливо видалити: на складі є ${warehouse._count.objectStockReservations} резерв(ів) під обʼєкти. Спочатку зніміть резерви.`,
     })
   }
 

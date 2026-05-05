@@ -106,10 +106,11 @@ model Warehouse {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  stock         WarehouseStock[]
-  invoices      Invoice[]
-  movementsFrom Movement[]       @relation("MovementFrom")
-  movementsTo   Movement[]       @relation("MovementTo")
+  stock                      WarehouseStock[]
+  objectStockReservations    WarehouseObjectReservation[]
+  invoices                   Invoice[]
+  movementsFrom              Movement[]       @relation("MovementFrom")
+  movementsTo                Movement[]       @relation("MovementTo")
 
   @@map("warehouses")
 }
@@ -123,10 +124,11 @@ model ConstructionObject {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  movements Movement[]
-  stock     ObjectStock[]
-  tasks     Task[]
-  timeLogs  TimeLog[]
+  movements                 Movement[]
+  stock                     ObjectStock[]
+  warehouseStockReservations WarehouseObjectReservation[]
+  tasks                     Task[]
+  timeLogs                  TimeLog[]
   /// Проєкти, де цей обʼєкт обраний як типовий для нових завдань
   projectsWithDefaultObject Project[]
 
@@ -179,6 +181,7 @@ model Product {
 
   group         ProductGroup?    @relation(fields: [groupId], references: [id])
   stock         WarehouseStock[]
+  warehouseObjectReservations WarehouseObjectReservation[]
   invoiceItems   InvoiceItem[]
   movementItems  MovementItem[]
   objectStock    ObjectStock[]
@@ -198,6 +201,23 @@ model WarehouseStock {
 
   @@unique([productId, warehouseId])
   @@map("warehouse_stock")
+}
+
+/// Резерв товару на складі під конкретний будівельний обʼєкт (фізично залишається на складі)
+model WarehouseObjectReservation {
+  id          String   @id @default(cuid())
+  objectId    String
+  warehouseId String
+  productId   String
+  quantity    Decimal  @default(0) @db.Decimal(12, 3)
+  updatedAt   DateTime @updatedAt
+
+  object    ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  warehouse Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([objectId, warehouseId, productId])
+  @@map("warehouse_object_reservations")
 }
 
 /// Залишок матеріалів на будівельному обʼєкті (після відпуску зі складу; зменшується при списанні та поверненні)

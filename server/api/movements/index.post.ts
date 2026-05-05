@@ -1,5 +1,5 @@
-
 import type { MovementType, Prisma } from '@prisma/client'
+import { consumeReservationForShipment, freeQtyOnWarehouse } from '../../utils/warehouseReservations'
 
 interface MovementItemInput {
   productId: string
@@ -101,18 +101,33 @@ export default defineEventHandler(async (event) => {
           where: { productId_warehouseId: { productId: item.productId, warehouseId: fromWarehouseId } },
         })
 
-        const available = stock ? Number(stock.quantity) : 0
-        if (available < item.quantity) {
+        const physical = stock ? Number(stock.quantity) : 0
+        if (physical + 1e-9 < item.quantity) {
           const product = await tx.product.findUnique({ where: { id: item.productId } })
           throw createError({
             statusCode: 400,
-            statusMessage: `Недостатньо товару "${product?.name}" на складі. Доступно: ${available}`,
+            statusMessage: `Недостатньо товару "${product?.name}" на складі. Доступно: ${physical}`,
           })
+        }
+
+        if (type === 'WAREHOUSE_TO_WAREHOUSE') {
+          const free = await freeQtyOnWarehouse(tx, fromWarehouseId, item.productId)
+          if (item.quantity > free + 1e-9) {
+            const product = await tx.product.findUnique({ where: { id: item.productId } })
+            throw createError({
+              statusCode: 400,
+              statusMessage: `Частина товару "${product?.name}" зарезервована під обʼєкти. Вільно для переміщення: ${free}`,
+            })
+          }
+        }
+
+        if (type === 'WAREHOUSE_TO_OBJECT' && objectId) {
+          await consumeReservationForShipment(tx, objectId, fromWarehouseId, item.productId, item.quantity)
         }
 
         await tx.warehouseStock.update({
           where: { productId_warehouseId: { productId: item.productId, warehouseId: fromWarehouseId } },
-          data: { quantity: available - item.quantity },
+          data: { quantity: physical - item.quantity },
         })
 
         if (type === 'WAREHOUSE_TO_WAREHOUSE' && toWarehouseId) {

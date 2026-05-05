@@ -26,7 +26,6 @@ export function useAuth() {
       const data = await $fetch<{ user: AuthUser }>('/api/auth/me', { headers })
       console.log('[useAuth] fetchMe raw data:', JSON.stringify(data))
       user.value = data.user
-      console.log('[useAuth] user.value.name after set:', user.value?.name, typeof user.value?.name)
     } catch (e) {
       console.error('[useAuth] fetchMe error:', e)
       user.value = null
@@ -42,7 +41,6 @@ export function useAuth() {
     })
     console.log('[useAuth] login raw data:', JSON.stringify(data))
     user.value = data.user
-    console.log('[useAuth] user.value.name after login:', user.value?.name, typeof user.value?.name)
     return data.user
   }
 

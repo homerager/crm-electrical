@@ -134,6 +134,15 @@ export default defineEventHandler(async (event) => {
     orderBy: { product: { name: 'asc' } },
   })
 
+  const warehouseReservations = await prisma.warehouseObjectReservation.findMany({
+    where: { objectId: id },
+    include: {
+      warehouse: { select: { id: true, name: true } },
+      product: { select: { id: true, name: true, sku: true, unit: true } },
+    },
+    orderBy: [{ warehouse: { name: 'asc' } }, { product: { name: 'asc' } }],
+  })
+
   const writeOffMovements = await prisma.movement.findMany({
     where: { objectId: id, type: 'OBJECT_WRITE_OFF' },
     include: {
@@ -202,6 +211,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     object,
+    warehouseReservations,
     movements,
     summary,
     summaryTotalAmount,
