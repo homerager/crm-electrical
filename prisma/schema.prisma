@@ -121,6 +121,8 @@ model ConstructionObject {
   address     String?
   description String?
   status      ObjectStatus @default(ACTIVE)
+  /// Загальний бюджет обʼєкта (грн)
+  budget      Decimal?     @db.Decimal(14, 2)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

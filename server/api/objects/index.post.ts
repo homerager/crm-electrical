@@ -8,12 +8,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, address, description, status } = body
+  const { name, address, description, status, budget } = body
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
 
   const object = await prisma.constructionObject.create({
-    data: { name, address, description, status: (status as ObjectStatus) || 'ACTIVE' },
+    data: {
+      name,
+      address,
+      description,
+      status: (status as ObjectStatus) || 'ACTIVE',
+      budget: budget != null && budget !== '' ? Number(budget) : null,
+    },
   })
 
   return { object }

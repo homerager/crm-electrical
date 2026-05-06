@@ -26,6 +26,11 @@ export default defineComponent({
     const laborHasMissingRate = computed(() => report.value?.laborHasMissingRate === true)
     const laborLogCount = computed(() => Number(report.value?.laborLogCount) || 0)
 
+    const budget = computed(() => report.value?.budget != null ? Number(report.value.budget) : null)
+    const totalExpenses = computed(() => Number(report.value?.totalExpenses) || 0)
+    const budgetRemaining = computed(() => report.value?.budgetRemaining != null ? Number(report.value.budgetRemaining) : null)
+    const budgetUsedPercent = computed(() => report.value?.budgetUsedPercent != null ? Number(report.value.budgetUsedPercent) : null)
+
     const stockOnSite = computed(() => report.value?.stockOnSite ?? [])
     const warehouseReservations = computed(
       () => (report.value?.warehouseReservations ?? []).filter((r: any) => Number(r.quantity) > 0),
@@ -175,6 +180,66 @@ export default defineComponent({
 
         {report.value && (
           <>
+            {budget.value != null && (
+              <v-card class="mb-4">
+                <v-card-title class="d-flex align-center">
+                  <v-icon class="mr-2" icon="mdi-cash-check" />
+                  Бюджет обʼєкта
+                </v-card-title>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Бюджет</div>
+                      <div class="text-h6 font-weight-bold">{uah(budget.value)}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Матеріали</div>
+                      <div class="text-h6">{uah(summaryTotalAmount.value)}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Праця</div>
+                      <div class="text-h6">{uah(laborTotalAmount.value)}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Залишок</div>
+                      <div class={`text-h6 font-weight-bold ${budgetRemaining.value != null && budgetRemaining.value < 0 ? 'text-error' : 'text-success'}`}>
+                        {budgetRemaining.value != null ? uah(budgetRemaining.value) : '—'}
+                      </div>
+                    </v-col>
+                  </v-row>
+
+                  <v-progress-linear
+                    model-value={Math.min(budgetUsedPercent.value ?? 0, 100)}
+                    color={budgetUsedPercent.value != null && budgetUsedPercent.value > 100 ? 'error' : budgetUsedPercent.value != null && budgetUsedPercent.value > 80 ? 'warning' : 'success'}
+                    height={24}
+                    rounded
+                    class="mt-4"
+                  >
+                    {{
+                      default: () => (
+                        <span class="text-body-2 font-weight-medium">
+                          {budgetUsedPercent.value != null ? `${budgetUsedPercent.value}%` : '—'}
+                        </span>
+                      ),
+                    }}
+                  </v-progress-linear>
+
+                  {budgetUsedPercent.value != null && budgetUsedPercent.value > 100 && (
+                    <v-alert type="error" variant="tonal" density="compact" class="mt-3">
+                      Бюджет перевищено на {uah(Math.abs(budgetRemaining.value!))}
+                    </v-alert>
+                  )}
+                  {(summaryHasMissingPrice.value || laborHasMissingRate.value) && (
+                    <v-alert type="warning" variant="tonal" density="compact" class="mt-3">
+                      Оцінка витрат неповна: {summaryHasMissingPrice.value ? 'для деяких матеріалів невідома ціна' : ''}
+                      {summaryHasMissingPrice.value && laborHasMissingRate.value ? '; ' : ''}
+                      {laborHasMissingRate.value ? 'для деяких працівників не задана ставка' : ''}.
+                    </v-alert>
+                  )}
+                </v-card-text>
+              </v-card>
+            )}
+
             <v-card class="mb-4">
               <v-card-title class="d-flex align-center flex-wrap">
                 <v-icon class="mr-2" icon="mdi-lock-outline" />

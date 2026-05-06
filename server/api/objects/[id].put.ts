@@ -9,11 +9,17 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { name, address, description, status } = body
+  const { name, address, description, status, budget } = body
 
   const object = await prisma.constructionObject.update({
     where: { id },
-    data: { name, address, description, status: status as ObjectStatus },
+    data: {
+      name,
+      address,
+      description,
+      status: status as ObjectStatus,
+      budget: budget != null && budget !== '' ? Number(budget) : null,
+    },
   })
 
   return { object }

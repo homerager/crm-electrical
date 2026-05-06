@@ -30,7 +30,7 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE' })
+    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number })
 
     const statusOptions = [
       { title: 'Активний', value: 'ACTIVE' },
@@ -40,13 +40,13 @@ export default defineComponent({
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE' })
+      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '' })
       dialog.value = true
     }
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status })
+      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '' })
       dialog.value = true
     }
 
@@ -84,9 +84,13 @@ export default defineComponent({
       }
     }
 
+    const uah = (n: number) =>
+      `₴${n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
     const headers = [
       { title: 'Назва', key: 'name' },
       { title: 'Адреса', key: 'address' },
+      { title: 'Бюджет, ₴', key: 'budget', align: 'end' as const, width: 150 },
       { title: 'Статус', key: 'status', width: 140 },
       { title: 'Дата створення', key: 'createdAt', width: 160 },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 140 },
@@ -107,6 +111,11 @@ export default defineComponent({
         <v-card>
           <v-data-table headers={headers} items={objects.value} loading={pending.value} hover>
             {{
+              'item.budget': ({ item }: any) => (
+                item.budget != null
+                  ? <span class="font-weight-medium">{uah(Number(item.budget))}</span>
+                  : <span class="text-medium-emphasis">—</span>
+              ),
               'item.status': ({ item }: any) => (
                 <v-chip size="small" color={STATUS_COLORS[item.status]} variant="tonal">
                   {STATUS_LABELS[item.status]}
@@ -137,6 +146,16 @@ export default defineComponent({
               {error.value && <v-alert type="error" variant="tonal" class="mb-3">{error.value}</v-alert>}
               <v-text-field v-model={form.name} label="Назва *" class="mb-3" />
               <v-text-field v-model={form.address} label="Адреса" class="mb-3" />
+              <v-text-field
+                v-model={form.budget}
+                label="Бюджет, ₴"
+                type="number"
+                min="0"
+                step="0.01"
+                class="mb-3"
+                hint="Загальний бюджет обʼєкта (необовʼязково)"
+                persistent-hint
+              />
               <v-select v-model={form.status} label="Статус" items={statusOptions} item-title="title" item-value="value" class="mb-3" />
               <v-textarea v-model={form.description} label="Опис" rows={3} />
             </v-card-text>

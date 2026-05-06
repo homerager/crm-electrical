@@ -209,6 +209,13 @@ export default defineEventHandler(async (event) => {
   const consumedTotalAmount = consumedSummary.reduce((s, r) => s + r.totalAmount, 0)
   const consumedHasMissingPrice = consumedSummary.some((r) => r.hasMissingPrice)
 
+  const budget = object.budget != null ? Number(object.budget) : null
+  const totalExpenses = summaryTotalAmount + laborTotalAmount
+  const budgetRemaining = budget != null ? budget - totalExpenses : null
+  const budgetUsedPercent = budget != null && budget > 0
+    ? Math.round((totalExpenses / budget) * 10000) / 100
+    : null
+
   return {
     object,
     warehouseReservations,
@@ -227,5 +234,9 @@ export default defineEventHandler(async (event) => {
     laborTotalAmount,
     laborHasMissingRate,
     laborLogCount: timeLogs.length,
+    budget,
+    totalExpenses,
+    budgetRemaining,
+    budgetUsedPercent,
   }
 })
