@@ -1,5 +1,6 @@
 import TaskCommentContent from '../../components/TaskCommentContent'
 import TaskCommentEditor from '../../components/TaskCommentEditor'
+import AuditLogPanel from '../../components/AuditLogPanel'
 
 const STATUSES = [
   { value: 'TODO', label: 'До виконання', color: 'blue-grey', icon: 'mdi-circle-outline' },
@@ -1166,6 +1167,14 @@ export default defineComponent({
               </v-card>
             </div>
           </div>
+
+          <v-card class="mt-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" color="primary">mdi-history</v-icon>
+              Історія змін
+            </v-card-title>
+            <AuditLogPanel entityType="Task" entityId={id.value} />
+          </v-card>
 
           {/* Edit dialog */}
           <v-dialog v-model={editDialog.value} max-width={560}>

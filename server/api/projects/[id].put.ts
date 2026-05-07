@@ -55,5 +55,11 @@ export default defineEventHandler(async (event) => {
     },
   })
 
+  const auditDiff = computeChanges(
+    { name: project.name, description: project.description, color: project.color, defaultObjectId: project.defaultObjectId } as Record<string, unknown>,
+    { name: updated.name, description: updated.description, color: updated.color, defaultObjectId: updated.defaultObjectId } as Record<string, unknown>,
+  )
+  if (auditDiff) writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'UPDATE', entityType: 'Project', entityId: id, changes: auditDiff })
+
   return updated
 })

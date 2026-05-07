@@ -59,7 +59,8 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  // Telegram notification to assignee
+  writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Task', entityId: task.id, changes: { title: task.title, priority: task.priority, status: 'TODO' } })
+
   if (task.assignedToId) {
     const assignee = await prisma.user.findUnique({
       where: { id: task.assignedToId },

@@ -1,4 +1,5 @@
 import MovementEditor from '../../components/MovementEditor'
+import AuditLogPanel from '../../components/AuditLogPanel'
 
 export default defineComponent({
   name: 'WarehouseDetailPage',
@@ -113,6 +114,7 @@ export default defineComponent({
         <v-tabs v-model={tab.value} class="mb-4" show-arrows>
           <v-tab value="stock" prepend-icon="mdi-package-variant-closed">Залишки</v-tab>
           <v-tab value="movements" prepend-icon="mdi-swap-horizontal">Переміщення</v-tab>
+          <v-tab value="history" prepend-icon="mdi-history">Історія змін</v-tab>
         </v-tabs>
 
         {tab.value === 'stock' && (
@@ -282,6 +284,16 @@ export default defineComponent({
                   ) : null,
               }}
             </v-data-table>
+          </v-card>
+        )}
+
+        {tab.value === 'history' && (
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-history" />
+              Історія змін
+            </v-card-title>
+            <AuditLogPanel entityType="Warehouse" entityId={id} />
           </v-card>
         )}
 

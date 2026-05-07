@@ -34,5 +34,7 @@ export default defineEventHandler(async (event) => {
     await tx.invoice.delete({ where: { id } })
   })
 
+  writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'DELETE', entityType: 'Invoice', entityId: id, changes: { number: invoice.number, type: invoice.type } })
+
   return { ok: true }
 })

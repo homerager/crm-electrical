@@ -15,6 +15,7 @@ export default defineEventHandler((event) => {
     || path.startsWith('/api/projects')
     || path.startsWith('/api/attachments/')
     || path.startsWith('/api/time-logs/')
+    || path.startsWith('/api/audit-logs')
     || path === '/api/users/list'
 
   if (!allowed) {

@@ -11,6 +11,8 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { name, address, description, status, budget } = body
 
+  const before = await prisma.constructionObject.findUnique({ where: { id } })
+
   const object = await prisma.constructionObject.update({
     where: { id },
     data: {
@@ -21,6 +23,11 @@ export default defineEventHandler(async (event) => {
       budget: budget != null && budget !== '' ? Number(budget) : null,
     },
   })
+
+  if (before) {
+    const diff = computeChanges(before as unknown as Record<string, unknown>, object as unknown as Record<string, unknown>)
+    if (diff) writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'UPDATE', entityType: 'ConstructionObject', entityId: id, changes: diff })
+  }
 
   return { object }
 })

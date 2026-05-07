@@ -42,7 +42,9 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  // Build human-readable change list for notification
+  const auditDiff = computeChanges(task as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>)
+  if (auditDiff) writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'UPDATE', entityType: 'Task', entityId: id, changes: auditDiff })
+
   const changes: Record<string, string> = {}
   if (status !== undefined && status !== task.status)
     changes['Статус'] = `${STATUS_LABELS[task.status] ?? task.status} → ${STATUS_LABELS[status] ?? status}`

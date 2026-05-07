@@ -37,6 +37,11 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const before = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, jobTitleId: true, hourlyRate: true },
+  })
+
   const user = await prisma.user.update({
     where: { id },
     data: {
@@ -60,6 +65,11 @@ export default defineEventHandler(async (event) => {
       hourlyRate: true,
     },
   })
+
+  if (before) {
+    const diff = computeChanges(before as unknown as Record<string, unknown>, user as unknown as Record<string, unknown>)
+    if (diff) writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'UPDATE', entityType: 'User', entityId: id, changes: diff })
+  }
 
   return { user }
 })

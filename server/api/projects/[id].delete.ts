@@ -26,5 +26,7 @@ export default defineEventHandler(async (event) => {
 
   await prisma.project.delete({ where: { id } })
 
+  writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'DELETE', entityType: 'Project', entityId: id, changes: { name: project.name } })
+
   return { success: true }
 })

@@ -66,5 +66,7 @@ export default defineEventHandler(async (event) => {
     return created
   })
 
+  writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Invoice', entityId: invoice.id, changes: { number, type, warehouseId, contractorId, itemCount: items.length } })
+
   return { invoice }
 })

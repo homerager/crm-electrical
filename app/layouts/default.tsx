@@ -101,6 +101,7 @@ export default defineComponent({
         base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
         base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
         base.push({ title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' })
+        base.push({ title: 'Журнал змін', icon: 'mdi-history', to: '/audit-log' })
       }
       return base
     })
@@ -257,6 +258,7 @@ function getPageTitle(path: string): string {
     '/projects': 'Проєкти',
     '/users': 'Користувачі',
     '/job-titles': 'Посади',
+    '/audit-log': 'Журнал змін',
   }
   for (const [key, val] of Object.entries(titles)) {
     if (path === key || (key !== '/' && path.startsWith(key))) return val

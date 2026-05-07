@@ -62,5 +62,7 @@ export default defineEventHandler(async (event) => {
     prisma.warehouse.delete({ where: { id } }),
   ])
 
+  writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'DELETE', entityType: 'Warehouse', entityId: id, changes: { name: warehouse.name } })
+
   return { ok: true }
 })

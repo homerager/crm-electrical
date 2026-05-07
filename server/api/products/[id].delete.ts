@@ -7,6 +7,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const id = getRouterParam(event, 'id')!
+
+  const product = await prisma.product.findUnique({ where: { id } })
   await prisma.product.delete({ where: { id } })
+
+  writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'DELETE', entityType: 'Product', entityId: id, changes: { name: product?.name } })
+
   return { ok: true }
 })

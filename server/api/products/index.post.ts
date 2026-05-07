@@ -16,5 +16,7 @@ export default defineEventHandler(async (event) => {
     include: { group: true },
   })
 
+  writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'CREATE', entityType: 'Product', entityId: product.id, changes: { name, description, sku, unit: product.unit } })
+
   return { product }
 })

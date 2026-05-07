@@ -159,6 +159,8 @@ export default defineEventHandler(async (event) => {
       })
     })
 
+    writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Movement', entityId: movement.id, changes: { type, fromWarehouseId, toWarehouseId, objectId, itemCount: normalizedItems.length } })
+
     return { movement }
   }
 
@@ -191,6 +193,8 @@ export default defineEventHandler(async (event) => {
         include: { items: true },
       })
     })
+
+    writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Movement', entityId: movement.id, changes: { type: 'OBJECT_WRITE_OFF', objectId, itemCount: normalizedItems.length } })
 
     return { movement }
   }
@@ -228,6 +232,8 @@ export default defineEventHandler(async (event) => {
         include: { items: true },
       })
     })
+
+    writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Movement', entityId: movement.id, changes: { type: 'OBJECT_TO_WAREHOUSE', objectId, toWarehouseId, itemCount: normalizedItems.length } })
 
     return { movement }
   }

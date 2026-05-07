@@ -26,6 +26,8 @@ export default defineEventHandler(async (event) => {
   const nameTrimmed = typeof name === 'string' ? name.trim() : ''
   if (!nameTrimmed) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
 
+  const before = await prisma.contractor.findUnique({ where: { id } })
+
   const contractor = await prisma.contractor.update({
     where: { id },
     data: {
@@ -42,6 +44,11 @@ export default defineEventHandler(async (event) => {
       paymentNotes: emptyToNull(paymentNotes),
     },
   })
+
+  if (before) {
+    const diff = computeChanges(before as unknown as Record<string, unknown>, contractor as unknown as Record<string, unknown>)
+    if (diff) writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'UPDATE', entityType: 'Contractor', entityId: id, changes: diff })
+  }
 
   return { contractor }
 })

@@ -1,5 +1,6 @@
 import ObjectReservationOps from '../../../components/ObjectReservationOps'
 import ObjectStockOps from '../../../components/ObjectStockOps'
+import AuditLogPanel from '../../../components/AuditLogPanel'
 
 export default defineComponent({
   name: 'ObjectReportPage',
@@ -581,6 +582,16 @@ export default defineComponent({
               )}
             </v-card>
           </>
+        )}
+
+        {report.value && (
+          <v-card class="mt-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-history" />
+              Історія змін
+            </v-card-title>
+            <AuditLogPanel entityType="ConstructionObject" entityId={id} />
+          </v-card>
         )}
       </div>
     )

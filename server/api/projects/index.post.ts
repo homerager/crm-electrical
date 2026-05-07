@@ -48,5 +48,7 @@ export default defineEventHandler(async (event) => {
     },
   })
 
+  writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'CREATE', entityType: 'Project', entityId: project.id, changes: { name: project.name, color: project.color } })
+
   return project
 })
