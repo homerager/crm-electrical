@@ -16,9 +16,10 @@ export default defineEventHandler((event) => {
     || path.startsWith('/api/attachments/')
     || path.startsWith('/api/time-logs/')
     || path.startsWith('/api/audit-logs')
+    || path.startsWith('/api/notifications')
     || path === '/api/users/list'
 
   if (!allowed) {
-    throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
+    throw createError({ statusCode: 403, message: 'Недостатньо прав' })
   }
 })

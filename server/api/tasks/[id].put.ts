@@ -58,6 +58,14 @@ export default defineEventHandler(async (event) => {
     if (oldDue !== newDue) changes['Дедлайн'] = `${oldDue} → ${newDue}`
   }
 
+  if (assignedToId !== undefined && assignedToId && assignedToId !== task.assignedToId && assignedToId !== auth.userId) {
+    createNotification({
+      userId: assignedToId,
+      title: `Вам призначено завдання: ${updated.title}`,
+      link: `/tasks/${id}`,
+    })
+  }
+
   if (Object.keys(changes).length > 0) {
     const config = useRuntimeConfig()
     const changer = await prisma.user.findUnique({
@@ -67,16 +75,30 @@ export default defineEventHandler(async (event) => {
     const changerName = changer?.name ?? 'Користувач'
     const msg = buildTaskUpdatedMessage(updated, changerName, config.appUrl, changes)
 
-    // Notify assignee
+    const changeSummary = Object.entries(changes).map(([k, v]) => `${k}: ${v}`).join(', ')
+    const notifRecipients = new Set<string>()
+    const assigneeId = (updated.assignee as any)?.id
+    const creatorId = (updated.createdBy as any)?.id
+    if (assigneeId && assigneeId !== auth.userId) notifRecipients.add(assigneeId)
+    if (creatorId && creatorId !== auth.userId) notifRecipients.add(creatorId)
+
+    if (notifRecipients.size) {
+      createNotificationForMany([...notifRecipients], {
+        title: `Завдання оновлено: ${updated.title}`,
+        body: `${changerName}: ${changeSummary}`,
+        link: `/tasks/${id}`,
+      })
+    }
+
+    // Notify assignee via Telegram
     const assigneeChatId = (updated.assignee as any)?.telegramChatId
     if (assigneeChatId) {
       sendTelegramMessage(assigneeChatId, msg)
     }
 
-    // Notify creator (if different from changer and assignee)
+    // Notify creator via Telegram (if different from changer and assignee)
     const creatorChatId = (updated.createdBy as any)?.telegramChatId
-    const creatorId = (updated.createdBy as any)?.id
-    if (creatorChatId && creatorId !== auth.userId && creatorId !== (updated.assignee as any)?.id) {
+    if (creatorChatId && creatorId !== auth.userId && creatorId !== assigneeId) {
       sendTelegramMessage(creatorChatId, msg)
     }
   }

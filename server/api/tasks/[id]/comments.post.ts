@@ -113,5 +113,21 @@ export default defineEventHandler(async (event) => {
     })
   })
 
+  const recipients = new Set<string>()
+  if (task.createdById && task.createdById !== auth.userId) recipients.add(task.createdById)
+  if (task.assignedToId && task.assignedToId !== auth.userId) recipients.add(task.assignedToId)
+
+  if (recipients.size) {
+    const commenter = await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { name: true },
+    })
+    createNotificationForMany([...recipients], {
+      title: `Коментар до завдання: ${task.title}`,
+      body: `${commenter?.name ?? 'Користувач'} залишив коментар`,
+      link: `/tasks/${taskId}`,
+    })
+  }
+
   return out
 })

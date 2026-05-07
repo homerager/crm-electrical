@@ -61,7 +61,14 @@ export default defineEventHandler(async (event) => {
 
   writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Task', entityId: task.id, changes: { title: task.title, priority: task.priority, status: 'TODO' } })
 
-  if (task.assignedToId) {
+  if (task.assignedToId && task.assignedToId !== auth.userId) {
+    createNotification({
+      userId: task.assignedToId,
+      title: `Вам призначено завдання: ${task.title}`,
+      body: task.project ? `Проєкт: ${task.project.name}` : undefined,
+      link: `/tasks/${task.id}`,
+    })
+
     const assignee = await prisma.user.findUnique({
       where: { id: task.assignedToId },
       select: { telegramChatId: true },
@@ -70,6 +77,23 @@ export default defineEventHandler(async (event) => {
       const config = useRuntimeConfig()
       const msg = buildTaskCreatedMessage(task, config.appUrl)
       sendTelegramMessage(assignee.telegramChatId, msg)
+    }
+  }
+
+  if (task.projectId) {
+    const members = await prisma.projectMember.findMany({
+      where: { projectId: task.projectId },
+      select: { userId: true },
+    })
+    const recipientIds = members
+      .map((m) => m.userId)
+      .filter((uid) => uid !== auth.userId && uid !== task.assignedToId)
+    if (recipientIds.length) {
+      createNotificationForMany(recipientIds, {
+        title: `Нове завдання: ${task.title}`,
+        body: `Створив(ла) ${task.createdBy.name}`,
+        link: `/tasks/${task.id}`,
+      })
     }
   }
 
