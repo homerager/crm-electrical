@@ -1,3 +1,5 @@
+import { useTheme } from 'vuetify'
+
 export default defineComponent({
   name: 'DashboardPage',
   setup() {
@@ -8,14 +10,18 @@ export default defineComponent({
     })
 
     const { isEmployee } = useAuth()
+    const vuetifyTheme = useTheme()
     const skipFull = () => isEmployee.value
 
-    const { data: stockData } = useFetch('/api/reports/stock', { skip: skipFull })
     const { data: invoicesData } = useFetch('/api/invoices', { skip: skipFull })
     const { data: movementsData } = useFetch('/api/movements', { skip: skipFull })
     const { data: objectsData } = useFetch('/api/objects', { skip: skipFull })
     const { data: warehousesData } = useFetch('/api/warehouses', { skip: skipFull })
     const { data: productsData } = useFetch('/api/products', { skip: skipFull })
+
+    const { data: movByMonth } = useFetch('/api/reports/dashboard/movements-by-month', { skip: skipFull })
+    const { data: objExpenses } = useFetch('/api/reports/dashboard/object-expenses-by-week', { skip: skipFull })
+    const { data: empWorkload } = useFetch('/api/reports/dashboard/employee-workload', { skip: skipFull })
 
     const totalWarehouses = computed(() => (warehousesData.value as any)?.warehouses?.length ?? 0)
     const totalProducts = computed(() => (productsData.value as any)?.products?.length ?? 0)
@@ -45,6 +51,153 @@ export default defineComponent({
       { title: 'Проєкти', desc: 'Ваші проєкти та завдання', icon: 'mdi-folder-multiple-outline', color: 'primary', to: '/projects' },
       { title: 'Завдання', desc: 'Список і канбан завдань', icon: 'mdi-checkbox-marked-circle-outline', color: 'success', to: '/tasks' },
     ]
+
+    const isDark = computed(() => vuetifyTheme.current.value.dark)
+    const chartFg = computed(() => isDark.value ? '#E0E0E0' : '#424242')
+    const chartGrid = computed(() => isDark.value ? '#333333' : '#E0E0E0')
+
+    function baseChartOpts(overrides: Record<string, any> = {}): Record<string, any> {
+      return {
+        chart: {
+          background: 'transparent',
+          toolbar: { show: false },
+          fontFamily: 'inherit',
+          ...overrides.chart,
+        },
+        theme: { mode: isDark.value ? 'dark' as const : 'light' as const },
+        grid: { borderColor: chartGrid.value, ...overrides.grid },
+        xaxis: {
+          labels: { style: { colors: chartFg.value } },
+          ...overrides.xaxis,
+        },
+        yaxis: {
+          labels: { style: { colors: chartFg.value } },
+          ...overrides.yaxis,
+        },
+        tooltip: { theme: isDark.value ? 'dark' : 'light', ...overrides.tooltip },
+        legend: { labels: { colors: chartFg.value }, ...overrides.legend },
+        ...overrides,
+      }
+    }
+
+    const movByMonthOpts = computed(() => {
+      const d = movByMonth.value as any
+      if (!d) return null
+      return {
+        options: baseChartOpts({
+          chart: { type: 'area', background: 'transparent', toolbar: { show: false }, fontFamily: 'inherit' },
+          colors: ['#2E7D32', '#D32F2F'],
+          stroke: { curve: 'smooth', width: 2 },
+          fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: d.labels,
+            labels: { style: { colors: chartFg.value } },
+          },
+          yaxis: {
+            labels: {
+              style: { colors: chartFg.value },
+              formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+            },
+          },
+          tooltip: {
+            theme: isDark.value ? 'dark' : 'light',
+            y: { formatter: (v: number) => `${v.toLocaleString('uk-UA')} грн` },
+          },
+        }),
+        series: [
+          { name: 'Прихід', data: d.incoming },
+          { name: 'Видаток', data: d.outgoing },
+        ],
+      }
+    })
+
+    const objExpensesOpts = computed(() => {
+      const d = objExpenses.value as any
+      if (!d) return null
+      return {
+        options: baseChartOpts({
+          chart: { type: 'bar', stacked: true, background: 'transparent', toolbar: { show: false }, fontFamily: 'inherit' },
+          colors: ['#1565C0', '#F57C00'],
+          plotOptions: { bar: { columnWidth: '60%', borderRadius: 3 } },
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: d.labels,
+            labels: { style: { colors: chartFg.value } },
+          },
+          yaxis: {
+            labels: {
+              style: { colors: chartFg.value },
+              formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+            },
+          },
+          tooltip: {
+            theme: isDark.value ? 'dark' : 'light',
+            y: { formatter: (v: number) => `${v.toLocaleString('uk-UA')} грн` },
+          },
+        }),
+        series: [
+          { name: 'Матеріали', data: d.material },
+          { name: 'Праця', data: d.labor },
+        ],
+      }
+    })
+
+    const empWorkloadOpts = computed(() => {
+      const d = empWorkload.value as any
+      if (!d || !d.users.length) return null
+      return {
+        options: baseChartOpts({
+          chart: { type: 'bar', background: 'transparent', toolbar: { show: false }, fontFamily: 'inherit' },
+          colors: ['#42A5F5', '#66BB6A', '#EF5350'],
+          plotOptions: { bar: { horizontal: true, barHeight: '65%', borderRadius: 3 } },
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: d.users,
+            labels: { style: { colors: chartFg.value } },
+          },
+          yaxis: {
+            labels: { style: { colors: chartFg.value } },
+          },
+          tooltip: { theme: isDark.value ? 'dark' : 'light' },
+        }),
+        series: [
+          { name: 'Годин', data: d.hours },
+          { name: 'Активних задач', data: d.activeTasks },
+          { name: 'Закритих задач', data: d.doneTasks },
+        ],
+      }
+    })
+
+    function renderChart(
+      title: string,
+      icon: string,
+      opts: { options: Record<string, any>; series: any[] } | null,
+      type: string,
+      height: number,
+    ) {
+      return (
+        <v-card>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2" icon={icon} />
+            {title}
+          </v-card-title>
+          <v-card-text>
+            {opts && import.meta.client
+              ? (
+                  <apexchart
+                    type={type}
+                    height={height}
+                    options={opts.options}
+                    series={opts.series}
+                  />
+                )
+              : <v-skeleton-loader type="image" height={height} />
+            }
+          </v-card-text>
+        </v-card>
+      )
+    }
 
     return () => (
       <div>
@@ -81,6 +234,39 @@ export default defineComponent({
                       </v-card>
                     </v-col>
                   ))}
+                </v-row>
+
+                <v-row class="mb-4">
+                  <v-col cols={12}>
+                    {renderChart(
+                      'Динаміка руху товарів по місяцях',
+                      'mdi-chart-line',
+                      movByMonthOpts.value,
+                      'area',
+                      320,
+                    )}
+                  </v-col>
+                </v-row>
+
+                <v-row class="mb-4">
+                  <v-col cols={12} md={7}>
+                    {renderChart(
+                      'Витрати на обʼєкти по тижнях',
+                      'mdi-chart-bar',
+                      objExpensesOpts.value,
+                      'bar',
+                      320,
+                    )}
+                  </v-col>
+                  <v-col cols={12} md={5}>
+                    {renderChart(
+                      'Завантаженість працівників',
+                      'mdi-account-group',
+                      empWorkloadOpts.value,
+                      'bar',
+                      320,
+                    )}
+                  </v-col>
                 </v-row>
 
                 <v-row>
