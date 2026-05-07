@@ -13,6 +13,9 @@ export default defineComponent({
     const vuetifyTheme = useTheme()
     const skipFull = () => isEmployee.value
 
+    const mounted = ref(false)
+    onMounted(() => { mounted.value = true })
+
     const { data: invoicesData } = useFetch('/api/invoices', { skip: skipFull })
     const { data: movementsData } = useFetch('/api/movements', { skip: skipFull })
     const { data: objectsData } = useFetch('/api/objects', { skip: skipFull })
@@ -183,7 +186,7 @@ export default defineComponent({
             {title}
           </v-card-title>
           <v-card-text>
-            {opts && import.meta.client
+            {opts && mounted.value
               ? (
                   <apexchart
                     type={type}

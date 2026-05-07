@@ -72,6 +72,13 @@ export function computeChanges(
       continue
     }
 
+    if (
+      (oldVal !== null && typeof oldVal === 'object' && !Array.isArray(oldVal) && !(oldVal instanceof Date))
+      || (newVal !== null && typeof newVal === 'object' && !Array.isArray(newVal) && !(newVal instanceof Date))
+    ) {
+      continue
+    }
+
     const oldStr = JSON.stringify(oldVal ?? null)
     const newStr = JSON.stringify(newVal ?? null)
     if (oldStr !== newStr) {

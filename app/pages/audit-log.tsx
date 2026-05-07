@@ -50,6 +50,76 @@ export default defineComponent({
       User: 'Користувач',
     }
 
+    const FIELD_LABELS: Record<string, string> = {
+      name: 'Назва',
+      title: 'Назва',
+      description: 'Опис',
+      address: 'Адреса',
+      status: 'Статус',
+      priority: 'Пріоритет',
+      budget: 'Бюджет',
+      isActive: 'Активний',
+      sku: 'Артикул',
+      unit: 'Одиниця',
+      groupId: 'Група',
+      contactPerson: 'Контактна особа',
+      phone: 'Телефон',
+      email: 'Email',
+      notes: 'Примітки',
+      taxCode: 'ЄДРПОУ/ІПН',
+      iban: 'IBAN',
+      bankName: 'Банк',
+      bankMfo: 'МФО',
+      paymentNotes: 'Примітки до оплати',
+      color: 'Колір',
+      role: 'Роль',
+      hourlyRate: 'Ставка (грн/год)',
+      jobTitleId: 'Посада',
+      assignedToId: 'Виконавець',
+      objectId: 'Об\'єкт',
+      dueDate: 'Дедлайн',
+      estimatedHours: 'Очікувано годин',
+      number: 'Номер',
+      type: 'Тип',
+      warehouseId: 'Склад',
+      contractorId: 'Контрагент',
+      itemCount: 'Кількість позицій',
+      fromWarehouseId: 'Зі складу',
+      toWarehouseId: 'На склад',
+      defaultObjectId: 'Об\'єкт за замовчуванням',
+      id: 'ID',
+    }
+
+    const STATUS_LABELS: Record<string, string> = {
+      TODO: 'До виконання',
+      IN_PROGRESS: 'В роботі',
+      REVIEW: 'На перевірці',
+      DONE: 'Виконано',
+      CANCELLED: 'Скасовано',
+      ACTIVE: 'Активний',
+      COMPLETED: 'Завершено',
+      SUSPENDED: 'Призупинено',
+    }
+
+    const PRIORITY_LABELS: Record<string, string> = {
+      LOW: 'Низький',
+      MEDIUM: 'Середній',
+      HIGH: 'Високий',
+      URGENT: 'Терміново',
+    }
+
+    function formatValue(key: string, val: unknown): string {
+      if (val === null || val === undefined) return '—'
+      if (typeof val === 'boolean') return val ? 'Так' : 'Ні'
+      if (key === 'status' && typeof val === 'string' && STATUS_LABELS[val]) return STATUS_LABELS[val]
+      if (key === 'priority' && typeof val === 'string' && PRIORITY_LABELS[val]) return PRIORITY_LABELS[val]
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+        return new Date(val).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })
+      }
+      if (typeof val === 'object') return JSON.stringify(val)
+      return String(val)
+    }
+
     const ACTION_META: Record<string, { label: string; color: string; icon: string }> = {
       CREATE: { label: 'Створення', color: 'success', icon: 'mdi-plus-circle-outline' },
       UPDATE: { label: 'Оновлення', color: 'info', icon: 'mdi-pencil-outline' },
@@ -73,15 +143,15 @@ export default defineComponent({
 
     function renderChangesDetail(changes: any, action: string) {
       if (!changes || typeof changes !== 'object') return null
-      const entries = Object.entries(changes)
+      const entries = Object.entries(changes).filter(([, v]) => v != null)
       if (!entries.length) return null
 
       if (action === 'CREATE' || action === 'DELETE') {
         return (
-          <div class="d-flex flex-wrap ga-1 pa-2">
+          <div class="d-flex flex-wrap ga-1 pa-3">
             {entries.map(([k, v]) => (
               <v-chip key={k} size="x-small" variant="outlined" label>
-                {k}: {String(v ?? '—')}
+                {FIELD_LABELS[k] ?? k}: {formatValue(k, v)}
               </v-chip>
             ))}
           </div>
@@ -89,20 +159,20 @@ export default defineComponent({
       }
 
       return (
-        <v-table density="compact" class="bg-surface-variant">
+        <v-table density="compact">
           <thead>
             <tr>
-              <th>Поле</th>
-              <th>Було</th>
-              <th>Стало</th>
+              <th style="width: 30%">Поле</th>
+              <th style="width: 35%">Було</th>
+              <th style="width: 35%">Стало</th>
             </tr>
           </thead>
           <tbody>
             {entries.map(([key, change]: [string, any]) => (
               <tr key={key}>
-                <td class="font-weight-medium">{key}</td>
-                <td class="text-medium-emphasis">{String(change?.old ?? '—')}</td>
-                <td>{String(change?.new ?? '—')}</td>
+                <td class="font-weight-medium">{FIELD_LABELS[key] ?? key}</td>
+                <td class="text-medium-emphasis">{formatValue(key, change?.old)}</td>
+                <td class="font-weight-medium">{formatValue(key, change?.new)}</td>
               </tr>
             ))}
           </tbody>
@@ -135,6 +205,8 @@ export default defineComponent({
             hover
             hide-default-footer
             item-value="id"
+            expanded={expandedRows.value}
+            onUpdate:expanded={(val: string[]) => { expandedRows.value = val }}
           >
             {{
               'item.expand': ({ item }: any) => (
@@ -168,14 +240,13 @@ export default defineComponent({
               'item.userName': ({ item }: any) => (
                 <span>{item.userName ?? '—'}</span>
               ),
-              'expanded-row': ({ item }: any) =>
-                expandedRows.value.includes(item.id) ? (
-                  <tr>
-                    <td colspan={5} class="pa-0">
-                      {renderChangesDetail(item.changes, item.action)}
-                    </td>
-                  </tr>
-                ) : null,
+              'expanded-row': ({ item }: any) => (
+                <tr>
+                  <td colspan={5} class="pa-0">
+                    {renderChangesDetail(item.changes, item.action)}
+                  </td>
+                </tr>
+              ),
             }}
           </v-data-table>
 

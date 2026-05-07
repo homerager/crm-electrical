@@ -195,6 +195,8 @@ export default defineComponent({
               loading={movPending.value}
               hover
               item-value="id"
+              expanded={expandedRows.value}
+              onUpdate:expanded={(val: string[]) => { expandedRows.value = val }}
             >
               {{
                 'item.expand': ({ item }: any) => (
