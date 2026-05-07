@@ -1,6 +1,5 @@
-import { createRequire } from 'node:module'
-import { join } from 'node:path'
 import type { Prisma } from '@prisma/client'
+import { getPdfMake, fmtMoney, fmtQty } from './pdfBase'
 
 export type InvoiceForPdf = Prisma.InvoiceGetPayload<{
   include: {
@@ -10,45 +9,6 @@ export type InvoiceForPdf = Prisma.InvoiceGetPayload<{
     items: { include: { product: true } }
   }
 }>
-
-function fmtMoney(n: number): string {
-  return n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function fmtQty(n: number): string {
-  return n.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
-}
-
-// pdfmake — CommonJS; підвантажуємо з кореня проєкту (стабільно для Nitro bundle).
-const requireFromRoot = createRequire(join(process.cwd(), 'package.json'))
-
-let pdfMakeSingleton: {
-  createPdf: (def: Record<string, unknown>) => { getBuffer: () => Promise<Buffer> }
-  virtualfs: { writeFileSync: (name: string, buf: Buffer) => void }
-  fonts: Record<string, Record<string, string>>
-  setUrlAccessPolicy: (fn: (url: string) => boolean) => void
-} | null = null
-
-function getPdfMake() {
-  if (!pdfMakeSingleton) {
-    const pdfMake = requireFromRoot('pdfmake')
-    const vfs = requireFromRoot('pdfmake/build/vfs_fonts') as Record<string, string>
-    pdfMake.setUrlAccessPolicy(() => false)
-    pdfMake.fonts = {
-      Roboto: {
-        normal: 'Roboto-Regular.ttf',
-        bold: 'Roboto-Medium.ttf',
-        italics: 'Roboto-Italic.ttf',
-        bolditalics: 'Roboto-MediumItalic.ttf',
-      },
-    }
-    for (const key of Object.keys(vfs)) {
-      pdfMake.virtualfs.writeFileSync(key, Buffer.from(vfs[key], 'base64'))
-    }
-    pdfMakeSingleton = pdfMake
-  }
-  return pdfMakeSingleton
-}
 
 export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buffer> {
   const pdfMake = getPdfMake()

@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, address, description, status, budget } = body
+  const { name, address, description, status, budget, clientId } = body
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
 
@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
       description,
       status: (status as ObjectStatus) || 'ACTIVE',
       budget: budget != null && budget !== '' ? Number(budget) : null,
+      clientId: clientId || null,
     },
   })
 

@@ -21,7 +21,9 @@ export default defineComponent({
 
     const { isPrivileged } = useAuth()
     const { data, refresh, pending } = useFetch('/api/objects')
+    const { data: clientsData } = useFetch('/api/clients')
     const objects = computed(() => (data.value as any)?.objects ?? [])
+    const clients = computed(() => (clientsData.value as any)?.clients ?? [])
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -30,7 +32,7 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number })
+    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, clientId: '' })
 
     const statusOptions = [
       { title: 'Активний', value: 'ACTIVE' },
@@ -40,13 +42,13 @@ export default defineComponent({
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '' })
+      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', clientId: '' })
       dialog.value = true
     }
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '' })
+      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', clientId: item.clientId || '' })
       dialog.value = true
     }
 
@@ -89,6 +91,7 @@ export default defineComponent({
 
     const headers = [
       { title: 'Назва', key: 'name' },
+      { title: 'Клієнт', key: 'client', width: 180 },
       { title: 'Адреса', key: 'address' },
       { title: 'Бюджет, ₴', key: 'budget', align: 'end' as const, width: 150 },
       { title: 'Статус', key: 'status', width: 140 },
@@ -111,6 +114,11 @@ export default defineComponent({
         <v-card>
           <v-data-table headers={headers} items={objects.value} loading={pending.value} hover>
             {{
+              'item.client': ({ item }: any) => (
+                item.client
+                  ? <span>{item.client.name}</span>
+                  : <span class="text-medium-emphasis">—</span>
+              ),
               'item.budget': ({ item }: any) => (
                 item.budget != null
                   ? <span class="font-weight-medium">{uah(Number(item.budget))}</span>
@@ -155,6 +163,17 @@ export default defineComponent({
                 class="mb-3"
                 hint="Загальний бюджет обʼєкта (необовʼязково)"
                 persistent-hint
+              />
+              <v-autocomplete
+                v-model={form.clientId}
+                label="Клієнт"
+                items={clients.value}
+                item-title="name"
+                item-value="id"
+                clearable
+                prepend-inner-icon="mdi-account-tie"
+                no-data-text="Немає клієнтів"
+                class="mb-3"
               />
               <v-select v-model={form.status} label="Статус" items={statusOptions} item-title="title" item-value="value" class="mb-3" />
               <v-textarea v-model={form.description} label="Опис" rows={3} />
