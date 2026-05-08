@@ -15,6 +15,12 @@
     "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.20",
+    "@fullcalendar/daygrid": "^6.1.20",
+    "@fullcalendar/interaction": "^6.1.20",
+    "@fullcalendar/list": "^6.1.20",
+    "@fullcalendar/timegrid": "^6.1.20",
+    "@fullcalendar/vue3": "^6.1.20",
     "@mdi/font": "^7.4.47",
     "@prisma/client": "^5.22.0",
     "@tiptap/core": "^3.22.4",

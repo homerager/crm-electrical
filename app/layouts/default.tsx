@@ -173,6 +173,7 @@ export default defineComponent({
           { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
           { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
           { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
+          { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
         ]
       }
       const base: NavItem[] = [
@@ -190,6 +191,7 @@ export default defineComponent({
         { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
         { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
         { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
+        { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
       ]
       if (isPrivileged.value) {
         base.push({ title: 'Облік часу', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
@@ -523,6 +525,7 @@ function getPageTitle(path: string): string {
     '/documents': 'Шаблони документів',
     '/movements': 'Переміщення',
     '/reports': 'Репорти',
+    '/tasks/calendar': 'Календар завдань',
     '/tasks': 'Завдання',
     '/time-logs/manual': 'Облік часу',
     '/projects': 'Проєкти',

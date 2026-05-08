@@ -14,7 +14,15 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   build: {
-    transpile: ['vuetify'],
+    transpile: [
+      'vuetify',
+      '@fullcalendar/core',
+      '@fullcalendar/vue3',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/interaction',
+      '@fullcalendar/list',
+    ],
   },
 
   modules: [
