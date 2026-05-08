@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
           productId: item.productId,
           quantity: item.quantity,
           estimatedPricePerUnit: item.estimatedPricePerUnit ?? 0,
+          vatPercent: item.vatPercent ?? 0,
           note: item.note,
         })),
       },

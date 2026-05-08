@@ -32,7 +32,7 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, markupPercent: '' as string | number, clientId: '' })
+    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, markupPercent: '' as string | number, clientVatPercent: '' as string | number, clientId: '' })
 
     const statusOptions = [
       { title: 'Активний', value: 'ACTIVE' },
@@ -42,13 +42,13 @@ export default defineComponent({
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientId: '' })
+      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: '', clientId: '' })
       dialog.value = true
     }
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', markupPercent: item.markupPercent ?? '', clientId: item.clientId || '' })
+      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', markupPercent: item.markupPercent ?? '', clientVatPercent: item.clientVatPercent ?? '', clientId: item.clientId || '' })
       dialog.value = true
     }
 
@@ -95,6 +95,7 @@ export default defineComponent({
       { title: 'Адреса', key: 'address' },
       { title: 'Бюджет, ₴', key: 'budget', align: 'end' as const, width: 150 },
       { title: 'Націнка', key: 'markupPercent', align: 'end' as const, width: 110 },
+      { title: 'ПДВ клієнту', key: 'clientVatPercent', align: 'end' as const, width: 120 },
       { title: 'Статус', key: 'status', width: 140 },
       { title: 'Дата створення', key: 'createdAt', width: 160 },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 140 },
@@ -128,6 +129,11 @@ export default defineComponent({
               'item.markupPercent': ({ item }: any) => (
                 item.markupPercent != null
                   ? <v-chip size="small" color="orange" variant="tonal">{Number(item.markupPercent)}%</v-chip>
+                  : <span class="text-medium-emphasis">—</span>
+              ),
+              'item.clientVatPercent': ({ item }: any) => (
+                item.clientVatPercent != null
+                  ? <v-chip size="small" color="blue" variant="tonal">ПДВ {Number(item.clientVatPercent)}%</v-chip>
                   : <span class="text-medium-emphasis">—</span>
               ),
               'item.status': ({ item }: any) => (
@@ -180,6 +186,18 @@ export default defineComponent({
                 class="mb-3"
                 prepend-inner-icon="mdi-percent"
                 hint="Відсоток націнки для кошторису та акту (необовʼязково)"
+                persistent-hint
+              />
+              <v-text-field
+                v-model={form.clientVatPercent}
+                label="ПДВ для клієнта, %"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                class="mb-3"
+                prepend-inner-icon="mdi-bank-outline"
+                hint="ПДВ у документах для клієнта: 0 = без ПДВ, 20 = 20%. Якщо не задано — береться з налаштувань"
                 persistent-hint
               />
               <v-autocomplete

@@ -2,6 +2,7 @@ interface InvoiceItemRow {
   productId: string
   quantity: number
   pricePerUnit: number
+  vatPercent: number
   _product?: any
 }
 
@@ -18,10 +19,15 @@ export default defineComponent({
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: contractorsData } = useFetch('/api/contractors')
     const { data: productsData } = useFetch('/api/products')
+    const { data: settingsData } = useFetch('/api/settings')
 
     const warehouses = computed(() => (warehousesData.value as any)?.warehouses ?? [])
     const contractors = computed(() => (contractorsData.value as any)?.contractors ?? [])
     const products = computed(() => (productsData.value as any)?.products ?? [])
+    const defaultVatPercent = computed(() => {
+      const s = (settingsData.value as any)?.settings
+      return s?.defaultVatPercent != null ? Number(s.defaultVatPercent) : 0
+    })
 
     const form = reactive({
       number: '',
@@ -42,7 +48,7 @@ export default defineComponent({
     ]
 
     function addItem() {
-      items.value.push({ productId: '', quantity: 1, pricePerUnit: 0 })
+      items.value.push({ productId: '', quantity: 1, pricePerUnit: 0, vatPercent: defaultVatPercent.value })
     }
 
     function removeItem(index: number) {
@@ -73,7 +79,7 @@ export default defineComponent({
       try {
         const result = await $fetch('/api/invoices', {
           method: 'POST',
-          body: { ...form, items: items.value.map((i) => ({ productId: i.productId, quantity: i.quantity, pricePerUnit: i.pricePerUnit })) },
+          body: { ...form, items: items.value.map((i) => ({ productId: i.productId, quantity: i.quantity, pricePerUnit: i.pricePerUnit, vatPercent: i.vatPercent })) },
         })
         await router.push(`/invoices/${(result as any).invoice.id}`)
       } catch (e: any) {
@@ -153,7 +159,7 @@ export default defineComponent({
                 )}
                 {items.value.map((item, index) => (
                   <v-row key={index} align="center" class="mb-2">
-                    <v-col cols={12} md={5}>
+                    <v-col cols={12} md={4}>
                       <v-autocomplete
                         v-model={item.productId}
                         label="Товар *"
@@ -164,7 +170,7 @@ export default defineComponent({
                         onChange={(val: string) => onProductChange(index, val)}
                       />
                     </v-col>
-                    <v-col cols={12} md={3}>
+                    <v-col cols={6} md={2}>
                       <v-text-field
                         v-model={item.quantity}
                         label="Кількість *"
@@ -175,10 +181,10 @@ export default defineComponent({
                         suffix={item._product?.unit || ''}
                       />
                     </v-col>
-                    <v-col cols={12} md={3}>
+                    <v-col cols={6} md={3}>
                       <v-text-field
                         v-model={item.pricePerUnit}
-                        label="Ціна за од."
+                        label="Ціна без ПДВ, ₴"
                         type="number"
                         min={0}
                         step={0.01}
@@ -186,7 +192,19 @@ export default defineComponent({
                         prefix="₴"
                       />
                     </v-col>
-                    <v-col cols={12} md={1}>
+                    <v-col cols={10} md={2}>
+                      <v-text-field
+                        v-model={item.vatPercent}
+                        label="ПДВ, %"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        hide-details
+                        suffix="%"
+                      />
+                    </v-col>
+                    <v-col cols={2} md={1}>
                       <v-btn icon="mdi-delete" variant="text" color="error" size="small" onClick={() => removeItem(index)} />
                     </v-col>
                   </v-row>
@@ -199,16 +217,38 @@ export default defineComponent({
             <v-card>
               <v-card-title>Підсумок</v-card-title>
               <v-card-text>
-                <div class="d-flex justify-space-between mb-2">
-                  <span class="text-medium-emphasis">Позицій:</span>
-                  <strong>{items.value.length}</strong>
-                </div>
-                <div class="d-flex justify-space-between mb-2">
-                  <span class="text-medium-emphasis">Сума:</span>
-                  <strong>
-                    ₴{items.value.reduce((s, i) => s + i.quantity * i.pricePerUnit, 0).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}
-                  </strong>
-                </div>
+                {{
+                  default: () => {
+                    const baseTotal = items.value.reduce((s, i) => s + Number(i.quantity) * Number(i.pricePerUnit), 0)
+                    const vatTotal = items.value.reduce((s, i) => s + Number(i.quantity) * Number(i.pricePerUnit) * Number(i.vatPercent || 0) / 100, 0)
+                    const hasVat = items.value.some((i) => Number(i.vatPercent) > 0)
+                    return (
+                      <>
+                        <div class="d-flex justify-space-between mb-2">
+                          <span class="text-medium-emphasis">Позицій:</span>
+                          <strong>{items.value.length}</strong>
+                        </div>
+                        <div class="d-flex justify-space-between mb-2">
+                          <span class="text-medium-emphasis">Без ПДВ:</span>
+                          <strong>₴{baseTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</strong>
+                        </div>
+                        {hasVat && (
+                          <>
+                            <div class="d-flex justify-space-between mb-2">
+                              <span class="text-medium-emphasis">ПДВ:</span>
+                              <span>₴{vatTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <v-divider class="mb-2" />
+                            <div class="d-flex justify-space-between mb-2">
+                              <span class="font-weight-bold">Всього з ПДВ:</span>
+                              <strong class="text-primary">₴{(baseTotal + vatTotal).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</strong>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )
+                  },
+                }}
               </v-card-text>
               <v-card-actions>
                 <v-btn block color="primary" variant="flat" size="large" loading={saving.value} onClick={save}>

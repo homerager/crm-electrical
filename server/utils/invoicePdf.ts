@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { getPdfMake, fmtMoney, fmtQty } from './pdfBase'
+import { calcVat } from './vatCalc'
 
 export type InvoiceForPdf = Prisma.InvoiceGetPayload<{
   include: {
@@ -26,12 +27,19 @@ export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buf
     ],
   ]
 
-  let total = 0
+  let baseTotal = 0
+  let vatTotal = 0
+  let hasVat = false
+
   invoice.items.forEach((line, idx) => {
     const qty = Number(line.quantity)
     const price = Number(line.pricePerUnit)
-    const lineTotal = qty * price
-    total += lineTotal
+    const vatPct = Number(line.vatPercent ?? 0)
+    const lineBase = qty * price
+    const { vatAmount, total: lineTotal } = calcVat(lineBase, vatPct)
+    baseTotal += lineBase
+    vatTotal += vatAmount
+    if (vatPct > 0) hasVat = true
     rows.push([
       { text: String(idx + 1), alignment: 'center' },
       { text: line.product.name },
@@ -42,13 +50,26 @@ export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buf
     ])
   })
 
+  if (hasVat) {
+    rows.push([
+      { text: 'Без ПДВ:', colSpan: 5, alignment: 'right' },
+      {}, {}, {}, {},
+      { text: fmtMoney(baseTotal), alignment: 'right' },
+    ])
+    rows.push([
+      { text: 'ПДВ:', colSpan: 5, alignment: 'right' },
+      {}, {}, {}, {},
+      { text: fmtMoney(vatTotal), alignment: 'right' },
+    ])
+  }
+
   rows.push([
-    { text: 'Всього:', colSpan: 5, alignment: 'right', bold: true },
+    { text: hasVat ? 'Всього з ПДВ:' : 'Всього:', colSpan: 5, alignment: 'right', bold: true },
     {},
     {},
     {},
     {},
-    { text: fmtMoney(total), alignment: 'right', bold: true },
+    { text: fmtMoney(baseTotal + vatTotal), alignment: 'right', bold: true },
   ])
 
   const infoStack: Record<string, unknown>[] = [

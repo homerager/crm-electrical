@@ -5,6 +5,7 @@ interface InvoiceItemInput {
   productId: string
   quantity: number
   pricePerUnit: number
+  vatPercent?: number
 }
 
 export default defineEventHandler(async (event) => {
@@ -31,6 +32,7 @@ export default defineEventHandler(async (event) => {
             productId: item.productId,
             quantity: item.quantity,
             pricePerUnit: item.pricePerUnit || 0,
+            vatPercent: item.vatPercent ?? 0,
           })),
         },
       },

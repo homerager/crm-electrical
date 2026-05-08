@@ -7,18 +7,25 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { defaultMaterialMarkupPercent, defaultLaborMarkupPercent } = body
+  const { defaultMaterialMarkupPercent, defaultLaborMarkupPercent, defaultVatPercent, defaultClientVatPercent } = body
+
+  const toDecimalOrNull = (v: unknown) =>
+    v != null && v !== '' ? Number(v) : null
 
   const settings = await prisma.settings.upsert({
     where: { id: 'global' },
     create: {
       id: 'global',
-      defaultMaterialMarkupPercent: defaultMaterialMarkupPercent != null && defaultMaterialMarkupPercent !== '' ? Number(defaultMaterialMarkupPercent) : null,
-      defaultLaborMarkupPercent: defaultLaborMarkupPercent != null && defaultLaborMarkupPercent !== '' ? Number(defaultLaborMarkupPercent) : null,
+      defaultMaterialMarkupPercent: toDecimalOrNull(defaultMaterialMarkupPercent),
+      defaultLaborMarkupPercent: toDecimalOrNull(defaultLaborMarkupPercent),
+      defaultVatPercent: toDecimalOrNull(defaultVatPercent),
+      defaultClientVatPercent: toDecimalOrNull(defaultClientVatPercent),
     },
     update: {
-      defaultMaterialMarkupPercent: defaultMaterialMarkupPercent != null && defaultMaterialMarkupPercent !== '' ? Number(defaultMaterialMarkupPercent) : null,
-      defaultLaborMarkupPercent: defaultLaborMarkupPercent != null && defaultLaborMarkupPercent !== '' ? Number(defaultLaborMarkupPercent) : null,
+      defaultMaterialMarkupPercent: toDecimalOrNull(defaultMaterialMarkupPercent),
+      defaultLaborMarkupPercent: toDecimalOrNull(defaultLaborMarkupPercent),
+      defaultVatPercent: toDecimalOrNull(defaultVatPercent),
+      defaultClientVatPercent: toDecimalOrNull(defaultClientVatPercent),
     },
   })
 
@@ -28,7 +35,7 @@ export default defineEventHandler(async (event) => {
     action: 'UPDATE',
     entityType: 'Settings',
     entityId: 'global',
-    changes: { defaultMaterialMarkupPercent, defaultLaborMarkupPercent },
+    changes: { defaultMaterialMarkupPercent, defaultLaborMarkupPercent, defaultVatPercent, defaultClientVatPercent },
   })
 
   return { settings }

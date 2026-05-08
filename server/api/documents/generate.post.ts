@@ -23,6 +23,8 @@ interface RequestBody {
   prepaymentPercent?: number
   warrantyMonths?: number
   notes?: string
+  /** Override VAT % for this document. If omitted, uses object.clientVatPercent or settings.defaultClientVatPercent */
+  vatPercent?: number
 }
 
 async function gatherMaterials(objectId: string): Promise<MaterialRow[]> {
@@ -147,6 +149,15 @@ export default defineEventHandler(async (event) => {
   const materialMarkupPercent = objectMarkup ?? (globalSettings?.defaultMaterialMarkupPercent != null ? Number(globalSettings.defaultMaterialMarkupPercent) : undefined)
   const laborMarkupPercent = objectMarkup ?? (globalSettings?.defaultLaborMarkupPercent != null ? Number(globalSettings.defaultLaborMarkupPercent) : undefined)
 
+  // VAT for client documents: body override → object level → global default → 0
+  const clientVatPercent = body.vatPercent != null
+    ? body.vatPercent
+    : object.clientVatPercent != null
+      ? Number(object.clientVatPercent)
+      : globalSettings?.defaultClientVatPercent != null
+        ? Number(globalSettings.defaultClientVatPercent)
+        : 0
+
   let client: any = null
   if (body.clientId) {
     client = await prisma.client.findUnique({ where: { id: body.clientId } })
@@ -174,6 +185,7 @@ export default defineEventHandler(async (event) => {
         date: body.date,
         materialMarkupPercent,
         laborMarkupPercent,
+        vatPercent: clientVatPercent,
         notes: body.notes,
       })
       asciiName = `koshtorys-${safeNumber}.pdf`
@@ -195,6 +207,7 @@ export default defineEventHandler(async (event) => {
         periodTo: body.periodTo,
         materialMarkupPercent,
         laborMarkupPercent,
+        vatPercent: clientVatPercent,
         notes: body.notes,
       })
       asciiName = `akt-${safeNumber}.pdf`
@@ -208,9 +221,13 @@ export default defineEventHandler(async (event) => {
       }
       const materials = await gatherMaterials(body.objectId)
       const labor = await gatherLabor(body.objectId)
-      const matSum = materials.reduce((s, m) => s + m.quantity * m.pricePerUnit, 0)
-      const labSum = labor.reduce((s, l) => s + (l.totalAmount ?? 0), 0)
-      const autoTotal = matSum + labSum
+      const matMarkup = 1 + (materialMarkupPercent ?? 0) / 100
+      const labMarkup = 1 + (laborMarkupPercent ?? 0) / 100
+      const matSum = materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * matMarkup, 0)
+      const labSum = labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * labMarkup : 0), 0)
+      const baseTotal = matSum + labSum
+      const vatMultiplier = 1 + clientVatPercent / 100
+      const autoTotal = baseTotal * vatMultiplier
 
       buffer = await buildContractPdf({
         object: toObjectInfo(object),
@@ -220,6 +237,7 @@ export default defineEventHandler(async (event) => {
         totalAmount: body.totalAmount ?? autoTotal,
         prepaymentPercent: body.prepaymentPercent,
         warrantyMonths: body.warrantyMonths,
+        vatPercent: clientVatPercent,
         notes: body.notes,
       })
       asciiName = `dohovir-${safeNumber}.pdf`

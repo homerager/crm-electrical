@@ -6,6 +6,7 @@ export interface PurchaseRequestItemInput {
   productId: string
   quantity: number
   estimatedPricePerUnit?: number
+  vatPercent?: number
   note?: string
 }
 
@@ -36,10 +37,14 @@ export function normalizePurchaseRequestItems(rawItems: unknown): PurchaseReques
       throw createError({ statusCode: 400, statusMessage: 'Орієнтовна ціна не може бути відʼємною' })
     }
 
+    const vatRaw = item.vatPercent ?? 0
+    const vatPercent = typeof vatRaw === 'number' ? vatRaw : Number(vatRaw)
+
     return {
       productId,
       quantity: parsePositiveQuantity(item.quantity),
       estimatedPricePerUnit,
+      vatPercent: Number.isFinite(vatPercent) && vatPercent >= 0 ? vatPercent : 0,
       note: typeof item.note === 'string' && item.note.trim() ? item.note.trim() : undefined,
     }
   })
@@ -178,6 +183,7 @@ export async function createIncomingInvoiceForPurchaseRequest(
           productId: item.productId,
           quantity: item.quantity,
           pricePerUnit: params.prices?.[item.id] ?? Number(item.estimatedPricePerUnit) ?? 0,
+          vatPercent: Number(item.vatPercent) ?? 0,
         })),
       },
     },

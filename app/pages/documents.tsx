@@ -7,6 +7,7 @@ export default defineComponent({
 
     const { data: objectsData } = useFetch('/api/objects')
     const { data: clientsData } = useFetch('/api/clients')
+    const { data: settingsData } = useFetch('/api/settings')
 
     const objects = computed(() => (objectsData.value as any)?.objects ?? [])
     const clients = computed(() => (clientsData.value as any)?.clients ?? [])
@@ -28,6 +29,7 @@ export default defineComponent({
       totalAmount: null as number | null,
       prepaymentPercent: null as number | null,
       warrantyMonths: 12,
+      vatPercent: null as number | null,
       notes: '',
     })
 
@@ -44,6 +46,13 @@ export default defineComponent({
 
     const selectedObject = computed(() => objects.value.find((o: any) => o.id === form.objectId))
     const objectMarkup = computed(() => selectedObject.value?.markupPercent != null ? Number(selectedObject.value.markupPercent) : null)
+    const globalSettings = computed(() => (settingsData.value as any)?.settings)
+    const effectiveClientVat = computed(() => {
+      if (form.vatPercent != null) return form.vatPercent
+      if (selectedObject.value?.clientVatPercent != null) return Number(selectedObject.value.clientVatPercent)
+      if (globalSettings.value?.defaultClientVatPercent != null) return Number(globalSettings.value.defaultClientVatPercent)
+      return 0
+    })
 
     watch(() => form.objectId, (newId) => {
       if (!newId) return
@@ -68,6 +77,7 @@ export default defineComponent({
       form.totalAmount = null
       form.prepaymentPercent = null
       form.warrantyMonths = 12
+      form.vatPercent = null
       form.notes = ''
       error.value = ''
       pdfPreviewUrl.value = ''
@@ -106,6 +116,7 @@ export default defineComponent({
           if (form.prepaymentPercent != null) body.prepaymentPercent = form.prepaymentPercent
           body.warrantyMonths = form.warrantyMonths
         }
+        if (form.vatPercent != null) body.vatPercent = form.vatPercent
 
         const response = await $fetch.raw(`/api/documents/generate${inline ? '?inline=1' : ''}`, {
           method: 'POST',
@@ -238,7 +249,7 @@ export default defineComponent({
                           no-data-text="Немає об'єктів"
                         />
                         {isEstimateOrAct.value && form.objectId && (
-                          <div class="mt-n2 mb-2">
+                          <div class="mt-n2 mb-2 d-flex gap-2 flex-wrap">
                             {objectMarkup.value != null && objectMarkup.value > 0
                               ? (
                                 <v-chip size="small" color="orange" variant="tonal" prepend-icon="mdi-percent">
@@ -246,9 +257,12 @@ export default defineComponent({
                                 </v-chip>
                               )
                               : (
-                                <span class="text-caption text-medium-emphasis">Націнка не задана для цього об'єкта</span>
+                                <span class="text-caption text-medium-emphasis">Націнка не задана</span>
                               )
                             }
+                            <v-chip size="small" color={effectiveClientVat.value > 0 ? 'blue' : 'grey'} variant="tonal" prepend-icon="mdi-bank-outline">
+                              ПДВ: {effectiveClientVat.value > 0 ? `${effectiveClientVat.value}%` : 'без ПДВ'}
+                            </v-chip>
                           </div>
                         )}
                       </v-col>
@@ -327,6 +341,25 @@ export default defineComponent({
                       </v-row>
                     )}
 
+                    {isEstimateOrAct.value && (
+                      <v-row>
+                        <v-col cols={12} md={4}>
+                          <v-text-field
+                            v-model={form.vatPercent}
+                            label="ПДВ для документа, %"
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            clearable
+                            prepend-inner-icon="mdi-bank-outline"
+                            hint={`Залишіть порожнім для автоматичного (${effectiveClientVat.value}%)`}
+                            persistent-hint
+                          />
+                        </v-col>
+                      </v-row>
+                    )}
+
                     <v-textarea
                       v-model={form.notes}
                       label="Примітки / додаткові умови"
@@ -346,8 +379,13 @@ export default defineComponent({
                       переміщені матеріали, трудовитрати та реквізити клієнта.
                     </div>
                     {isEstimateOrAct.value && objectMarkup.value != null && objectMarkup.value > 0 && (
-                      <v-alert type="info" variant="tonal" density="compact" class="mb-4" icon="mdi-percent">
-                        До підсумку буде додано націнку <strong>{objectMarkup.value}%</strong>
+                      <v-alert type="info" variant="tonal" density="compact" class="mb-2" icon="mdi-percent">
+                        Націнка <strong>{objectMarkup.value}%</strong>
+                      </v-alert>
+                    )}
+                    {isEstimateOrAct.value && effectiveClientVat.value > 0 && (
+                      <v-alert type="info" variant="tonal" density="compact" class="mb-4" icon="mdi-bank-outline">
+                        ПДВ <strong>{effectiveClientVat.value}%</strong> буде включено в підсумок
                       </v-alert>
                     )}
 

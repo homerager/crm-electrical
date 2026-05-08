@@ -1,4 +1,5 @@
 import { getPdfMake, fmtMoney, fmtQty, pdfTableLayout, defaultDocStyles, pdfFooter } from './pdfBase'
+import { calcVat } from './vatCalc'
 
 /* ────────────────────── Shared types ────────────────────── */
 
@@ -62,6 +63,8 @@ export interface EstimateInput {
   date: string
   materialMarkupPercent?: number
   laborMarkupPercent?: number
+  /** VAT % charged to client. 0 = no VAT line shown */
+  vatPercent?: number
   notes?: string
 }
 
@@ -179,13 +182,29 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
   // Grand total (already includes markup via per-row prices)
   const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * matMarkup, 0)
   const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * labMarkup : 0), 0)
-  const grandTotal = matSum + labSum
+  const baseTotal = matSum + labSum
+  const vat = calcVat(baseTotal, input.vatPercent ?? 0)
 
-  content.push({
-    text: [{ text: 'ВСЬОГО ПО КОШТОРИСУ: ', bold: true, fontSize: 11 }, { text: `${fmtMoney(grandTotal)} грн`, fontSize: 11, bold: true }],
-    margin: [0, 16, 0, 0],
-    alignment: 'right',
-  })
+  if (vat.vatPercent > 0) {
+    content.push({
+      table: {
+        widths: ['*', 120],
+        body: [
+          [{ text: 'Всього без ПДВ:', alignment: 'right' }, { text: `${fmtMoney(vat.base)} грн`, alignment: 'right', bold: true }],
+          [{ text: `ПДВ ${vat.vatPercent}%:`, alignment: 'right' }, { text: `${fmtMoney(vat.vatAmount)} грн`, alignment: 'right', bold: true }],
+          [{ text: 'ВСЬОГО ПО КОШТОРИСУ з ПДВ:', alignment: 'right', bold: true, fontSize: 11 }, { text: `${fmtMoney(vat.total)} грн`, alignment: 'right', bold: true, fontSize: 11 }],
+        ],
+      },
+      layout: 'noBorders',
+      margin: [0, 16, 0, 0],
+    })
+  } else {
+    content.push({
+      text: [{ text: 'ВСЬОГО ПО КОШТОРИСУ: ', bold: true, fontSize: 11 }, { text: `${fmtMoney(baseTotal)} грн`, fontSize: 11, bold: true }],
+      margin: [0, 16, 0, 0],
+      alignment: 'right',
+    })
+  }
 
   content.push(signatureBlock('Виконавець', 'Замовник'))
 
@@ -213,6 +232,8 @@ export interface ActInput {
   periodTo?: string
   materialMarkupPercent?: number
   laborMarkupPercent?: number
+  /** VAT % charged to client. 0 = no VAT line shown */
+  vatPercent?: number
   notes?: string
 }
 
@@ -330,13 +351,29 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
   // Grand total (already includes markup via per-row prices)
   const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * matMarkup, 0)
   const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * labMarkup : 0), 0)
-  const grandTotal = matSum + labSum
+  const baseTotal = matSum + labSum
+  const vat = calcVat(baseTotal, input.vatPercent ?? 0)
 
-  content.push({
-    text: [{ text: 'ЗАГАЛЬНА ВАРТІСТЬ ВИКОНАНИХ РОБІТ: ', bold: true, fontSize: 11 }, { text: `${fmtMoney(grandTotal)} грн`, fontSize: 11, bold: true }],
-    margin: [0, 16, 0, 0],
-    alignment: 'right',
-  })
+  if (vat.vatPercent > 0) {
+    content.push({
+      table: {
+        widths: ['*', 120],
+        body: [
+          [{ text: 'Всього без ПДВ:', alignment: 'right' }, { text: `${fmtMoney(vat.base)} грн`, alignment: 'right', bold: true }],
+          [{ text: `ПДВ ${vat.vatPercent}%:`, alignment: 'right' }, { text: `${fmtMoney(vat.vatAmount)} грн`, alignment: 'right', bold: true }],
+          [{ text: 'ЗАГАЛЬНА ВАРТІСТЬ ВИКОНАНИХ РОБІТ з ПДВ:', alignment: 'right', bold: true, fontSize: 11 }, { text: `${fmtMoney(vat.total)} грн`, alignment: 'right', bold: true, fontSize: 11 }],
+        ],
+      },
+      layout: 'noBorders',
+      margin: [0, 16, 0, 0],
+    })
+  } else {
+    content.push({
+      text: [{ text: 'ЗАГАЛЬНА ВАРТІСТЬ ВИКОНАНИХ РОБІТ: ', bold: true, fontSize: 11 }, { text: `${fmtMoney(baseTotal)} грн`, fontSize: 11, bold: true }],
+      margin: [0, 16, 0, 0],
+      alignment: 'right',
+    })
+  }
 
   content.push({
     text: 'Роботи виконані в повному обсязі та у встановлені строки. Замовник претензій щодо обсягу, якості та строків виконання робіт не має.',
@@ -368,6 +405,8 @@ export interface ContractInput {
   totalAmount: number
   prepaymentPercent?: number
   warrantyMonths?: number
+  /** VAT % — used in contract clause 2.1 to clarify whether amount includes VAT */
+  vatPercent?: number
   notes?: string
 }
 
@@ -416,10 +455,15 @@ export async function buildContractPdf(input: ContractInput): Promise<Buffer> {
 
   // 2. Вартість та порядок розрахунків
   content.push({ text: '2. Вартість та порядок розрахунків', style: 'sectionHeader' })
+  const vatClause = (input.vatPercent ?? 0) > 0
+    ? `, у т.ч. ПДВ ${input.vatPercent}% — ${fmtMoney(input.totalAmount - input.totalAmount / (1 + (input.vatPercent ?? 0) / 100))} грн`
+    : ', без ПДВ'
+
   content.push({
     text: [
       '2.1. Загальна вартість робіт за цим Договором становить: ',
       { text: `${fmtMoney(input.totalAmount)} грн`, bold: true },
+      vatClause,
       '.',
     ],
     lineHeight: 1.4,

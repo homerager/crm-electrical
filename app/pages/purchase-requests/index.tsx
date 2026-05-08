@@ -2,6 +2,7 @@ interface RequestItemRow {
   productId: string
   quantity: number
   estimatedPricePerUnit: number
+  vatPercent: number
   note?: string
 }
 
@@ -34,12 +35,17 @@ export default defineComponent({
     const { data: productsData } = useFetch('/api/products')
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: contractorsData } = useFetch('/api/contractors')
+    const { data: settingsData } = useFetch('/api/settings')
 
     const purchaseRequests = computed(() => (data.value as any)?.purchaseRequests ?? [])
     const objects = computed(() => (objectsData.value as any)?.objects ?? [])
     const products = computed(() => (productsData.value as any)?.products ?? [])
     const warehouses = computed(() => (warehousesData.value as any)?.warehouses ?? [])
     const contractors = computed(() => (contractorsData.value as any)?.contractors ?? [])
+    const defaultVatPercent = computed(() => {
+      const s = (settingsData.value as any)?.settings
+      return s?.defaultVatPercent != null ? Number(s.defaultVatPercent) : 0
+    })
 
     const createDialog = ref(false)
     const generateDialog = ref(false)
@@ -96,7 +102,10 @@ export default defineComponent({
 
     function requestTotal(request: any) {
       return (request.items ?? []).reduce(
-        (sum: number, item: any) => sum + Number(item.quantity) * Number(item.estimatedPricePerUnit),
+        (sum: number, item: any) => {
+          const base = Number(item.quantity) * Number(item.estimatedPricePerUnit)
+          return sum + base * (1 + Number(item.vatPercent || 0) / 100)
+        },
         0,
       )
     }
@@ -105,7 +114,7 @@ export default defineComponent({
       form.objectId = objects.value[0]?.id ?? ''
       form.contractorId = ''
       form.notes = ''
-      items.value = [{ productId: '', quantity: 1, estimatedPricePerUnit: 0 }]
+      items.value = [{ productId: '', quantity: 1, estimatedPricePerUnit: 0, vatPercent: defaultVatPercent.value }]
       error.value = ''
     }
 
@@ -115,7 +124,7 @@ export default defineComponent({
     }
 
     function addItem() {
-      items.value.push({ productId: '', quantity: 1, estimatedPricePerUnit: 0 })
+      items.value.push({ productId: '', quantity: 1, estimatedPricePerUnit: 0, vatPercent: defaultVatPercent.value })
     }
 
     function removeItem(index: number) {
@@ -152,6 +161,7 @@ export default defineComponent({
               productId: item.productId,
               quantity: Number(item.quantity),
               estimatedPricePerUnit: Number(item.estimatedPricePerUnit) || 0,
+              vatPercent: Number(item.vatPercent) || 0,
               note: item.note || undefined,
             })),
           },
@@ -352,7 +362,7 @@ export default defineComponent({
           </v-data-table>
         </v-card>
 
-        <v-dialog v-model={createDialog.value} max-width={860} scrollable>
+        <v-dialog v-model={createDialog.value} max-width={1060} scrollable>
           <v-card>
             <v-card-title>Нова заявка на закупівлю</v-card-title>
             <v-card-text>
@@ -386,7 +396,7 @@ export default defineComponent({
 
               {items.value.map((item, index) => (
                 <v-row key={index} align="center" class="mb-1">
-                  <v-col cols={12} md={5}>
+                  <v-col cols={12} md={3}>
                     <v-autocomplete
                       v-model={item.productId}
                       label="Товар *"
@@ -403,7 +413,7 @@ export default defineComponent({
                   <v-col cols={6} md={2}>
                     <v-text-field
                       v-model={item.estimatedPricePerUnit}
-                      label="Ціна"
+                      label="Ціна без ПДВ"
                       type="number"
                       min={0}
                       step={0.01}
@@ -411,7 +421,19 @@ export default defineComponent({
                       hide-details
                     />
                   </v-col>
-                  <v-col cols={10} md={2}>
+                  <v-col cols={4} md={2}>
+                    <v-text-field
+                      v-model={item.vatPercent}
+                      label="ПДВ %"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      suffix="%"
+                      hide-details
+                    />
+                  </v-col>
+                  <v-col cols={6} md={2}>
                     <v-text-field v-model={item.note} label="Коментар" hide-details />
                   </v-col>
                   <v-col cols={2} md={1}>

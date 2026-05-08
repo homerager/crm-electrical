@@ -2,6 +2,7 @@ interface RequestItemRow {
   productId: string
   quantity: number
   estimatedPricePerUnit: number
+  vatPercent: number
   note?: string
 }
 
@@ -30,11 +31,16 @@ export default defineComponent({
     const { data: objectsData } = useFetch('/api/objects')
     const { data: productsData } = useFetch('/api/products')
     const { data: contractorsData } = useFetch('/api/contractors')
+    const { data: settingsData } = useFetch('/api/settings')
 
     const purchaseRequest = computed(() => (data.value as any)?.purchaseRequest)
     const objects = computed(() => (objectsData.value as any)?.objects ?? [])
     const products = computed(() => (productsData.value as any)?.products ?? [])
     const contractors = computed(() => (contractorsData.value as any)?.contractors ?? [])
+    const defaultVatPercent = computed(() => {
+      const s = (settingsData.value as any)?.settings
+      return s?.defaultVatPercent != null ? Number(s.defaultVatPercent) : 0
+    })
     const canEdit = computed(() => purchaseRequest.value?.status !== 'RECEIVED')
 
     useHead({
@@ -59,8 +65,9 @@ export default defineComponent({
       { title: 'Товар', key: 'product.name', minWidth: 180 },
       { title: 'Артикул', key: 'product.sku', width: 120 },
       { title: 'Кількість', key: 'quantity', align: 'end' as const, width: 130 },
-      { title: 'Ціна', key: 'estimatedPricePerUnit', align: 'end' as const, width: 130 },
-      { title: 'Сума', key: 'total', align: 'end' as const, width: 130 },
+      { title: 'Ціна без ПДВ', key: 'estimatedPricePerUnit', align: 'end' as const, width: 130 },
+      { title: 'ПДВ, %', key: 'vatPercent', align: 'end' as const, width: 90 },
+      { title: 'Сума з ПДВ', key: 'total', align: 'end' as const, width: 130 },
       { title: 'Коментар', key: 'note', minWidth: 160 },
     ]
 
@@ -72,14 +79,22 @@ export default defineComponent({
 
     const totalSum = computed(() =>
       (purchaseRequest.value?.items ?? []).reduce(
-        (sum: number, item: any) => sum + Number(item.quantity) * Number(item.estimatedPricePerUnit),
+        (sum: number, item: any) => {
+          const base = Number(item.quantity) * Number(item.estimatedPricePerUnit)
+          const vat = base * Number(item.vatPercent || 0) / 100
+          return sum + base + vat
+        },
         0,
       ),
     )
 
     const editTotal = computed(() =>
       items.value.reduce(
-        (sum, item) => sum + Number(item.quantity) * Number(item.estimatedPricePerUnit || 0),
+        (sum, item) => {
+          const base = Number(item.quantity) * Number(item.estimatedPricePerUnit || 0)
+          const vat = base * Number(item.vatPercent || 0) / 100
+          return sum + base + vat
+        },
         0,
       ),
     )
@@ -99,6 +114,7 @@ export default defineComponent({
         productId: item.productId,
         quantity: Number(item.quantity),
         estimatedPricePerUnit: Number(item.estimatedPricePerUnit) || 0,
+        vatPercent: Number(item.vatPercent) || 0,
         note: item.note ?? '',
       }))
     }
@@ -120,7 +136,7 @@ export default defineComponent({
     }
 
     function addItem() {
-      items.value.push({ productId: '', quantity: 1, estimatedPricePerUnit: 0, note: '' })
+      items.value.push({ productId: '', quantity: 1, estimatedPricePerUnit: 0, vatPercent: defaultVatPercent.value, note: '' })
     }
 
     function removeItem(index: number) {
@@ -151,6 +167,7 @@ export default defineComponent({
               productId: item.productId,
               quantity: Number(item.quantity),
               estimatedPricePerUnit: Number(item.estimatedPricePerUnit) || 0,
+              vatPercent: Number(item.vatPercent) || 0,
               note: item.note || undefined,
             })),
           },
@@ -241,13 +258,20 @@ export default defineComponent({
                     'item.estimatedPricePerUnit': ({ item }: any) => (
                       <span>{uah(Number(item.estimatedPricePerUnit) || 0)}</span>
                     ),
-                    'item.total': ({ item }: any) => (
-                      <strong>{uah(Number(item.quantity) * Number(item.estimatedPricePerUnit || 0))}</strong>
+                    'item.vatPercent': ({ item }: any) => (
+                      Number(item.vatPercent) > 0
+                        ? <v-chip size="x-small" color="blue" variant="tonal">{Number(item.vatPercent)}%</v-chip>
+                        : <span class="text-medium-emphasis">—</span>
                     ),
+                    'item.total': ({ item }: any) => {
+                      const base = Number(item.quantity) * Number(item.estimatedPricePerUnit || 0)
+                      const total = base * (1 + Number(item.vatPercent || 0) / 100)
+                      return <strong>{uah(total)}</strong>
+                    },
                     'item.note': ({ item }: any) => <span class="text-medium-emphasis">{item.note || '—'}</span>,
                     'body.append': () => (
                       <tr>
-                        <td colspan={4} class="text-right font-weight-bold pa-3">Всього:</td>
+                        <td colspan={5} class="text-right font-weight-bold pa-3">Всього з ПДВ:</td>
                         <td class="text-right font-weight-bold pa-3">{uah(totalSum.value)}</td>
                         <td />
                       </tr>
@@ -304,7 +328,7 @@ export default defineComponent({
 
               {items.value.map((item, index) => (
                 <v-row key={index} align="center" class="mb-1">
-                  <v-col cols={12} md={5}>
+                  <v-col cols={12} md={4}>
                     <v-autocomplete
                       v-model={item.productId}
                       label="Товар *"
@@ -320,7 +344,7 @@ export default defineComponent({
                   <v-col cols={6} md={2}>
                     <v-text-field
                       v-model={item.estimatedPricePerUnit}
-                      label="Ціна"
+                      label="Ціна без ПДВ"
                       type="number"
                       min={0}
                       step={0.01}
@@ -328,7 +352,19 @@ export default defineComponent({
                       hide-details
                     />
                   </v-col>
-                  <v-col cols={10} md={2}>
+                  <v-col cols={4} md={1}>
+                    <v-text-field
+                      v-model={item.vatPercent}
+                      label="ПДВ %"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      suffix="%"
+                      hide-details
+                    />
+                  </v-col>
+                  <v-col cols={6} md={2}>
                     <v-text-field v-model={item.note} label="Коментар" hide-details />
                   </v-col>
                   <v-col cols={2} md={1}>

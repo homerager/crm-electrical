@@ -28,6 +28,8 @@ export default defineComponent({
     const markupForm = reactive({
       defaultMaterialMarkupPercent: '' as string | number,
       defaultLaborMarkupPercent: '' as string | number,
+      defaultVatPercent: '' as string | number,
+      defaultClientVatPercent: '' as string | number,
     })
 
     async function loadMarkup() {
@@ -38,6 +40,8 @@ export default defineComponent({
         if (s) {
           markupForm.defaultMaterialMarkupPercent = s.defaultMaterialMarkupPercent != null ? Number(s.defaultMaterialMarkupPercent) : ''
           markupForm.defaultLaborMarkupPercent = s.defaultLaborMarkupPercent != null ? Number(s.defaultLaborMarkupPercent) : ''
+          markupForm.defaultVatPercent = s.defaultVatPercent != null ? Number(s.defaultVatPercent) : ''
+          markupForm.defaultClientVatPercent = s.defaultClientVatPercent != null ? Number(s.defaultClientVatPercent) : ''
         }
       } catch {
         markupError.value = 'Помилка завантаження налаштувань'
@@ -302,6 +306,47 @@ export default defineComponent({
 
                     <v-alert type="info" variant="tonal" density="compact" class="mt-2 mb-4" icon="mdi-information-outline">
                       Якщо для будівельного об'єкта задана власна «Націнка %» — вона перекриває обидва глобальні значення.
+                    </v-alert>
+
+                    <v-divider class="mb-4" />
+                    <div class="text-subtitle-2 font-weight-medium mb-3 d-flex align-center">
+                      <v-icon icon="mdi-bank-outline" size="18" color="blue" class="mr-1" />
+                      Типовий відсоток ПДВ
+                    </div>
+                    <v-row>
+                      <v-col cols={12} md={6}>
+                        <v-text-field
+                          v-model={markupForm.defaultVatPercent}
+                          label="ПДВ для закупівель, %"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          prepend-inner-icon="mdi-package-variant"
+                          variant="outlined"
+                          density="comfortable"
+                          hint="Підставляється за замовчуванням у накладні та заявки (0 = без ПДВ)"
+                          persistent-hint
+                        />
+                      </v-col>
+                      <v-col cols={12} md={6}>
+                        <v-text-field
+                          v-model={markupForm.defaultClientVatPercent}
+                          label="ПДВ для клієнта, %"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          prepend-inner-icon="mdi-account-tie"
+                          variant="outlined"
+                          density="comfortable"
+                          hint="Підставляється у кошторис, акт і договір (0 = без ПДВ)"
+                          persistent-hint
+                        />
+                      </v-col>
+                    </v-row>
+                    <v-alert type="info" variant="tonal" density="compact" class="mt-2 mb-4" icon="mdi-information-outline">
+                      Значення ПДВ для клієнта можна перевизначити на картці кожного обʼєкта («ПДВ для клієнта %»).
                     </v-alert>
 
                     <div class="d-flex justify-end">
