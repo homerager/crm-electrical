@@ -167,6 +167,7 @@ export default defineEventHandler(async (event) => {
         labor,
         number: body.number,
         date: body.date,
+        markupPercent: object.markupPercent != null ? Number(object.markupPercent) : undefined,
         notes: body.notes,
       })
       asciiName = `koshtorys-${safeNumber}.pdf`
@@ -186,6 +187,7 @@ export default defineEventHandler(async (event) => {
         date: body.date,
         periodFrom: body.periodFrom,
         periodTo: body.periodTo,
+        markupPercent: object.markupPercent != null ? Number(object.markupPercent) : undefined,
         notes: body.notes,
       })
       asciiName = `akt-${safeNumber}.pdf`

@@ -1,15 +1,17 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RECEIVE'
 
 export type AuditEntityType =
   | 'Warehouse'
   | 'ConstructionObject'
   | 'Product'
   | 'ProductGroup'
+  | 'Client'
   | 'Contractor'
   | 'Invoice'
   | 'Movement'
+  | 'PurchaseRequest'
   | 'Task'
   | 'Project'
   | 'TimeLog'

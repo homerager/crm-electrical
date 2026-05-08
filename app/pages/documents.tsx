@@ -40,6 +40,10 @@ export default defineComponent({
     const selectedType = computed(() => docTypes.find((t) => t.value === form.type))
     const isContract = computed(() => form.type === 'contract')
     const isAct = computed(() => form.type === 'act')
+    const isEstimateOrAct = computed(() => form.type === 'estimate' || form.type === 'act')
+
+    const selectedObject = computed(() => objects.value.find((o: any) => o.id === form.objectId))
+    const objectMarkup = computed(() => selectedObject.value?.markupPercent != null ? Number(selectedObject.value.markupPercent) : null)
 
     watch(() => form.objectId, (newId) => {
       if (!newId) return
@@ -233,6 +237,20 @@ export default defineComponent({
                           prepend-inner-icon="mdi-office-building-outline"
                           no-data-text="Немає об'єктів"
                         />
+                        {isEstimateOrAct.value && form.objectId && (
+                          <div class="mt-n2 mb-2">
+                            {objectMarkup.value != null && objectMarkup.value > 0
+                              ? (
+                                <v-chip size="small" color="orange" variant="tonal" prepend-icon="mdi-percent">
+                                  Націнка: {objectMarkup.value}%
+                                </v-chip>
+                              )
+                              : (
+                                <span class="text-caption text-medium-emphasis">Націнка не задана для цього об'єкта</span>
+                              )
+                            }
+                          </div>
+                        )}
                       </v-col>
                       <v-col cols={12} md={6}>
                         <v-autocomplete
@@ -327,6 +345,11 @@ export default defineComponent({
                       Документ буде сформовано на основі даних обраного об'єкта:
                       переміщені матеріали, трудовитрати та реквізити клієнта.
                     </div>
+                    {isEstimateOrAct.value && objectMarkup.value != null && objectMarkup.value > 0 && (
+                      <v-alert type="info" variant="tonal" density="compact" class="mb-4" icon="mdi-percent">
+                        До підсумку буде додано націнку <strong>{objectMarkup.value}%</strong>
+                      </v-alert>
+                    )}
 
                     <v-btn
                       block

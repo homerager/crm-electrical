@@ -60,6 +60,7 @@ export interface EstimateInput {
   labor: LaborRow[]
   number: string
   date: string
+  markupPercent?: number
   notes?: string
 }
 
@@ -93,6 +94,8 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
     content.push({ text: [{ text: 'Примітки: ', bold: true }, input.notes], margin: [0, 0, 0, 8] })
   }
 
+  const markup = 1 + (input.markupPercent ?? 0) / 100
+
   // Materials table
   if (input.materials.length > 0) {
     content.push({ text: '1. Матеріали', style: 'sectionHeader' })
@@ -109,7 +112,8 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
 
     let matTotal = 0
     input.materials.forEach((m, idx) => {
-      const lineTotal = m.quantity * m.pricePerUnit
+      const price = m.pricePerUnit * markup
+      const lineTotal = m.quantity * price
       matTotal += lineTotal
       matRows.push([
         { text: String(idx + 1), alignment: 'center' },
@@ -117,7 +121,7 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
         { text: m.sku || '—' },
         { text: m.unit, alignment: 'center' },
         { text: fmtQty(m.quantity), alignment: 'right' },
-        { text: fmtMoney(m.pricePerUnit), alignment: 'right' },
+        { text: fmtMoney(price), alignment: 'right' },
         { text: fmtMoney(lineTotal), alignment: 'right', bold: true },
       ])
     })
@@ -147,14 +151,15 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
 
     let labTotal = 0
     input.labor.forEach((l, idx) => {
-      const amount = l.totalAmount ?? 0
-      labTotal += amount
+      const rate = l.hourlyRate != null ? l.hourlyRate * markup : null
+      const amount = l.totalAmount != null ? l.totalAmount * markup : null
+      labTotal += amount ?? 0
       labRows.push([
         { text: String(idx + 1), alignment: 'center' },
         { text: l.userName },
         { text: fmtQty(l.totalHours), alignment: 'right' },
-        { text: l.hourlyRate != null ? fmtMoney(l.hourlyRate) : '—', alignment: 'right' },
-        { text: l.totalAmount != null ? fmtMoney(l.totalAmount) : '—', alignment: 'right', bold: true },
+        { text: rate != null ? fmtMoney(rate) : '—', alignment: 'right' },
+        { text: amount != null ? fmtMoney(amount) : '—', alignment: 'right', bold: true },
       ])
     })
 
@@ -169,9 +174,9 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
     })
   }
 
-  // Grand total
-  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit, 0)
-  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount ?? 0), 0)
+  // Grand total (already includes markup via per-row prices)
+  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * markup, 0)
+  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * markup : 0), 0)
   const grandTotal = matSum + labSum
 
   content.push({
@@ -204,6 +209,7 @@ export interface ActInput {
   date: string
   periodFrom?: string
   periodTo?: string
+  markupPercent?: number
   notes?: string
 }
 
@@ -239,6 +245,8 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
     content.push({ text: [{ text: 'Примітки: ', bold: true }, input.notes], margin: [0, 0, 0, 8] })
   }
 
+  const markup = 1 + (input.markupPercent ?? 0) / 100
+
   // Materials consumed
   if (input.materials.length > 0) {
     content.push({ text: '1. Використані матеріали', style: 'sectionHeader' })
@@ -254,14 +262,15 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
 
     let matTotal = 0
     input.materials.forEach((m, idx) => {
-      const lineTotal = m.quantity * m.pricePerUnit
+      const price = m.pricePerUnit * markup
+      const lineTotal = m.quantity * price
       matTotal += lineTotal
       matRows.push([
         { text: String(idx + 1), alignment: 'center' },
         { text: m.name },
         { text: m.unit, alignment: 'center' },
         { text: fmtQty(m.quantity), alignment: 'right' },
-        { text: fmtMoney(m.pricePerUnit), alignment: 'right' },
+        { text: fmtMoney(price), alignment: 'right' },
         { text: fmtMoney(lineTotal), alignment: 'right', bold: true },
       ])
     })
@@ -291,14 +300,15 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
 
     let labTotal = 0
     input.labor.forEach((l, idx) => {
-      const amount = l.totalAmount ?? 0
-      labTotal += amount
+      const rate = l.hourlyRate != null ? l.hourlyRate * markup : null
+      const amount = l.totalAmount != null ? l.totalAmount * markup : null
+      labTotal += amount ?? 0
       labRows.push([
         { text: String(idx + 1), alignment: 'center' },
         { text: l.userName },
         { text: fmtQty(l.totalHours), alignment: 'right' },
-        { text: l.hourlyRate != null ? fmtMoney(l.hourlyRate) : '—', alignment: 'right' },
-        { text: l.totalAmount != null ? fmtMoney(l.totalAmount) : '—', alignment: 'right', bold: true },
+        { text: rate != null ? fmtMoney(rate) : '—', alignment: 'right' },
+        { text: amount != null ? fmtMoney(amount) : '—', alignment: 'right', bold: true },
       ])
     })
 
@@ -313,9 +323,9 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
     })
   }
 
-  // Grand total
-  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit, 0)
-  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount ?? 0), 0)
+  // Grand total (already includes markup via per-row prices)
+  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * markup, 0)
+  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * markup : 0), 0)
   const grandTotal = matSum + labSum
 
   content.push({

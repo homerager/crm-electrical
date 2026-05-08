@@ -40,6 +40,13 @@ enum ProjectMemberRole {
   MEMBER
 }
 
+enum PurchaseRequestStatus {
+  DRAFT
+  APPROVED
+  ORDERED
+  RECEIVED
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -94,6 +101,7 @@ model User {
   projectsCreated Project[]
   projectMembers  ProjectMember[]
   notifications   Notification[]
+  purchaseRequests PurchaseRequest[]
 
   @@map("users")
 }
@@ -123,8 +131,10 @@ model ConstructionObject {
   description String?
   status      ObjectStatus @default(ACTIVE)
   /// Загальний бюджет обʼєкта (грн)
-  budget      Decimal?     @db.Decimal(14, 2)
-  clientId    String?
+  budget        Decimal?     @db.Decimal(14, 2)
+  /// Відсоток націнки для кошторису та акту виконаних робіт
+  markupPercent Decimal?     @db.Decimal(5, 2)
+  clientId      String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -132,6 +142,7 @@ model ConstructionObject {
   movements                 Movement[]
   stock                     ObjectStock[]
   warehouseStockReservations WarehouseObjectReservation[]
+  purchaseRequests           PurchaseRequest[]
   tasks                     Task[]
   timeLogs                  TimeLog[]
   /// Проєкти, де цей обʼєкт обраний як типовий для нових завдань
@@ -179,6 +190,7 @@ model Contractor {
   updatedAt     DateTime @updatedAt
 
   invoices Invoice[]
+  purchaseRequests PurchaseRequest[]
 
   @@map("contractors")
 }
@@ -211,6 +223,7 @@ model Product {
   invoiceItems   InvoiceItem[]
   movementItems  MovementItem[]
   objectStock    ObjectStock[]
+  purchaseRequestItems PurchaseRequestItem[]
 
   @@map("products")
 }
@@ -277,6 +290,7 @@ model Invoice {
   warehouse  Warehouse   @relation(fields: [warehouseId], references: [id])
   createdBy  User        @relation(fields: [createdById], references: [id])
   items      InvoiceItem[]
+  purchaseRequests PurchaseRequest[]
 
   @@map("invoices")
 }
@@ -326,6 +340,44 @@ model MovementItem {
   product  Product  @relation(fields: [productId], references: [id])
 
   @@map("movement_items")
+}
+
+model PurchaseRequest {
+  id          String                @id @default(cuid())
+  objectId    String
+  contractorId String?
+  status      PurchaseRequestStatus @default(DRAFT)
+  createdById String
+  invoiceId   String?
+  notes       String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  object    ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  contractor Contractor?        @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  createdBy User               @relation(fields: [createdById], references: [id])
+  invoice   Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  items     PurchaseRequestItem[]
+
+  @@index([objectId, status])
+  @@index([contractorId])
+  @@index([createdById])
+  @@index([invoiceId])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestItem {
+  id                     String  @id @default(cuid())
+  purchaseRequestId      String
+  productId              String
+  quantity               Decimal @db.Decimal(12, 3)
+  estimatedPricePerUnit  Decimal @default(0) @db.Decimal(12, 2)
+  note                   String?
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("purchase_request_items")
 }
 
 model Task {

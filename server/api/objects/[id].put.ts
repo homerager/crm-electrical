@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { name, address, description, status, budget, clientId } = body
+  const { name, address, description, status, budget, markupPercent, clientId } = body
 
   const before = await prisma.constructionObject.findUnique({ where: { id } })
 
@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
       description,
       status: status as ObjectStatus,
       budget: budget != null && budget !== '' ? Number(budget) : null,
+      markupPercent: markupPercent != null && markupPercent !== '' ? Number(markupPercent) : null,
       clientId: clientId || null,
     },
   })
