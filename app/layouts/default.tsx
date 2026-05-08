@@ -218,9 +218,6 @@ export default defineComponent({
         : [],
     )
 
-    const groupOpen = ref<Record<string, boolean>>({
-      'admin-settings': adminSettingsPaths.some((p) => route.path === p || route.path.startsWith(p + '/')),
-    })
 
     return () => (
       <v-app theme={theme.value}>
@@ -258,49 +255,38 @@ export default defineComponent({
 
                 <v-divider />
 
-                <v-list density="compact" nav>
+                <v-list density="compact" nav opened={openedGroups.value}>
                   {navItems.value.map((item) => {
                     if ('children' in item) {
                       const anyChildActive = item.children.some(
                         (c) => route.path === c.to || route.path.startsWith(c.to + '/'),
                       )
-                      const isOpen = openedGroups.value.includes(item.group) || groupOpen.value[item.group]
                       return (
-                        <div key={item.group}>
-                          <v-list-item
-                            prepend-icon={item.icon}
-                            title={item.title}
-                            active={anyChildActive && !isOpen}
-                            active-color="primary"
-                            rounded="lg"
-                            onClick={() => { groupOpen.value = { ...groupOpen.value, [item.group]: !isOpen } }}
-                          >
-                            {{
-                              append: () => (
-                                <v-icon size="18" style={{ transition: 'transform .2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                                  mdi-chevron-down
-                                </v-icon>
-                              ),
-                            }}
-                          </v-list-item>
-                          <v-expand-transition>
-                            {isOpen && (
-                              <div>
-                                {item.children.map((child) => (
-                                  <v-list-item
-                                    key={child.to}
-                                    prepend-icon={child.icon}
-                                    title={child.title}
-                                    to={child.to}
-                                    active={route.path === child.to || route.path.startsWith(child.to + '/')}
-                                    active-color="primary"
-                                    rounded="lg"
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </v-expand-transition>
-                        </div>
+                        <v-list-group key={item.group} value={item.group}>
+                          {{
+                            activator: ({ props }: { props: Record<string, unknown> }) => (
+                              <v-list-item
+                                {...props}
+                                prepend-icon={item.icon}
+                                title={item.title}
+                                active={anyChildActive}
+                                active-color="primary"
+                                rounded="lg"
+                              />
+                            ),
+                            default: () => item.children.map((child) => (
+                              <v-list-item
+                                key={child.to}
+                                prepend-icon={child.icon}
+                                title={child.title}
+                                to={child.to}
+                                active={route.path === child.to || route.path.startsWith(child.to + '/')}
+                                active-color="primary"
+                                rounded="lg"
+                              />
+                            )),
+                          }}
+                        </v-list-group>
                       )
                     }
                     return (

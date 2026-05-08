@@ -96,6 +96,11 @@
   gap: 16px;
 }
 
+/* Remove extra indentation from v-list-group children in the nav drawer */
+.v-navigation-drawer .v-list-group__items .v-list-item {
+  padding-inline-start: 30px !important;
+}
+
 .pdf-preview-dialog__body {
   min-height: 50vh;
   background: #525659;
