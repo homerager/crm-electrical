@@ -161,7 +161,13 @@ export default defineComponent({
       return new Date(dateStr).toLocaleDateString('uk-UA')
     }
 
-    const navItems = computed(() => {
+    type NavLeaf  = { title: string; icon: string; to: string }
+    type NavGroup = { title: string; icon: string; group: string; children: NavLeaf[] }
+    type NavItem  = NavLeaf | NavGroup
+
+    const adminSettingsPaths = ['/users', '/job-titles', '/audit-log', '/settings']
+
+    const navItems = computed((): NavItem[] => {
       if (isEmployee.value) {
         return [
           { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
@@ -169,7 +175,7 @@ export default defineComponent({
           { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
         ]
       }
-      const base = [
+      const base: NavItem[] = [
         { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
         { title: 'Склади', icon: 'mdi-warehouse', to: '/warehouses' },
         { title: 'Обʼєкти', icon: 'mdi-office-building-outline', to: '/objects' },
@@ -191,11 +197,29 @@ export default defineComponent({
       }
       if (isAdmin.value) {
         base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
-        base.push({ title: 'Користувачі', icon: 'mdi-account-group', to: '/users' })
-        base.push({ title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' })
-        base.push({ title: 'Журнал змін', icon: 'mdi-history', to: '/audit-log' })
+        base.push({
+          title: 'Налаштування',
+          icon: 'mdi-cog-outline',
+          group: 'admin-settings',
+          children: [
+            { title: 'Користувачі', icon: 'mdi-account-group', to: '/users' },
+            { title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' },
+            { title: 'Журнал змін', icon: 'mdi-history', to: '/audit-log' },
+            { title: 'Загальні', icon: 'mdi-cog-outline', to: '/settings' },
+          ],
+        })
       }
       return base
+    })
+
+    const openedGroups = computed(() =>
+      adminSettingsPaths.some((p) => route.path === p || route.path.startsWith(p + '/'))
+        ? ['admin-settings']
+        : [],
+    )
+
+    const groupOpen = ref<Record<string, boolean>>({
+      'admin-settings': adminSettingsPaths.some((p) => route.path === p || route.path.startsWith(p + '/')),
     })
 
     return () => (
@@ -235,17 +259,62 @@ export default defineComponent({
                 <v-divider />
 
                 <v-list density="compact" nav>
-                  {navItems.value.map((item) => (
-                    <v-list-item
-                      key={item.to}
-                      prepend-icon={item.icon}
-                      title={item.title}
-                      to={item.to}
-                      active={route.path === item.to || (item.to !== '/' && route.path.startsWith(item.to))}
-                      active-color="primary"
-                      rounded="lg"
-                    />
-                  ))}
+                  {navItems.value.map((item) => {
+                    if ('children' in item) {
+                      const anyChildActive = item.children.some(
+                        (c) => route.path === c.to || route.path.startsWith(c.to + '/'),
+                      )
+                      const isOpen = openedGroups.value.includes(item.group) || groupOpen.value[item.group]
+                      return (
+                        <div key={item.group}>
+                          <v-list-item
+                            prepend-icon={item.icon}
+                            title={item.title}
+                            active={anyChildActive && !isOpen}
+                            active-color="primary"
+                            rounded="lg"
+                            onClick={() => { groupOpen.value = { ...groupOpen.value, [item.group]: !isOpen } }}
+                          >
+                            {{
+                              append: () => (
+                                <v-icon size="18" style={{ transition: 'transform .2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                  mdi-chevron-down
+                                </v-icon>
+                              ),
+                            }}
+                          </v-list-item>
+                          <v-expand-transition>
+                            {isOpen && (
+                              <div>
+                                {item.children.map((child) => (
+                                  <v-list-item
+                                    key={child.to}
+                                    prepend-icon={child.icon}
+                                    title={child.title}
+                                    to={child.to}
+                                    active={route.path === child.to || route.path.startsWith(child.to + '/')}
+                                    active-color="primary"
+                                    rounded="lg"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </v-expand-transition>
+                        </div>
+                      )
+                    }
+                    return (
+                      <v-list-item
+                        key={item.to}
+                        prepend-icon={item.icon}
+                        title={item.title}
+                        to={item.to}
+                        active={route.path === item.to || (item.to !== '/' && route.path.startsWith(item.to))}
+                        active-color="primary"
+                        rounded="lg"
+                      />
+                    )
+                  })}
                 </v-list>
               </>
             ),
@@ -474,6 +543,7 @@ function getPageTitle(path: string): string {
     '/users': 'Користувачі',
     '/job-titles': 'Посади',
     '/audit-log': 'Журнал змін',
+    '/settings': 'Налаштування CRM',
   }
   for (const [key, val] of Object.entries(titles)) {
     if (path === key || (key !== '/' && path.startsWith(key))) return val

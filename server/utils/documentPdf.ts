@@ -60,7 +60,8 @@ export interface EstimateInput {
   labor: LaborRow[]
   number: string
   date: string
-  markupPercent?: number
+  materialMarkupPercent?: number
+  laborMarkupPercent?: number
   notes?: string
 }
 
@@ -94,7 +95,8 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
     content.push({ text: [{ text: 'Примітки: ', bold: true }, input.notes], margin: [0, 0, 0, 8] })
   }
 
-  const markup = 1 + (input.markupPercent ?? 0) / 100
+  const matMarkup = 1 + (input.materialMarkupPercent ?? 0) / 100
+  const labMarkup = 1 + (input.laborMarkupPercent ?? 0) / 100
 
   // Materials table
   if (input.materials.length > 0) {
@@ -112,7 +114,7 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
 
     let matTotal = 0
     input.materials.forEach((m, idx) => {
-      const price = m.pricePerUnit * markup
+      const price = m.pricePerUnit * matMarkup
       const lineTotal = m.quantity * price
       matTotal += lineTotal
       matRows.push([
@@ -151,8 +153,8 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
 
     let labTotal = 0
     input.labor.forEach((l, idx) => {
-      const rate = l.hourlyRate != null ? l.hourlyRate * markup : null
-      const amount = l.totalAmount != null ? l.totalAmount * markup : null
+      const rate = l.hourlyRate != null ? l.hourlyRate * labMarkup : null
+      const amount = l.totalAmount != null ? l.totalAmount * labMarkup : null
       labTotal += amount ?? 0
       labRows.push([
         { text: String(idx + 1), alignment: 'center' },
@@ -175,8 +177,8 @@ export async function buildEstimatePdf(input: EstimateInput): Promise<Buffer> {
   }
 
   // Grand total (already includes markup via per-row prices)
-  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * markup, 0)
-  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * markup : 0), 0)
+  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * matMarkup, 0)
+  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * labMarkup : 0), 0)
   const grandTotal = matSum + labSum
 
   content.push({
@@ -209,7 +211,8 @@ export interface ActInput {
   date: string
   periodFrom?: string
   periodTo?: string
-  markupPercent?: number
+  materialMarkupPercent?: number
+  laborMarkupPercent?: number
   notes?: string
 }
 
@@ -245,7 +248,8 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
     content.push({ text: [{ text: 'Примітки: ', bold: true }, input.notes], margin: [0, 0, 0, 8] })
   }
 
-  const markup = 1 + (input.markupPercent ?? 0) / 100
+  const matMarkup = 1 + (input.materialMarkupPercent ?? 0) / 100
+  const labMarkup = 1 + (input.laborMarkupPercent ?? 0) / 100
 
   // Materials consumed
   if (input.materials.length > 0) {
@@ -262,7 +266,7 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
 
     let matTotal = 0
     input.materials.forEach((m, idx) => {
-      const price = m.pricePerUnit * markup
+      const price = m.pricePerUnit * matMarkup
       const lineTotal = m.quantity * price
       matTotal += lineTotal
       matRows.push([
@@ -300,8 +304,8 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
 
     let labTotal = 0
     input.labor.forEach((l, idx) => {
-      const rate = l.hourlyRate != null ? l.hourlyRate * markup : null
-      const amount = l.totalAmount != null ? l.totalAmount * markup : null
+      const rate = l.hourlyRate != null ? l.hourlyRate * labMarkup : null
+      const amount = l.totalAmount != null ? l.totalAmount * labMarkup : null
       labTotal += amount ?? 0
       labRows.push([
         { text: String(idx + 1), alignment: 'center' },
@@ -324,8 +328,8 @@ export async function buildActPdf(input: ActInput): Promise<Buffer> {
   }
 
   // Grand total (already includes markup via per-row prices)
-  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * markup, 0)
-  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * markup : 0), 0)
+  const matSum = input.materials.reduce((s, m) => s + m.quantity * m.pricePerUnit * matMarkup, 0)
+  const labSum = input.labor.reduce((s, l) => s + (l.totalAmount != null ? l.totalAmount * labMarkup : 0), 0)
   const grandTotal = matSum + labSum
 
   content.push({

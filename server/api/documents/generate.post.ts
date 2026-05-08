@@ -136,11 +136,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Вкажіть type, objectId, number, date' })
   }
 
-  const object = await prisma.constructionObject.findUnique({
-    where: { id: body.objectId },
-    include: { client: true },
-  })
+  const [object, globalSettings] = await Promise.all([
+    prisma.constructionObject.findUnique({ where: { id: body.objectId }, include: { client: true } }),
+    prisma.settings.findUnique({ where: { id: 'global' } }),
+  ])
   if (!object) throw createError({ statusCode: 404, statusMessage: 'Об\'єкт не знайдено' })
+
+  // Per-object markupPercent overrides both global defaults; otherwise use global per-category defaults
+  const objectMarkup = object.markupPercent != null ? Number(object.markupPercent) : null
+  const materialMarkupPercent = objectMarkup ?? (globalSettings?.defaultMaterialMarkupPercent != null ? Number(globalSettings.defaultMaterialMarkupPercent) : undefined)
+  const laborMarkupPercent = objectMarkup ?? (globalSettings?.defaultLaborMarkupPercent != null ? Number(globalSettings.defaultLaborMarkupPercent) : undefined)
 
   let client: any = null
   if (body.clientId) {
@@ -167,7 +172,8 @@ export default defineEventHandler(async (event) => {
         labor,
         number: body.number,
         date: body.date,
-        markupPercent: object.markupPercent != null ? Number(object.markupPercent) : undefined,
+        materialMarkupPercent,
+        laborMarkupPercent,
         notes: body.notes,
       })
       asciiName = `koshtorys-${safeNumber}.pdf`
@@ -187,7 +193,8 @@ export default defineEventHandler(async (event) => {
         date: body.date,
         periodFrom: body.periodFrom,
         periodTo: body.periodTo,
-        markupPercent: object.markupPercent != null ? Number(object.markupPercent) : undefined,
+        materialMarkupPercent,
+        laborMarkupPercent,
         notes: body.notes,
       })
       asciiName = `akt-${safeNumber}.pdf`

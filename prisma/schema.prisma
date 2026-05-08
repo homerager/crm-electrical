@@ -516,6 +516,40 @@ model Notification {
   @@map("notifications")
 }
 
+/// Глобальні налаштування CRM (singleton, id = "global")
+model Settings {
+  id                           String   @id @default("global")
+  /// Загальна націнка на матеріали (%), якщо на обʼєкті не задана окрема
+  defaultMaterialMarkupPercent Decimal? @db.Decimal(5, 2)
+  /// Загальна націнка на роботи працівників (%), якщо на обʼєкті не задана окрема
+  defaultLaborMarkupPercent    Decimal? @db.Decimal(5, 2)
+  updatedAt                    DateTime @updatedAt
+
+  @@map("settings")
+}
+
+/// Набір банківських реквізитів виконавця для документів
+model Requisite {
+  id          String   @id @default(cuid())
+  /// Назва набору (напр. "ФОП Іванов І.І.", "ТОВ Компанія")
+  name        String
+  companyName String?
+  taxCode     String?
+  iban        String?
+  bankName    String?
+  bankMfo     String?
+  address     String?
+  phone       String?
+  email       String?
+  /// Чи є цей набір реквізитів типовим (використовується в документах за замовчуванням)
+  isDefault   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("requisites")
+}
+
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String?
