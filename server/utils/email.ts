@@ -1,32 +1,27 @@
-import FormData from 'form-data'
-import Mailgun from 'mailgun.js'
-
-function getMailgunClient() {
-  const config = useRuntimeConfig()
-  if (!config.mailgunApiKey || !config.mailgunDomain) return null
-  const mg = new Mailgun(FormData)
-  return mg.client({
-    username: 'api',
-    key: config.mailgunApiKey,
-    url: config.mailgunUrl || 'https://api.eu.mailgun.net',
-  })
-}
-
 export async function sendEmail(to: string | string[], subject: string, html: string): Promise<void> {
   const config = useRuntimeConfig()
-  if (!config.mailgunApiKey || !config.mailgunDomain) return
+  const apiKey = config.mailgunApiKey
+  const domain = config.mailgunDomain
+  if (!apiKey || !domain) return
 
-  const client = getMailgunClient()
-  if (!client) return
-
+  const baseUrl = (config.mailgunUrl || 'https://api.eu.mailgun.net').replace(/\/$/, '')
   const recipients = Array.isArray(to) ? to.join(',') : to
+  const from = config.mailgunFrom || `CRM <noreply@${domain}>`
+
+  const body = new URLSearchParams()
+  body.set('from', from)
+  body.set('to', recipients)
+  body.set('subject', subject)
+  body.set('html', html)
 
   try {
-    await client.messages.create(config.mailgunDomain, {
-      from: config.mailgunFrom || `CRM <noreply@${config.mailgunDomain}>`,
-      to: recipients,
-      subject,
-      html,
+    await $fetch(`${baseUrl}/v3/${domain}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
     })
   } catch (e) {
     console.error('[Email] Failed to send:', e)
