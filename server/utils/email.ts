@@ -14,20 +14,25 @@ function getMailgunClient() {
 
 export async function sendEmail(to: string | string[], subject: string, html: string): Promise<void> {
   const config = useRuntimeConfig()
-  if (!config.mailgunApiKey || !config.mailgunDomain) return
+  if (!config.mailgunApiKey || !config.mailgunDomain) {
+    console.warn('[Email] Mailgun not configured (missing API key or domain)')
+    return
+  }
 
   const client = getMailgunClient()
   if (!client) return
 
   const recipients = Array.isArray(to) ? to.join(',') : to
+  console.log(`[Email] Sending to: ${recipients} | subject: ${subject}`)
 
   try {
-    await client.messages.create(config.mailgunDomain, {
+    const result = await client.messages.create(config.mailgunDomain, {
       from: config.mailgunFrom || `CRM <noreply@${config.mailgunDomain}>`,
       to: recipients,
       subject,
       html,
     })
+    console.log('[Email] Sent OK:', result.id ?? result)
   } catch (e) {
     console.error('[Email] Failed to send:', e)
   }
