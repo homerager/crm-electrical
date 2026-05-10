@@ -54,6 +54,7 @@ export default defineNuxtConfig({
     mailgunApiKey: process.env.MAILGUN_API_KEY || '',
     mailgunDomain: process.env.MAILGUN_DOMAIN || '',
     mailgunFrom: process.env.MAILGUN_FROM || '',
+    mailgunUrl: process.env.MAILGUN_URL || 'https://api.eu.mailgun.net',
     public: {},
   },
 

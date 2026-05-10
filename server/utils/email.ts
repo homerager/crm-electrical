@@ -5,7 +5,11 @@ function getMailgunClient() {
   const config = useRuntimeConfig()
   if (!config.mailgunApiKey || !config.mailgunDomain) return null
   const mg = new Mailgun(FormData)
-  return mg.client({ username: 'api', key: config.mailgunApiKey })
+  return mg.client({
+    username: 'api',
+    key: config.mailgunApiKey,
+    url: config.mailgunUrl || 'https://api.eu.mailgun.net',
+  })
 }
 
 export async function sendEmail(to: string | string[], subject: string, html: string): Promise<void> {
