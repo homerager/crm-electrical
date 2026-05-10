@@ -51,6 +51,9 @@ export default defineNuxtConfig({
     databaseUrl: process.env.DATABASE_URL || '',
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
+    mailgunApiKey: process.env.MAILGUN_API_KEY || '',
+    mailgunDomain: process.env.MAILGUN_DOMAIN || '',
+    mailgunFrom: process.env.MAILGUN_FROM || '',
     public: {},
   },
 

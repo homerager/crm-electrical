@@ -1,4 +1,5 @@
 import { sendTelegramMessage, buildTaskUpdatedMessage } from '../../utils/telegram'
+import { sendEmail, buildTaskUpdatedEmail, buildTaskReassignedEmail } from '../../utils/email'
 
 const STATUS_LABELS: Record<string, string> = {
   TODO: 'До виконання', IN_PROGRESS: 'В роботі', REVIEW: 'На перевірці',
@@ -64,6 +65,16 @@ export default defineEventHandler(async (event) => {
       title: `Вам призначено завдання: ${updated.title}`,
       link: `/tasks/${id}`,
     })
+    const newAssignee = await prisma.user.findUnique({
+      where: { id: assignedToId },
+      select: { email: true },
+    })
+    if (newAssignee?.email) {
+      const config = useRuntimeConfig()
+      const changer = await prisma.user.findUnique({ where: { id: auth.userId }, select: { name: true } })
+      const { subject, html } = buildTaskReassignedEmail(updated, changer?.name ?? 'Користувач', config.appUrl)
+      sendEmail(newAssignee.email, subject, html)
+    }
   }
 
   if (Object.keys(changes).length > 0) {
@@ -100,6 +111,16 @@ export default defineEventHandler(async (event) => {
     const creatorChatId = (updated.createdBy as any)?.telegramChatId
     if (creatorChatId && creatorId !== auth.userId && creatorId !== assigneeId) {
       sendTelegramMessage(creatorChatId, msg)
+    }
+
+    // Send email notifications
+    const { subject: emailSubject, html: emailHtml } = buildTaskUpdatedEmail(updated, changerName, changes, config.appUrl)
+    const emailRecipients = await prisma.user.findMany({
+      where: { id: { in: [...notifRecipients] } },
+      select: { email: true },
+    })
+    for (const r of emailRecipients) {
+      if (r.email) sendEmail(r.email, emailSubject, emailHtml)
     }
   }
 

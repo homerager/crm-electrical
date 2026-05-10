@@ -3,6 +3,7 @@ import {
   MAX_TASK_FILE_SIZE,
   createTaskAttachmentForComment,
 } from '../../../utils/taskAttachmentFile'
+import { sendEmail, buildTaskCommentEmail } from '../../../utils/email'
 
 type BodyJson = { content: string; parentId?: string | null; attachmentIds?: string[] }
 
@@ -122,11 +123,23 @@ export default defineEventHandler(async (event) => {
       where: { id: auth.userId },
       select: { name: true },
     })
+    const commenterName = commenter?.name ?? 'Користувач'
+
     createNotificationForMany([...recipients], {
       title: `Коментар до завдання: ${task.title}`,
-      body: `${commenter?.name ?? 'Користувач'} залишив коментар`,
+      body: `${commenterName} залишив коментар`,
       link: `/tasks/${taskId}`,
     })
+
+    const config = useRuntimeConfig()
+    const { subject, html } = buildTaskCommentEmail(task, commenterName, config.appUrl)
+    const emailUsers = await prisma.user.findMany({
+      where: { id: { in: [...recipients] } },
+      select: { email: true },
+    })
+    for (const u of emailUsers) {
+      if (u.email) sendEmail(u.email, subject, html)
+    }
   }
 
   return out

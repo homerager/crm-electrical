@@ -1,4 +1,5 @@
 import { sendTelegramMessage, buildTaskCreatedMessage } from '../../utils/telegram'
+import { sendEmail, buildTaskAssignedEmail } from '../../utils/email'
 import { isElevatedRole } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
@@ -71,12 +72,16 @@ export default defineEventHandler(async (event) => {
 
     const assignee = await prisma.user.findUnique({
       where: { id: task.assignedToId },
-      select: { telegramChatId: true },
+      select: { email: true, telegramChatId: true },
     })
+    const config = useRuntimeConfig()
     if (assignee?.telegramChatId) {
-      const config = useRuntimeConfig()
       const msg = buildTaskCreatedMessage(task, config.appUrl)
       sendTelegramMessage(assignee.telegramChatId, msg)
+    }
+    if (assignee?.email) {
+      const { subject, html } = buildTaskAssignedEmail(task, config.appUrl)
+      sendEmail(assignee.email, subject, html)
     }
   }
 
