@@ -36,6 +36,7 @@ export default defineComponent({
       name: '',
       role: 'STOREKEEPER',
       isActive: true,
+      emailNotifications: true,
       phone: '',
       jobTitleId: null as string | null,
       hourlyRate: '',
@@ -71,6 +72,7 @@ export default defineComponent({
         name: item.name,
         role: item.role,
         isActive: item.isActive,
+        emailNotifications: item.emailNotifications ?? true,
         phone: item.phone ?? '',
         jobTitleId: item.jobTitleId ?? null,
         hourlyRate: item.hourlyRate != null && item.hourlyRate !== '' ? String(item.hourlyRate) : '',
@@ -124,6 +126,7 @@ export default defineComponent({
             name: editForm.name,
             role: editForm.role,
             isActive: editForm.isActive,
+            emailNotifications: editForm.emailNotifications,
             phone: editForm.phone,
             jobTitleId: editForm.jobTitleId || null,
             hourlyRate: editForm.hourlyRate.trim() === '' ? null : editForm.hourlyRate.trim(),
@@ -468,12 +471,21 @@ export default defineComponent({
                   Telegram підключено
                 </v-chip>
               )}
-              <v-switch
-                v-model={editForm.isActive}
-                label={editForm.isActive ? 'Активний' : 'Деактивований'}
-                color="success"
-                hide-details
-              />
+              <div class="d-flex gap-4">
+                <v-switch
+                  v-model={editForm.isActive}
+                  label={editForm.isActive ? 'Активний' : 'Деактивований'}
+                  color="success"
+                  hide-details
+                />
+                <v-switch
+                  v-model={editForm.emailNotifications}
+                  label="Email-сповіщення"
+                  color="primary"
+                  hide-details
+                  prepend-icon={editForm.emailNotifications ? 'mdi-email-outline' : 'mdi-email-off-outline'}
+                />
+              </div>
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />

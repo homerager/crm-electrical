@@ -135,10 +135,10 @@ export default defineEventHandler(async (event) => {
     const { subject, html } = buildTaskCommentEmail(task, commenterName, config.appUrl)
     const emailUsers = await prisma.user.findMany({
       where: { id: { in: [...recipients] } },
-      select: { email: true },
+      select: { email: true, emailNotifications: true },
     })
     for (const u of emailUsers) {
-      if (u.email) sendEmail(u.email, subject, html)
+      if (u.email && u.emailNotifications) sendEmail(u.email, subject, html)
     }
   }
 

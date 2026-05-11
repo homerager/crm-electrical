@@ -204,10 +204,10 @@ export default defineComponent({
           icon: 'mdi-cog-outline',
           group: 'admin-settings',
           children: [
+            { title: 'Загальні', icon: 'mdi-cog-outline', to: '/settings' },
             { title: 'Користувачі', icon: 'mdi-account-group', to: '/users' },
             { title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' },
             { title: 'Журнал змін', icon: 'mdi-history', to: '/audit-log' },
-            { title: 'Загальні', icon: 'mdi-cog-outline', to: '/settings' },
           ],
         })
       }

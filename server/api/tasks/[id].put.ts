@@ -67,9 +67,9 @@ export default defineEventHandler(async (event) => {
     })
     const newAssignee = await prisma.user.findUnique({
       where: { id: assignedToId },
-      select: { email: true },
+      select: { email: true, emailNotifications: true },
     })
-    if (newAssignee?.email) {
+    if (newAssignee?.email && newAssignee.emailNotifications) {
       const config = useRuntimeConfig()
       const changer = await prisma.user.findUnique({ where: { id: auth.userId }, select: { name: true } })
       const { subject, html } = buildTaskReassignedEmail(updated, changer?.name ?? 'Користувач', config.appUrl)
@@ -117,10 +117,10 @@ export default defineEventHandler(async (event) => {
     const { subject: emailSubject, html: emailHtml } = buildTaskUpdatedEmail(updated, changerName, changes, config.appUrl)
     const emailRecipients = await prisma.user.findMany({
       where: { id: { in: [...notifRecipients] } },
-      select: { email: true },
+      select: { email: true, emailNotifications: true },
     })
     for (const r of emailRecipients) {
-      if (r.email) sendEmail(r.email, emailSubject, emailHtml)
+      if (r.email && r.emailNotifications) sendEmail(r.email, emailSubject, emailHtml)
     }
   }
 

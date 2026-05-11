@@ -1,3 +1,7 @@
+:root {
+  --v-list-prepend-gap: 15px;
+}
+
 @media print {
   .no-print {
     display: none !important;

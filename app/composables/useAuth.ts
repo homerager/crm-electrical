@@ -4,6 +4,7 @@ export interface AuthUser {
   email: string
   role: 'ADMIN' | 'MANAGER' | 'STOREKEEPER' | 'USER' | 'EMPLOYEE'
   isActive: boolean
+  emailNotifications: boolean
   jobTitle?: { id: string; name: string } | null
 }
 

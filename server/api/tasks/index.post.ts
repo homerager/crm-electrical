@@ -72,14 +72,14 @@ export default defineEventHandler(async (event) => {
 
     const assignee = await prisma.user.findUnique({
       where: { id: task.assignedToId },
-      select: { email: true, telegramChatId: true },
+      select: { email: true, telegramChatId: true, emailNotifications: true },
     })
     const config = useRuntimeConfig()
     if (assignee?.telegramChatId) {
       const msg = buildTaskCreatedMessage(task, config.appUrl)
       sendTelegramMessage(assignee.telegramChatId, msg)
     }
-    if (assignee?.email) {
+    if (assignee?.email && assignee.emailNotifications) {
       const { subject, html } = buildTaskAssignedEmail(task, config.appUrl)
       sendEmail(assignee.email, subject, html)
     }
