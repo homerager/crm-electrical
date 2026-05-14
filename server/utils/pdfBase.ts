@@ -31,7 +31,7 @@ export function getPdfMake(): PdfMakeInstance {
     }
     pdfMakeSingleton = pdfMake
   }
-  return pdfMakeSingleton
+  return pdfMakeSingleton!
 }
 
 export function fmtMoney(n: number): string {

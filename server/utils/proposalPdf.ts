@@ -1,4 +1,19 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { getPdfMake, fmtMoney, fmtQty } from './pdfBase'
+
+let _logoBase64: string | null = null
+
+function getLogoDataUri(): string | null {
+  if (_logoBase64 !== undefined && _logoBase64 !== null) return _logoBase64
+  try {
+    const buf = readFileSync(join(process.cwd(), 'public/static/images/logo.png'))
+    _logoBase64 = `data:image/png;base64,${buf.toString('base64')}`
+  } catch {
+    _logoBase64 = null
+  }
+  return _logoBase64
+}
 
 export interface ProposalEquipmentCard {
   title: string
@@ -52,38 +67,50 @@ export async function buildProposalPdf(input: ProposalInput): Promise<Buffer> {
   const content: Record<string, unknown>[] = []
 
   /* ── Header bar ── */
+  const logoDataUri = getLogoDataUri()
+
+  // Header: [лого] [назва + підзаголовок] [сайт + телефон]
+  const headerBody: Record<string, unknown>[][] = [[
+    // Колонка 1 — лого (або порожня якщо немає)
+    logoDataUri
+      ? { image: logoDataUri, height: 52, fit: [160, 52], alignment: 'left' }
+      : { text: '' },
+    // Колонка 2 — назва компанії + підзаголовок (поряд з лого)
+    {
+      stack: [
+        companyName
+          ? { text: companyName, color: 'white', bold: true, fontSize: 14, margin: [0, 0, 0, 3] }
+          : { text: '' },
+        companyWebsite
+          ? { text: companyWebsite, color: 'white', fontSize: 9, alignment: 'left', margin: [0, 0, 0, 3]  }
+          : { text: '' },
+        companyPhone
+          ? { text: companyPhone, color: 'white', fontSize: 9, bold: true, alignment: 'left',  margin: [0, 0, 0, 3]  }
+          : { text: '' },
+        companyTagline
+          ? { text: companyTagline, color: HEADER_TEXT_MUTED, fontSize: 8 }
+          : { text: '' },
+      ],
+    },
+    // Колонка 3 —
+    {
+      stack: [
+       
+      ],
+    },
+  ]]
+
   content.push({
     table: {
-      widths: ['*', 'auto'],
-      body: [[
-        {
-          stack: [
-            companyName
-              ? { text: companyName, color: 'white', bold: true, fontSize: 13, margin: [0, 0, 0, 2] }
-              : { text: '' },
-            companyTagline
-              ? { text: companyTagline, color: HEADER_TEXT_MUTED, fontSize: 8 }
-              : { text: '' },
-          ],
-        },
-        {
-          stack: [
-            companyWebsite
-              ? { text: companyWebsite, color: HEADER_TEXT_MUTED, fontSize: 8, alignment: 'right' }
-              : { text: '' },
-            companyPhone
-              ? { text: companyPhone, color: 'white', fontSize: 10, bold: true, alignment: 'right', margin: [0, 3, 0, 0] }
-              : { text: '' },
-          ],
-        },
-      ]],
+      widths: ['auto', '*', 'auto'],
+      body: headerBody,
     },
     layout: {
       fillColor: () => NAVY,
       hLineWidth: () => 0,
       vLineWidth: () => 0,
-      paddingLeft: () => 16,
-      paddingRight: () => 16,
+      paddingLeft: (i: number) => (i === 0 ? 14 : i === 1 ? 4 : 8),
+      paddingRight: (i: number) => (i === 0 ? 4 : i === 2 ? 14 : 8),
       paddingTop: () => 10,
       paddingBottom: () => 10,
     },
@@ -208,17 +235,12 @@ export async function buildProposalPdf(input: ProposalInput): Promise<Buffer> {
   }
 
   /* ── Spec table — BEFORE tech specs ── */
-  // Примусовий перенос сторінки лише якщо є картки обладнання (вони займають багато місця).
-  // Без карток — контент тече природно, без великого пустого поля.
-  const hasContentAbove = cards.length > 0
-
   content.push({
     text: 'СПЕЦИФІКАЦІЯ ОБЛАДНАННЯ ТА ВАРТІСТЬ',
     bold: true,
     fontSize: 10,
     color: NAVY,
-    margin: [0, 0, 0, 4],
-    pageBreak: hasContentAbove ? 'before' : undefined,
+    margin: [0, cards.length > 0 || !!input.worksDescription ? 10 : 0, 0, 4],
   } as Record<string, unknown>)
 
   content.push({
