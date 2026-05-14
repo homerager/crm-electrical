@@ -166,6 +166,7 @@ export default defineComponent({
     type NavItem  = NavLeaf | NavGroup
 
     const adminSettingsPaths = ['/users', '/job-titles', '/audit-log', '/settings']
+    const proposalPaths = ['/proposals']
 
     const navItems = computed((): NavItem[] => {
       if (isEmployee.value) {
@@ -187,6 +188,15 @@ export default defineComponent({
         { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
         { title: 'Заявки на закупівлю', icon: 'mdi-cart-arrow-down', to: '/purchase-requests' },
         { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents' },
+        {
+          title: 'Комерційні пропозиції',
+          icon: 'mdi-briefcase-edit-outline',
+          group: 'proposals',
+          children: [
+            { title: 'Список КП', icon: 'mdi-file-document-multiple-outline', to: '/proposals' },
+            { title: 'Товари для КП', icon: 'mdi-tag-text-outline', to: '/proposals/products' },
+          ],
+        },
         { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
         { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
         { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
@@ -214,11 +224,16 @@ export default defineComponent({
       return base
     })
 
-    const openedGroups = computed(() =>
-      adminSettingsPaths.some((p) => route.path === p || route.path.startsWith(p + '/'))
-        ? ['admin-settings']
-        : [],
-    )
+    const openedGroups = computed(() => {
+      const open: string[] = []
+      if (adminSettingsPaths.some((p) => route.path === p || route.path.startsWith(p + '/'))) {
+        open.push('admin-settings')
+      }
+      if (proposalPaths.some((p) => route.path === p || route.path.startsWith(p + '/'))) {
+        open.push('proposals')
+      }
+      return open
+    })
 
 
     return () => (
@@ -523,6 +538,9 @@ function getPageTitle(path: string): string {
     '/invoices': 'Накладні',
     '/purchase-requests': 'Заявки на закупівлю',
     '/documents': 'Шаблони документів',
+    '/proposals/products': 'Товари для КП',
+    '/proposals/new': 'Нова КП',
+    '/proposals': 'Комерційні пропозиції',
     '/movements': 'Переміщення',
     '/reports': 'Репорти',
     '/tasks/calendar': 'Календар завдань',
@@ -534,8 +552,10 @@ function getPageTitle(path: string): string {
     '/audit-log': 'Журнал змін',
     '/settings': 'Налаштування CRM',
   }
-  for (const [key, val] of Object.entries(titles)) {
-    if (path === key || (key !== '/' && path.startsWith(key))) return val
+  // exact match first, then prefix (longer keys first to avoid '/proposals' matching '/proposals/products')
+  const sorted = Object.entries(titles).sort((a, b) => b[0].length - a[0].length)
+  for (const [key, val] of sorted) {
+    if (path === key || (key !== '/' && path.startsWith(key + '/')) || (key !== '/' && path === key)) return val
   }
   return 'CRM'
 }

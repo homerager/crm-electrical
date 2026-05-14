@@ -103,6 +103,7 @@ model User {
   projectMembers  ProjectMember[]
   notifications   Notification[]
   purchaseRequests PurchaseRequest[]
+  proposals       Proposal[]
 
   @@map("users")
 }
@@ -558,7 +559,72 @@ model Requisite {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  proposals Proposal[]
+
   @@map("requisites")
+}
+
+/// Незалежний каталог товарів/послуг для комерційних пропозицій (не повʼязаний з основними товарами)
+model ProposalProduct {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  sku         String?
+  unit        String   @default("шт")
+  groupName   String?
+  priceExVat  Decimal  @default(0) @db.Decimal(14, 2)
+  vatPercent  Decimal  @default(20) @db.Decimal(5, 2)
+  notes       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  proposalItems ProposalItem[]
+
+  @@map("proposal_products")
+}
+
+model Proposal {
+  id               String    @id @default(cuid())
+  title            String
+  subtitle         String?
+  tagline          String?
+  date             DateTime  @default(now())
+  usdRate          Decimal?  @db.Decimal(8, 4)
+  requisiteId      String?
+  worksDescription String?
+  techSpecs        String?
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  requisite Requisite? @relation(fields: [requisiteId], references: [id], onDelete: SetNull)
+  createdBy User       @relation(fields: [createdById], references: [id])
+  items     ProposalItem[]
+
+  @@index([createdById])
+  @@map("proposals")
+}
+
+model ProposalItem {
+  id                String  @id @default(cuid())
+  proposalId        String
+  proposalProductId String?
+  name              String
+  quantity          Decimal @default(1) @db.Decimal(12, 3)
+  unit              String  @default("шт")
+  priceExVat        Decimal @default(0) @db.Decimal(14, 2)
+  vatPercent        Decimal @default(0) @db.Decimal(5, 2)
+  highlight         String?
+  spec              String?
+  sortOrder         Int     @default(0)
+
+  proposal        Proposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  proposalProduct ProposalProduct? @relation(fields: [proposalProductId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId])
+  @@map("proposal_items")
 }
 
 model AuditLog {

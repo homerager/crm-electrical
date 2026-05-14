@@ -20,6 +20,7 @@ export default defineComponent({
 
     const { data: groupsData } = useFetch('/api/product-groups')
     const groups = computed(() => (groupsData.value as any)?.groups ?? [])
+
     const groupOptions = computed(() => [
       { title: 'Усі групи', value: null },
       ...groups.value.map((g: any) => ({ title: g.name, value: g.id })),
@@ -261,6 +262,7 @@ export default defineComponent({
             </v-card-actions>
           </v-card>
         </v-dialog>
+
       </div>
     )
   },
