@@ -1,10 +1,11 @@
 import { useDisplay } from 'vuetify'
 import { useNotifications, type AppNotification } from '~/composables/useNotifications'
+import AppNavMenu from '~/components/AppNavMenu'
 
 export default defineComponent({
   name: 'DefaultLayout',
   setup() {
-    const { user, isAdmin, isPrivileged, isEmployee, logout } = useAuth()
+    const { user, logout } = useAuth()
     const route = useRoute()
     const slots = useSlots()
     const display = useDisplay()
@@ -161,81 +162,6 @@ export default defineComponent({
       return new Date(dateStr).toLocaleDateString('uk-UA')
     }
 
-    type NavLeaf  = { title: string; icon: string; to: string }
-    type NavGroup = { title: string; icon: string; group: string; children: NavLeaf[] }
-    type NavItem  = NavLeaf | NavGroup
-
-    const adminSettingsPaths = ['/users', '/job-titles', '/audit-log', '/settings']
-    const proposalPaths = ['/proposals']
-
-    const navItems = computed((): NavItem[] => {
-      if (isEmployee.value) {
-        return [
-          { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
-          { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
-          { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
-          { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
-        ]
-      }
-      const base: NavItem[] = [
-        { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' },
-        { title: 'Склади', icon: 'mdi-warehouse', to: '/warehouses' },
-        { title: 'Обʼєкти', icon: 'mdi-office-building-outline', to: '/objects' },
-        { title: 'Товари', icon: 'mdi-package-variant-closed', to: '/products' },
-        { title: 'Групи товарів', icon: 'mdi-tag-multiple', to: '/product-groups' },
-        { title: 'Клієнти', icon: 'mdi-account-tie', to: '/clients' },
-        { title: 'Контрагенти', icon: 'mdi-domain', to: '/contractors' },
-        { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
-        { title: 'Заявки на закупівлю', icon: 'mdi-cart-arrow-down', to: '/purchase-requests' },
-        { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents' },
-        {
-          title: 'Комерційні пропозиції',
-          icon: 'mdi-briefcase-edit-outline',
-          group: 'proposals',
-          children: [
-            { title: 'Список КП', icon: 'mdi-file-document-multiple-outline', to: '/proposals' },
-            { title: 'Товари для КП', icon: 'mdi-tag-text-outline', to: '/proposals/products' },
-          ],
-        },
-        { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
-        { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
-        { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
-        { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
-        { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
-      ]
-      if (isPrivileged.value) {
-        base.push({ title: 'Облік часу', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
-        base.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
-      }
-      if (isAdmin.value) {
-        base.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
-        base.push({
-          title: 'Налаштування',
-          icon: 'mdi-cog-outline',
-          group: 'admin-settings',
-          children: [
-            { title: 'Загальні', icon: 'mdi-cog-outline', to: '/settings' },
-            { title: 'Користувачі', icon: 'mdi-account-group', to: '/users' },
-            { title: 'Посади', icon: 'mdi-badge-account-horizontal-outline', to: '/job-titles' },
-            { title: 'Журнал змін', icon: 'mdi-history', to: '/audit-log' },
-          ],
-        })
-      }
-      return base
-    })
-
-    const openedGroups = computed(() => {
-      const open: string[] = []
-      if (adminSettingsPaths.some((p) => route.path === p || route.path.startsWith(p + '/'))) {
-        open.push('admin-settings')
-      }
-      if (proposalPaths.some((p) => route.path === p || route.path.startsWith(p + '/'))) {
-        open.push('proposals')
-      }
-      return open
-    })
-
-
     return () => (
       <v-app theme={theme.value}>
 
@@ -272,53 +198,7 @@ export default defineComponent({
 
                 <v-divider />
 
-                <v-list density="compact" nav opened={openedGroups.value}>
-                  {navItems.value.map((item) => {
-                    if ('children' in item) {
-                      const anyChildActive = item.children.some(
-                        (c) => route.path === c.to || route.path.startsWith(c.to + '/'),
-                      )
-                      return (
-                        <v-list-group key={item.group} value={item.group}>
-                          {{
-                            activator: ({ props }: { props: Record<string, unknown> }) => (
-                              <v-list-item
-                                {...props}
-                                prepend-icon={item.icon}
-                                title={item.title}
-                                active={anyChildActive}
-                                active-color="primary"
-                                rounded="lg"
-                              />
-                            ),
-                            default: () => item.children.map((child) => (
-                              <v-list-item
-                                key={child.to}
-                                prepend-icon={child.icon}
-                                title={child.title}
-                                to={child.to}
-                                active={route.path === child.to || route.path.startsWith(child.to + '/')}
-                                active-color="primary"
-                                rounded="lg"
-                              />
-                            )),
-                          }}
-                        </v-list-group>
-                      )
-                    }
-                    return (
-                      <v-list-item
-                        key={item.to}
-                        prepend-icon={item.icon}
-                        title={item.title}
-                        to={item.to}
-                        active={route.path === item.to || (item.to !== '/' && route.path.startsWith(item.to))}
-                        active-color="primary"
-                        rounded="lg"
-                      />
-                    )
-                  })}
-                </v-list>
+                <AppNavMenu />
               </>
             ),
           }}

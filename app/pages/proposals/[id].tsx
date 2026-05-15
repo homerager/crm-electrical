@@ -377,7 +377,7 @@ export default defineComponent({
           <v-tab value="extras">Додатково</v-tab>
         </v-tabs>
 
-        <v-window v-model={activeTab.value}>
+        <v-window v-model={activeTab.value} class="mb-4">
 
           {/* ── Tab: Parameters ── */}
           <v-window-item value="main">

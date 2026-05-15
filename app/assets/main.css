@@ -116,3 +116,10 @@
   height: min(72vh, 720px);
   border: 0;
 }
+
+
+.crm-card {
+  padding: 1rem;
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
