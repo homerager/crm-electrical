@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
     usdRate,
     requisiteId,
     worksDescription,
+    worksPercent,
     techSpecs,
     items = [],
   } = body as {
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
     usdRate?: number
     requisiteId?: string
     worksDescription?: string
+    worksPercent?: number
     techSpecs?: string
     items: ItemInput[]
   }
@@ -48,6 +50,7 @@ export default defineEventHandler(async (event) => {
       usdRate: usdRate ?? null,
       requisiteId: requisiteId || null,
       worksDescription: worksDescription || null,
+      worksPercent: worksPercent ?? null,
       techSpecs: techSpecs || null,
       createdById: auth.userId,
       items: {

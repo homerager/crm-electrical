@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
       pricePerUnit: Number(i.priceExVat) * (1 + Number(i.vatPercent) / 100),
     })),
     worksDescription: proposal.worksDescription ?? undefined,
+    worksPercent: proposal.worksPercent ? Number(proposal.worksPercent) : undefined,
     techSpecs: proposal.techSpecs ?? undefined,
   })
 

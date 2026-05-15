@@ -594,6 +594,7 @@ model Proposal {
   usdRate          Decimal?  @db.Decimal(8, 4)
   requisiteId      String?
   worksDescription String?
+  worksPercent     Decimal?  @db.Decimal(5, 2)
   techSpecs        String?
   createdById      String
   createdAt        DateTime  @default(now())

@@ -45,6 +45,7 @@ export interface ProposalInput {
   items: ProposalItem[]
 
   worksDescription?: string
+  worksPercent?: number
   techSpecs?: string
 }
 
@@ -259,10 +260,10 @@ export async function buildProposalPdf(input: ProposalInput): Promise<Buffer> {
     ],
   ]
 
-  let grandTotal = 0
+  let equipmentTotal = 0
   input.items.forEach((item, idx) => {
     const lineTotal = item.quantity * item.pricePerUnit
-    grandTotal += lineTotal
+    equipmentTotal += lineTotal
     tableBody.push([
       { text: String(idx + 1), alignment: 'center', fontSize: 9 },
       { text: item.name, fontSize: 9 },
@@ -272,6 +273,26 @@ export async function buildProposalPdf(input: ProposalInput): Promise<Buffer> {
       { text: fmtMoney(lineTotal), alignment: 'right', bold: true, fontSize: 9 },
     ])
   })
+
+  const worksPercent = input.worksPercent && input.worksPercent > 0 ? input.worksPercent : 0
+  const worksAmount = worksPercent > 0 ? Math.round(equipmentTotal * worksPercent / 100 * 100) / 100 : 0
+
+  if (worksPercent > 0) {
+    const worksRowBg = '#EEF3FA'
+    const worksLabel = input.worksDescription
+      ? input.worksDescription
+      : 'Монтажні та пусконалагоджувальні роботи'
+    tableBody.push([
+      { text: String(input.items.length + 1), alignment: 'center', fontSize: 9, fillColor: worksRowBg },
+      { text: worksLabel, fontSize: 9, color: NAVY, fillColor: worksRowBg },
+      { text: `-`, alignment: 'right', fontSize: 9, color: '#555555', fillColor: worksRowBg },
+      { text: '-', alignment: 'center', fontSize: 8, color: '#555555', fillColor: worksRowBg },
+      { text: '—', alignment: 'right', fontSize: 9, color: '#999999', fillColor: worksRowBg },
+      { text: fmtMoney(worksAmount), alignment: 'right', bold: true, fontSize: 9, color: NAVY, fillColor: worksRowBg },
+    ])
+  }
+
+  const grandTotal = equipmentTotal + worksAmount
 
   content.push({
     table: {

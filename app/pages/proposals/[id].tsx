@@ -43,6 +43,7 @@ export default defineComponent({
 
     const items = ref<FormItem[]>([])
     const worksDescription = ref('')
+    const worksPercent = ref('')
     const techSpecs = ref('')
     const activeTab = ref('main')
 
@@ -59,6 +60,7 @@ export default defineComponent({
         meta.usdRate = p.usdRate ? String(Number(p.usdRate)) : ''
         meta.requisiteId = p.requisiteId || ''
         worksDescription.value = p.worksDescription || ''
+        worksPercent.value = p.worksPercent ? String(Number(p.worksPercent)) : ''
         techSpecs.value = p.techSpecs || ''
         items.value = (p.items || []).map((i: any) => ({
           proposalProductId: i.proposalProductId || undefined,
@@ -182,6 +184,11 @@ export default defineComponent({
 
     const grandTotalExVat = computed(() => items.value.reduce((s, i) => s + lineExVat(i), 0))
     const grandTotal = computed(() => items.value.reduce((s, i) => s + lineTotal(i), 0))
+    const worksAmount = computed(() => {
+      const pct = parseFloat(worksPercent.value) || 0
+      return pct > 0 ? Math.round(grandTotal.value * pct / 100 * 100) / 100 : 0
+    })
+    const grandTotalWithWorks = computed(() => grandTotal.value + worksAmount.value)
     const equipmentCardsCount = computed(() => items.value.filter((i) => i.highlight.trim()).length)
 
     function fmtMoney(n: number) {
@@ -205,6 +212,7 @@ export default defineComponent({
         usdRate: meta.usdRate ? parseFloat(meta.usdRate) : undefined,
         requisiteId: meta.requisiteId || undefined,
         worksDescription: worksDescription.value.trim() || undefined,
+        worksPercent: worksPercent.value ? parseFloat(worksPercent.value) : undefined,
         techSpecs: techSpecs.value.trim() || undefined,
         items: items.value.map((i, idx) => ({
           proposalProductId: i.proposalProductId || undefined,
@@ -259,6 +267,36 @@ export default defineComponent({
       }
     }
 
+    /* ── Preview PDF ── */
+    const previewDialog = ref(false)
+    const previewUrl = ref('')
+    const previewing = ref(false)
+
+    async function openPreview() {
+      if (!isValid.value) return
+      previewing.value = true
+      saveError.value = ''
+      try {
+        if (isNew.value) { await save(); return }
+        await $fetch(`/api/proposals/${route.params.id}`, { method: 'PUT', body: buildBody() })
+        const blob = await $fetch(`/api/proposals/${route.params.id}/pdf`, { responseType: 'blob' }) as Blob
+        if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+        previewUrl.value = URL.createObjectURL(blob)
+        previewDialog.value = true
+      } catch (e: any) {
+        saveError.value = e?.data?.statusMessage || 'Помилка генерації PDF'
+      } finally {
+        previewing.value = false
+      }
+    }
+
+    function closePreview() {
+      previewDialog.value = false
+      setTimeout(() => {
+        if (previewUrl.value) { URL.revokeObjectURL(previewUrl.value); previewUrl.value = '' }
+      }, 500)
+    }
+
     const unitOptions = ['шт', 'м', 'м²', 'м³', 'кг', 'т', 'л', 'уп', 'к-т', 'пог.м', 'компл.', 'послуга']
     const vatOptions = [
       { title: 'Без ПДВ (0%)', value: '0' },
@@ -280,6 +318,19 @@ export default defineComponent({
             {isNew.value ? 'Нова комерційна пропозиція' : (meta.title || 'Редагування КП')}
           </div>
           <v-spacer />
+          {!isNew.value && (
+            <v-btn
+              color="secondary"
+              variant="outlined"
+              prepend-icon="mdi-eye-outline"
+              loading={previewing.value}
+              disabled={!isValid.value}
+              class="mr-2"
+              onClick={openPreview}
+            >
+              Перегляд
+            </v-btn>
+          )}
           {!isNew.value && (
             <v-btn
               color="error"
@@ -420,7 +471,10 @@ export default defineComponent({
                   {items.value.length > 0 && (
                     <div class="text-body-2 text-right">
                       <div class="text-medium-emphasis">Без ПДВ: <strong>{fmtMoney(grandTotalExVat.value)} грн</strong></div>
-                      <div>З ПДВ: <strong class="text-primary text-body-1">{fmtMoney(grandTotal.value)} грн</strong></div>
+                      <div>
+                        З ПДВ{worksAmount.value > 0 ? ' + роботи' : ''}:{' '}
+                        <strong class="text-primary text-body-1">{fmtMoney(grandTotalWithWorks.value)} грн</strong>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -564,9 +618,21 @@ export default defineComponent({
                             <td class="text-right">{fmtMoney(grandTotal.value - grandTotalExVat.value)} грн</td>
                           </tr>
                           <tr>
-                            <td class="text-right pr-4 font-weight-bold text-primary">Сума з ПДВ:</td>
+                            <td class="text-right pr-4 font-weight-medium">Обладнання з ПДВ:</td>
+                            <td class="text-right font-weight-medium">{fmtMoney(grandTotal.value)} грн</td>
+                          </tr>
+                          {worksAmount.value > 0 && (
+                            <tr>
+                              <td class="text-right pr-4 text-medium-emphasis">
+                                Монтажні роботи ({parseFloat(worksPercent.value) || 0}%):
+                              </td>
+                              <td class="text-right">{fmtMoney(worksAmount.value)} грн</td>
+                            </tr>
+                          )}
+                          <tr>
+                            <td class="text-right pr-4 font-weight-bold text-primary">Загальна сума:</td>
                             <td class="text-right font-weight-bold text-primary text-h6">
-                              {fmtMoney(grandTotal.value)} грн
+                              {fmtMoney(grandTotalWithWorks.value)} грн
                             </td>
                           </tr>
                         </tbody>
@@ -583,16 +649,35 @@ export default defineComponent({
             <v-card class="mt-2">
               <v-card-text>
                 <v-row>
-                  <v-col cols={12}>
+                  <v-col cols={12} sm={4}>
+                    <v-text-field
+                      v-model={worksPercent.value}
+                      label="Монтажні роботи, % від суми обладнання"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      placeholder="15"
+                      prepend-inner-icon="mdi-wrench-outline"
+                      variant="outlined"
+                      suffix="%"
+                      hide-details="auto"
+                      hint={worksAmount.value > 0
+                        ? `= ${fmtMoney(worksAmount.value)} грн (від ${fmtMoney(grandTotal.value)} грн)`
+                        : `Вкажіть відсоток — рядок з'явиться в специфікації`}
+                      persistent-hint
+                    />
+                  </v-col>
+                  <v-col cols={12} sm={12}>
                     <v-textarea
                       v-model={worksDescription.value}
-                      label="Монтажні та пусконалагоджувальні роботи"
+                      label="Назва / опис монтажних робіт"
                       placeholder="Монтаж конструкцій, установка обладнання, прокладка кабелів, налаштування та введення в експлуатацію"
-                      rows={3}
+                      rows={2}
                       auto-grow
                       variant="outlined"
-                      prepend-inner-icon="mdi-wrench-outline"
-                      hint="Відображається у блоці «МОНТАЖНІ ТА ПУСКОНАЛАГОДЖУВАЛЬНІ РОБОТИ» у PDF"
+                      prepend-inner-icon="mdi-text"
+                      hint="Назва відображається в рядку специфікації та блоці опису у PDF"
                       persistent-hint
                     />
                   </v-col>
@@ -616,41 +701,82 @@ export default defineComponent({
 
         </v-window>
 
-        {/* Bottom bar */}
         <v-card class="mt-4" variant="tonal">
           <v-card-text class="py-2">
-            <div class="d-flex align-center gap-3">
+            <div class="d-flex align-center justify-space-between gap-3">
               <div class="text-body-2 text-medium-emphasis">
                 {isNew.value
                   ? 'Заповніть форму та збережіть КП'
                   : `Оновлено: ${loadedProposal.value ? new Date(loadedProposal.value.updatedAt).toLocaleString('uk-UA') : '—'}`}
               </div>
-              <v-spacer />
-              {!isNew.value && (
+              <div class="d-flex align-center gap-3">
+                {!isNew.value && (
+                  <v-btn
+                    color="secondary"
+                    variant="outlined"
+                    prepend-icon="mdi-eye-outline"
+                    loading={previewing.value}
+                    disabled={!isValid.value}
+                    onClick={openPreview}
+                  >
+                    Переглянути PDF
+                  </v-btn>
+                )}
+                {!isNew.value && (
+                    <v-btn
+                    color="error"
+                    variant="outlined"
+                    prepend-icon="mdi-file-pdf-box"
+                    loading={downloading.value}
+                    disabled={!isValid.value}
+                    onClick={downloadPdf}
+                    >
+                    Завантажити PDF
+                    </v-btn>
+                )}
                 <v-btn
-                  color="error"
-                  variant="outlined"
-                  prepend-icon="mdi-file-pdf-box"
-                  loading={downloading.value}
-                  disabled={!isValid.value}
-                  onClick={downloadPdf}
+                    color="primary"
+                    variant="elevated"
+                    prepend-icon={isNew.value ? 'mdi-plus' : 'mdi-content-save'}
+                    loading={saving.value}
+                    disabled={!isValid.value}
+                    onClick={save}
                 >
-                  Завантажити PDF
+                    {isNew.value ? 'Створити КП' : 'Зберегти зміни'}
                 </v-btn>
-              )}
-              <v-btn
-                color="primary"
-                variant="elevated"
-                prepend-icon={isNew.value ? 'mdi-plus' : 'mdi-content-save'}
-                loading={saving.value}
-                disabled={!isValid.value}
-                onClick={save}
-              >
-                {isNew.value ? 'Створити КП' : 'Зберегти зміни'}
-              </v-btn>
+              </div>
             </div>
           </v-card-text>
         </v-card>
+
+        {/* PDF Preview dialog */}
+        <v-dialog v-model={previewDialog.value} fullscreen transition="dialog-bottom-transition">
+          <v-card style="display:flex;flex-direction:column;height:100%;">
+            <v-toolbar color="primary" density="compact">
+              <v-toolbar-title class="text-body-1 font-weight-medium">
+                Перегляд PDF — {meta.title}
+              </v-toolbar-title>
+              <v-spacer />
+              <v-btn
+                variant="text"
+                prepend-icon="mdi-file-pdf-box"
+                onClick={downloadPdf}
+              >
+                Завантажити
+              </v-btn>
+              <v-btn icon="mdi-close" onClick={closePreview} />
+            </v-toolbar>
+            <div style="flex:1;overflow:hidden;">
+              {previewUrl.value && (
+                <iframe
+                  src={previewUrl.value}
+                  style="width:100%;height:100%;border:none;"
+                  title="PDF Preview"
+                />
+              )}
+            </div>
+          </v-card>
+        </v-dialog>
 
         {/* Product picker dialog */}
         <v-dialog v-model={productPickerDialog.value} max-width={660} scrollable>
