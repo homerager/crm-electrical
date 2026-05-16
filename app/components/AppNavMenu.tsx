@@ -50,6 +50,7 @@ export default defineComponent({
         value: 'reports',
         children: [
           { title: 'Репорти', icon: 'mdi-chart-bar', to: '/reports' },
+          { title: 'Фото-звіти', icon: 'mdi-camera-burst', to: '/photo-reports' },
         ],
       }
       if (isAdmin.value) {

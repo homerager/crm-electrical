@@ -21,7 +21,6 @@ export default defineEventHandler(async (event) => {
     // Витрати на матеріали: invoice items через movements до цього обʼєкта
     const movements = await prisma.movement.findMany({
       where: { objectId: obj.id, type: 'WAREHOUSE_TO_OBJECT' },
-      include: { items: { include: { product: true } } },
       select: { fromWarehouseId: true, items: { select: { productId: true, quantity: true } } },
     })
 
@@ -48,7 +47,7 @@ export default defineEventHandler(async (event) => {
           { objectId: obj.id, taskId: null },
         ],
       },
-      include: { user: { select: { hourlyRate: true } } },
+      select: { hours: true, user: { select: { hourlyRate: true } } },
     })
 
     let laborCost = 0

@@ -425,6 +425,7 @@ function getPageTitle(path: string): string {
     '/payments/schedule': 'Графік платежів',
     '/payments': 'Оплати',
     '/reports': 'Репорти',
+    '/photo-reports': 'Фото-звіти',
     '/tasks/calendar': 'Календар завдань',
     '/tasks': 'Завдання',
     '/time-logs/manual': 'Облік часу',

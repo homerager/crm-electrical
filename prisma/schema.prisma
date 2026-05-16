@@ -106,6 +106,7 @@ model User {
   proposals       Proposal[]
   payments        Payment[]
   paymentSchedules PaymentSchedule[]
+  photoReports    PhotoReport[]
 
   @@map("users")
 }
@@ -155,6 +156,7 @@ model ConstructionObject {
   projectsWithDefaultObject Project[]
   payments                  Payment[]
   paymentSchedules          PaymentSchedule[]
+  photoReports              PhotoReport[]
 
   @@map("construction_objects")
 }
@@ -722,6 +724,54 @@ model PaymentSchedule {
   @@index([clientId])
   @@index([dueDate, status])
   @@map("payment_schedules")
+}
+
+enum PhotoStage {
+  BEFORE
+  IN_PROGRESS
+  AFTER
+}
+
+model PhotoReport {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  objectId    String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  object    ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  createdBy User               @relation(fields: [createdById], references: [id])
+  photos    PhotoReportPhoto[]
+
+  @@index([objectId])
+  @@index([createdById])
+  @@map("photo_reports")
+}
+
+model PhotoReportPhoto {
+  id            String     @id @default(cuid())
+  reportId      String
+  stage         PhotoStage @default(BEFORE)
+  description   String?
+  filename      String
+  storedAs      String
+  mimeType      String
+  size          Int
+  /// Latitude from EXIF or manual input
+  latitude      Float?
+  /// Longitude from EXIF or manual input
+  longitude     Float?
+  /// Original photo timestamp from EXIF
+  takenAt       DateTime?
+  sortOrder     Int        @default(0)
+  createdAt     DateTime   @default(now())
+
+  report PhotoReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, stage])
+  @@map("photo_report_photos")
 }
 
 model AuditLog {
