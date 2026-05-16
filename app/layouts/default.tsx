@@ -422,6 +422,8 @@ function getPageTitle(path: string): string {
     '/proposals/new': 'Нова КП',
     '/proposals': 'Комерційні пропозиції',
     '/movements': 'Переміщення',
+    '/payments/schedule': 'Графік платежів',
+    '/payments': 'Оплати',
     '/reports': 'Репорти',
     '/tasks/calendar': 'Календар завдань',
     '/tasks': 'Завдання',

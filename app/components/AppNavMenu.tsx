@@ -77,6 +77,15 @@ export default defineComponent({
             { title: 'Обʼєкти', icon: 'mdi-office-building-outline', to: '/objects' },
           ],
         },
+        {
+          title: 'Фінанси',
+          icon: 'mdi-cash-multiple',
+          value: 'finance',
+          children: [
+            { title: 'Оплати', icon: 'mdi-bank-transfer', to: '/payments' },
+            { title: 'Графік платежів', icon: 'mdi-calendar-clock', to: '/payments/schedule' },
+          ],
+        },
         projects,
         {
           title: 'Склад і товари',

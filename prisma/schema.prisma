@@ -104,6 +104,8 @@ model User {
   notifications   Notification[]
   purchaseRequests PurchaseRequest[]
   proposals       Proposal[]
+  payments        Payment[]
+  paymentSchedules PaymentSchedule[]
 
   @@map("users")
 }
@@ -151,6 +153,8 @@ model ConstructionObject {
   timeLogs                  TimeLog[]
   /// Проєкти, де цей обʼєкт обраний як типовий для нових завдань
   projectsWithDefaultObject Project[]
+  payments                  Payment[]
+  paymentSchedules          PaymentSchedule[]
 
   @@map("construction_objects")
 }
@@ -171,7 +175,9 @@ model Client {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  objects ConstructionObject[]
+  objects          ConstructionObject[]
+  payments         Payment[]
+  paymentSchedules PaymentSchedule[]
 
   @@map("clients")
 }
@@ -193,8 +199,9 @@ model Contractor {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  invoices Invoice[]
+  invoices         Invoice[]
   purchaseRequests PurchaseRequest[]
+  payments         Payment[]
 
   @@map("contractors")
 }
@@ -295,6 +302,7 @@ model Invoice {
   createdBy  User        @relation(fields: [createdById], references: [id])
   items      InvoiceItem[]
   purchaseRequests PurchaseRequest[]
+  payments   Payment[]
 
   @@map("invoices")
 }
@@ -637,6 +645,83 @@ model ProposalItem {
 
   @@index([proposalId])
   @@map("proposal_items")
+}
+
+enum PaymentDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  CARD
+  OTHER
+}
+
+enum PaymentScheduleStatus {
+  EXPECTED
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Payment {
+  id            String           @id @default(cuid())
+  direction     PaymentDirection
+  status        PaymentStatus    @default(PENDING)
+  method        PaymentMethod    @default(BANK_TRANSFER)
+  amount        Decimal          @db.Decimal(14, 2)
+  date          DateTime
+  description   String?
+  objectId      String?
+  clientId      String?
+  contractorId  String?
+  invoiceId     String?
+  createdById   String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  object     ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  client     Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  contractor Contractor?         @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  invoice    Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdBy  User                @relation(fields: [createdById], references: [id])
+
+  @@index([objectId])
+  @@index([clientId])
+  @@index([contractorId])
+  @@index([direction, status])
+  @@index([date])
+  @@map("payments")
+}
+
+model PaymentSchedule {
+  id          String                @id @default(cuid())
+  objectId    String
+  clientId    String?
+  amount      Decimal               @db.Decimal(14, 2)
+  dueDate     DateTime
+  status      PaymentScheduleStatus @default(EXPECTED)
+  description String?
+  createdById String
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  object    ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  client    Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User               @relation(fields: [createdById], references: [id])
+
+  @@index([objectId])
+  @@index([clientId])
+  @@index([dueDate, status])
+  @@map("payment_schedules")
 }
 
 model AuditLog {

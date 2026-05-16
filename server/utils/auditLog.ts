@@ -16,6 +16,8 @@ export type AuditEntityType =
   | 'Project'
   | 'TimeLog'
   | 'User'
+  | 'Payment'
+  | 'PaymentSchedule'
 
 interface AuditLogInput {
   userId?: string | null
