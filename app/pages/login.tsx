@@ -29,13 +29,24 @@ export default defineComponent({
     }
 
     return () => (
-      <v-card class="pa-2">
-        <v-card-title class="text-h6 text-center pa-4">
-          Вхід в систему
-        </v-card-title>
-        <v-card-text>
+      <v-card rounded="xl" elevation={12}>
+        <v-card-text class="pa-6 pa-sm-8">
+          <div class="text-h6 font-weight-bold text-center">
+            Вхід в систему
+          </div>
+          <div class="text-body-2 text-medium-emphasis text-center mt-1 mb-6">
+            Введіть дані облікового запису
+          </div>
+
           {error.value && (
-            <v-alert type="error" variant="tonal" class="mb-4" closable onUpdate:modelValue={() => (error.value = '')}>
+            <v-alert
+              type="error"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+              closable
+              onUpdate:modelValue={() => (error.value = '')}
+            >
               {error.value}
             </v-alert>
           )}
@@ -75,20 +86,21 @@ export default defineComponent({
               ),
             }}
           </v-text-field>
-        </v-card-text>
-        <v-card-actions class="px-4 pb-4">
+
           <v-btn
             block
             variant="flat"
             color="primary"
             size="large"
+            class="mt-5"
+            prepend-icon="mdi-login-variant"
             loading={loading.value}
             disabled={!form.email || !form.password}
             onClick={handleSubmit}
           >
             Увійти
           </v-btn>
-        </v-card-actions>
+        </v-card-text>
       </v-card>
     )
   },
