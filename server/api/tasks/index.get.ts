@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const assignedToId = query.assignedToId as string | undefined
   const objectId = query.objectId as string | undefined
   const projectId = query.projectId as string | undefined
+  const tagId = query.tagId as string | undefined
 
   const isElevated = isElevatedRole(auth.role)
 
@@ -24,6 +25,7 @@ export default defineEventHandler(async (event) => {
   if (status) where.status = status
   if (priority) where.priority = priority
   if (assignedToId) where.assignedToId = assignedToId
+  if (tagId) where.tags = { some: { id: tagId } }
 
   if (projectId) {
     if (!isElevated) {
@@ -51,6 +53,7 @@ export default defineEventHandler(async (event) => {
       assignee: { select: { id: true, name: true } },
       object: { select: { id: true, name: true } },
       project: { select: { id: true, name: true, color: true } },
+      tags: { select: { id: true, name: true, color: true } },
       _count: { select: { timeLogs: true, comments: true, subTasks: true } },
       timeLogs: { select: { hours: true } },
     },

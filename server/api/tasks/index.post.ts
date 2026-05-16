@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { title, description, priority, assignedToId, objectId, parentId, projectId, dueDate, estimatedHours } = body
+  const { title, description, priority, assignedToId, objectId, parentId, projectId, dueDate, estimatedHours, tagIds } = body
 
   if (!title?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Назва завдання обов\'язкова' })
@@ -51,12 +51,16 @@ export default defineEventHandler(async (event) => {
       dueDate: dueDate ? new Date(dueDate) : null,
       estimatedHours: estimatedHours ? Number(estimatedHours) : null,
       createdById: auth.userId,
+      ...(Array.isArray(tagIds) && tagIds.length > 0 && {
+        tags: { connect: tagIds.map((id: string) => ({ id })) },
+      }),
     },
     include: {
       createdBy: { select: { id: true, name: true } },
       assignee: { select: { id: true, name: true } },
       object: { select: { id: true, name: true } },
       project: { select: { id: true, name: true, color: true } },
+      tags: { select: { id: true, name: true, color: true } },
     },
   })
 

@@ -38,6 +38,7 @@ export default defineComponent({
     const filterStatus = ref('')
     const filterPriority = ref('')
     const filterAssignee = ref('')
+    const filterTag = ref('')
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -58,13 +59,39 @@ export default defineComponent({
       objectId: '',
       dueDate: '',
       estimatedHours: '',
+      tagIds: [] as string[],
     })
+
+    const { data: tagsData, refresh: refreshTags } = useFetch('/api/task-tags')
+    const allTags = computed(() => (tagsData.value as any)?.tags ?? [])
+
+    const newTagDialog = ref(false)
+    const newTagName = ref('')
+    const newTagColor = ref('#1976D2')
+    const newTagSaving = ref(false)
+
+    async function createTag() {
+      if (!newTagName.value.trim()) return
+      newTagSaving.value = true
+      try {
+        await $fetch('/api/task-tags', {
+          method: 'POST',
+          body: { name: newTagName.value.trim(), color: newTagColor.value },
+        })
+        newTagDialog.value = false
+        newTagName.value = ''
+        newTagColor.value = '#1976D2'
+        await refreshTags()
+      } catch {}
+      newTagSaving.value = false
+    }
 
     const { data: tasksData, refresh, pending } = useFetch('/api/tasks', {
       query: computed(() => ({
         ...(filterStatus.value && { status: filterStatus.value }),
         ...(filterPriority.value && { priority: filterPriority.value }),
         ...(filterAssignee.value && { assignedToId: filterAssignee.value }),
+        ...(filterTag.value && { tagId: filterTag.value }),
       })),
     })
 
@@ -89,6 +116,7 @@ export default defineComponent({
       Object.assign(form, {
         title: '', description: '', priority: 'MEDIUM',
         assignedToId: '', objectId: '', dueDate: '', estimatedHours: '',
+        tagIds: [],
       })
       error.value = ''
       dialog.value = true
@@ -106,6 +134,7 @@ export default defineComponent({
             objectId: form.objectId || null,
             dueDate: form.dueDate || null,
             estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : null,
+            tagIds: form.tagIds.length > 0 ? form.tagIds : undefined,
           },
         })
         dialog.value = false
@@ -202,6 +231,7 @@ export default defineComponent({
       { title: 'Назва', key: 'title', minWidth: 220 },
       { title: 'Статус', key: 'status', width: 140 },
       { title: 'Пріоритет', key: 'priority', width: 130 },
+      { title: 'Теги', key: 'tags', width: 180 },
       { title: 'Виконавець', key: 'assignee', width: 160 },
       { title: 'Дедлайн', key: 'dueDate', width: 120 },
       { title: 'Год.', key: 'totalHours', width: 90 },
@@ -244,7 +274,7 @@ export default defineComponent({
         {/* Filters */}
         <v-card class="mb-4 pa-4">
           <v-row dense>
-            <v-col cols={12} sm={6} md={4}>
+            <v-col cols={12} sm={6} md={3}>
               <v-select
                 v-model={filterStatus.value}
                 label="Статус"
@@ -255,7 +285,7 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            <v-col cols={12} sm={6} md={4}>
+            <v-col cols={12} sm={6} md={3}>
               <v-select
                 v-model={filterPriority.value}
                 label="Пріоритет"
@@ -266,7 +296,7 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            <v-col cols={12} md={4}>
+            <v-col cols={12} sm={6} md={3}>
               <v-select
                 v-model={filterAssignee.value}
                 label="Виконавець"
@@ -277,14 +307,25 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            {(filterStatus.value || filterPriority.value || filterAssignee.value) && (
+            <v-col cols={12} sm={6} md={3}>
+              <v-select
+                v-model={filterTag.value}
+                label="Тег"
+                items={[{ value: '', title: 'Всі' }, ...allTags.value.map((t: any) => ({ value: t.id, title: t.name }))]}
+                density="compact"
+                class="w-100"
+                clearable
+                hide-details
+              />
+            </v-col>
+            {(filterStatus.value || filterPriority.value || filterAssignee.value || filterTag.value) && (
               <v-col cols={12} class="d-flex align-center">
                 <v-btn
                   variant="text"
                   size="small"
                   color="error"
                   prepend-icon="mdi-filter-remove"
-                  onClick={() => { filterStatus.value = ''; filterPriority.value = ''; filterAssignee.value = '' }}
+                  onClick={() => { filterStatus.value = ''; filterPriority.value = ''; filterAssignee.value = ''; filterTag.value = '' }}
                 >
                   Скинути
                 </v-btn>
@@ -399,6 +440,21 @@ export default defineComponent({
                             <div class="text-body-2 font-weight-medium mb-2" style="line-height:1.3">
                               {task.title}
                             </div>
+                            {task.tags?.length > 0 && (
+                              <div class="d-flex flex-wrap gap-1 mb-2">
+                                {task.tags.map((tag: any) => (
+                                  <v-chip
+                                    key={tag.id}
+                                    size="x-small"
+                                    color={tag.color}
+                                    variant="tonal"
+                                    prepend-icon="mdi-tag"
+                                  >
+                                    {tag.name}
+                                  </v-chip>
+                                ))}
+                              </div>
+                            )}
                             <div class="d-flex align-center gap-1 flex-wrap">
                               {task.assignee && (
                                 <v-chip size="x-small" prepend-icon="mdi-account" variant="text">
@@ -476,6 +532,13 @@ export default defineComponent({
                     </v-chip>
                   )
                 },
+                'item.tags': ({ item }: any) => (
+                  item.tags?.length > 0
+                    ? <div class="d-flex flex-wrap gap-1">{item.tags.map((tag: any) => (
+                        <v-chip key={tag.id} size="x-small" color={tag.color} variant="tonal" prepend-icon="mdi-tag">{tag.name}</v-chip>
+                      ))}</div>
+                    : <span class="text-disabled">—</span>
+                ),
                 'item.assignee': ({ item }: any) => item.assignee?.name ?? '—',
                 'item.dueDate': ({ item }: any) => (
                   <span class={isOverdue(item) ? 'text-error' : ''}>
@@ -544,6 +607,34 @@ export default defineComponent({
                 min="0"
                 step="0.5"
               />
+              <v-select
+                v-model={form.tagIds}
+                label="Теги"
+                items={allTags.value.map((t: any) => ({ value: t.id, title: t.name }))}
+                multiple
+                chips
+                closable-chips
+                density="compact"
+                hide-details
+                class="mt-2"
+              >
+                {{
+                  'append-item': () => (
+                    <div class="pa-2">
+                      <v-btn
+                        variant="text"
+                        size="small"
+                        prepend-icon="mdi-plus"
+                        color="primary"
+                        block
+                        onClick={() => (newTagDialog.value = true)}
+                      >
+                        Створити тег
+                      </v-btn>
+                    </div>
+                  ),
+                }}
+              </v-select>
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />
@@ -566,6 +657,46 @@ export default defineComponent({
               <v-spacer />
               <v-btn variant="outlined" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
               <v-btn color="error" variant="elevated" loading={deleting.value} onClick={confirmDelete}>Видалити</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        {/* Create tag dialog */}
+        <v-dialog v-model={newTagDialog.value} max-width={400}>
+          <v-card>
+            <v-card-title class="pa-4">Новий тег</v-card-title>
+            <v-card-text class="pa-4 pt-0">
+              <v-text-field
+                v-model={newTagName.value}
+                label="Назва тегу *"
+                class="mb-3"
+                autofocus
+              />
+              <div class="d-flex align-center gap-3">
+                <span class="text-body-2">Колір:</span>
+                <input
+                  type="color"
+                  value={newTagColor.value}
+                  onInput={(e: Event) => (newTagColor.value = (e.target as HTMLInputElement).value)}
+                  style="width:40px;height:32px;border:none;cursor:pointer;background:none"
+                />
+                <v-chip size="small" color={newTagColor.value} variant="tonal" prepend-icon="mdi-tag">
+                  {newTagName.value || 'Приклад'}
+                </v-chip>
+              </div>
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              <v-btn variant="outlined" onClick={() => (newTagDialog.value = false)}>Скасувати</v-btn>
+              <v-btn
+                color="primary"
+                variant="elevated"
+                loading={newTagSaving.value}
+                disabled={!newTagName.value.trim()}
+                onClick={createTag}
+              >
+                Створити
+              </v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>

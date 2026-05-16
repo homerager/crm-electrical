@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
       assignee: { select: { id: true, name: true } },
       object: { select: { id: true, name: true } },
       project: { select: { id: true, name: true, color: true } },
+      tags: { select: { id: true, name: true, color: true } },
       timeLogs: {
         include: {
           user: { select: { id: true, name: true } },

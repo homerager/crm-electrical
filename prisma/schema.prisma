@@ -413,8 +413,19 @@ model Task {
   timeLogs    TimeLog[]
   comments    TaskComment[]
   attachments TaskAttachment[]
+  tags        TaskTag[]
 
   @@map("tasks")
+}
+
+model TaskTag {
+  id    String @id @default(cuid())
+  name  String @unique
+  color String @default("#1976D2")
+
+  tasks Task[]
+
+  @@map("task_tags")
 }
 
 model TimeLog {

@@ -42,6 +42,40 @@ export default defineComponent({
     const { data, refresh, pending } = useFetch(() => `/api/tasks/${id.value}`)
     const task = computed(() => data.value as any)
 
+    const { data: tagsData, refresh: refreshTags } = useFetch('/api/task-tags')
+    const allTags = computed(() => (tagsData.value as any)?.tags ?? [])
+
+    const newTagDialog = ref(false)
+    const newTagName = ref('')
+    const newTagColor = ref('#1976D2')
+    const newTagSaving = ref(false)
+
+    async function createTagFromDetail() {
+      if (!newTagName.value.trim()) return
+      newTagSaving.value = true
+      try {
+        await $fetch('/api/task-tags', {
+          method: 'POST',
+          body: { name: newTagName.value.trim(), color: newTagColor.value },
+        })
+        newTagDialog.value = false
+        newTagName.value = ''
+        newTagColor.value = '#1976D2'
+        await refreshTags()
+      } catch {}
+      newTagSaving.value = false
+    }
+
+    async function updateTaskTags(tagIds: string[]) {
+      try {
+        await $fetch(`/api/tasks/${id.value}`, {
+          method: 'PUT',
+          body: { tagIds },
+        })
+        await refresh()
+      } catch {}
+    }
+
     useHead(computed(() => ({ title: task.value?.title ?? 'Завдання' })))
 
     const users = computed(() => {
@@ -62,6 +96,7 @@ export default defineComponent({
       objectId: '',
       dueDate: '',
       estimatedHours: '',
+      tagIds: [] as string[],
     })
     const editSaving = ref(false)
     const editError = ref('')
@@ -78,6 +113,7 @@ export default defineComponent({
         objectId: t.objectId ?? '',
         dueDate: t.dueDate ? t.dueDate.substring(0, 10) : '',
         estimatedHours: t.estimatedHours != null ? String(t.estimatedHours) : '',
+        tagIds: (t.tags ?? []).map((tag: any) => tag.id),
       })
       editError.value = ''
       editDialog.value = true
@@ -95,6 +131,7 @@ export default defineComponent({
             objectId: editForm.objectId || null,
             dueDate: editForm.dueDate || null,
             estimatedHours: editForm.estimatedHours !== '' ? Number(editForm.estimatedHours) : null,
+            tagIds: editForm.tagIds,
           },
         })
         editDialog.value = false
@@ -504,6 +541,17 @@ export default defineComponent({
                         {formatDate(t.dueDate)}
                       </v-chip>
                     )}
+                    {(t.tags ?? []).map((tag: any) => (
+                      <v-chip
+                        key={tag.id}
+                        size="small"
+                        color={tag.color}
+                        variant="tonal"
+                        prepend-icon="mdi-tag"
+                      >
+                        {tag.name}
+                      </v-chip>
+                    ))}
                   </div>
 
                   {/* Quick status change */}
@@ -1164,6 +1212,39 @@ export default defineComponent({
                     </div>
                   ))}
                 </div>
+                <v-divider />
+                <div class="pa-3">
+                  <div class="text-caption text-medium-emphasis mb-2">ТЕГИ</div>
+                  <v-select
+                    modelValue={(t.tags ?? []).map((tag: any) => tag.id)}
+                    onUpdate:modelValue={(val: string[]) => updateTaskTags(val)}
+                    items={allTags.value.map((tag: any) => ({ value: tag.id, title: tag.name }))}
+                    multiple
+                    chips
+                    closable-chips
+                    density="compact"
+                    variant="outlined"
+                    placeholder="Обрати теги"
+                    hide-details
+                  >
+                    {{
+                      'append-item': () => (
+                        <div class="pa-2">
+                          <v-btn
+                            variant="text"
+                            size="small"
+                            prepend-icon="mdi-plus"
+                            color="primary"
+                            block
+                            onClick={() => (newTagDialog.value = true)}
+                          >
+                            Створити тег
+                          </v-btn>
+                        </div>
+                      ),
+                    }}
+                  </v-select>
+                </div>
               </v-card>
             </div>
           </div>
@@ -1230,6 +1311,34 @@ export default defineComponent({
                     style="flex:1"
                   />
                 </div>
+                <v-select
+                  v-model={editForm.tagIds}
+                  label="Теги"
+                  items={allTags.value.map((tag: any) => ({ value: tag.id, title: tag.name }))}
+                  multiple
+                  chips
+                  closable-chips
+                  density="compact"
+                  hide-details
+                  class="mt-3"
+                >
+                  {{
+                    'append-item': () => (
+                      <div class="pa-2">
+                        <v-btn
+                          variant="text"
+                          size="small"
+                          prepend-icon="mdi-plus"
+                          color="primary"
+                          block
+                          onClick={() => (newTagDialog.value = true)}
+                        >
+                          Створити тег
+                        </v-btn>
+                      </div>
+                    ),
+                  }}
+                </v-select>
               </v-card-text>
               <v-card-actions class="pa-4 pt-0">
                 <v-spacer />
@@ -1320,6 +1429,46 @@ export default defineComponent({
                   onClick={saveTimeLog}
                 >
                   Зберегти
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          {/* Create tag dialog */}
+          <v-dialog v-model={newTagDialog.value} max-width={400}>
+            <v-card>
+              <v-card-title class="pa-4">Новий тег</v-card-title>
+              <v-card-text class="pa-4 pt-0">
+                <v-text-field
+                  v-model={newTagName.value}
+                  label="Назва тегу *"
+                  class="mb-3"
+                  autofocus
+                />
+                <div class="d-flex align-center gap-3">
+                  <span class="text-body-2">Колір:</span>
+                  <input
+                    type="color"
+                    value={newTagColor.value}
+                    onInput={(e: Event) => (newTagColor.value = (e.target as HTMLInputElement).value)}
+                    style="width:40px;height:32px;border:none;cursor:pointer;background:none"
+                  />
+                  <v-chip size="small" color={newTagColor.value} variant="tonal" prepend-icon="mdi-tag">
+                    {newTagName.value || 'Приклад'}
+                  </v-chip>
+                </div>
+              </v-card-text>
+              <v-card-actions class="pa-4 pt-0">
+                <v-spacer />
+                <v-btn variant="outlined" onClick={() => (newTagDialog.value = false)}>Скасувати</v-btn>
+                <v-btn
+                  color="primary"
+                  variant="elevated"
+                  loading={newTagSaving.value}
+                  disabled={!newTagName.value.trim()}
+                  onClick={createTagFromDetail}
+                >
+                  Створити
                 </v-btn>
               </v-card-actions>
             </v-card>

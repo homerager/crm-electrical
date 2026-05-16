@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   })
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Завдання не знайдено' })
 
-  const { title, description, status, priority, assignedToId, objectId, dueDate, estimatedHours } = body
+  const { title, description, status, priority, assignedToId, objectId, dueDate, estimatedHours, tagIds } = body
 
   const updated = await prisma.task.update({
     where: { id },
@@ -35,11 +35,13 @@ export default defineEventHandler(async (event) => {
       ...(objectId !== undefined && { objectId: objectId || null }),
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
       ...(estimatedHours !== undefined && { estimatedHours: estimatedHours !== null ? Number(estimatedHours) : null }),
+      ...(Array.isArray(tagIds) && { tags: { set: tagIds.map((tid: string) => ({ id: tid })) } }),
     },
     include: {
       createdBy: { select: { id: true, name: true, telegramChatId: true } },
       assignee: { select: { id: true, name: true, telegramChatId: true } },
       object: { select: { id: true, name: true } },
+      tags: { select: { id: true, name: true, color: true } },
     },
   })
 
