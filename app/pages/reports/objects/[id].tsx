@@ -10,6 +10,7 @@ export default defineComponent({
     const route = useRoute()
     const id = route.params.id as string
     const { data, pending, refresh } = useFetch(`/api/reports/objects/${id}`)
+    const { data: payStatusData } = useFetch('/api/payments/object-status', { query: { objectId: id } })
 
     const report = computed(() => data.value as any)
     const object = computed(() => report.value?.object)
@@ -26,6 +27,8 @@ export default defineComponent({
     const laborTotalAmount = computed(() => Number(report.value?.laborTotalAmount) || 0)
     const laborHasMissingRate = computed(() => report.value?.laborHasMissingRate === true)
     const laborLogCount = computed(() => Number(report.value?.laborLogCount) || 0)
+
+    const payStatus = computed(() => payStatusData.value as any)
 
     const budget = computed(() => report.value?.budget != null ? Number(report.value.budget) : null)
     const totalExpenses = computed(() => Number(report.value?.totalExpenses) || 0)
@@ -238,6 +241,61 @@ export default defineComponent({
                     </v-alert>
                   )}
                 </v-card-text>
+              </v-card>
+            )}
+
+            {payStatus.value && (payStatus.value.totalScheduled > 0 || payStatus.value.totalPaid > 0) && (
+              <v-card class="mb-4">
+                <v-card-title class="d-flex align-center">
+                  <v-icon class="mr-2" icon="mdi-bank-transfer" />
+                  Статус оплати
+                </v-card-title>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Виставлено</div>
+                      <div class="text-h6 font-weight-bold">{uah(payStatus.value.totalScheduled)}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Оплачено клієнтом</div>
+                      <div class="text-h6 text-success">{uah(payStatus.value.totalPaid)}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Борг</div>
+                      <div class={`text-h6 font-weight-bold ${payStatus.value.debt > 0 ? 'text-error' : 'text-success'}`}>
+                        {uah(payStatus.value.debt)}
+                      </div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Прибуток</div>
+                      <div class={`text-h6 font-weight-bold ${payStatus.value.profit >= 0 ? 'text-success' : 'text-error'}`}>
+                        {uah(payStatus.value.profit)}
+                      </div>
+                    </v-col>
+                  </v-row>
+                  {payStatus.value.totalScheduled > 0 && (
+                    <v-progress-linear
+                      model-value={Math.min((payStatus.value.totalPaid / payStatus.value.totalScheduled) * 100, 100)}
+                      color={payStatus.value.debt > 0 ? 'warning' : 'success'}
+                      height={20}
+                      rounded
+                      class="mt-4"
+                    >
+                      {{
+                        default: () => (
+                          <span class="text-body-2 font-weight-medium">
+                            {Math.round((payStatus.value.totalPaid / payStatus.value.totalScheduled) * 100)}% оплачено
+                          </span>
+                        ),
+                      }}
+                    </v-progress-linear>
+                  )}
+                </v-card-text>
+                <v-card-actions>
+                  <v-btn variant="text" color="primary" prepend-icon="mdi-open-in-new" to={`/payments?objectId=${id}`}>
+                    Переглянути оплати
+                  </v-btn>
+                </v-card-actions>
               </v-card>
             )}
 

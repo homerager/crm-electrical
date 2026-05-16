@@ -33,10 +33,11 @@ export default defineComponent({
     useHead({ title: 'Оплати' })
 
     const { isPrivileged } = useAuth()
+    const route = useRoute()
 
     const filterDirection = ref('')
     const filterStatus = ref('')
-    const filterObjectId = ref('')
+    const filterObjectId = ref((route.query.objectId as string) || '')
     const filterClientId = ref('')
     const filterDateFrom = ref('')
     const filterDateTo = ref('')
