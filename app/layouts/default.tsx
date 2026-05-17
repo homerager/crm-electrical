@@ -2,7 +2,7 @@ import { useDisplay } from 'vuetify'
 import { useNotifications, type AppNotification } from '~/composables/useNotifications'
 import AppNavMenu from '~/components/AppNavMenu'
 import PwaOfflineBanner from '~/components/PwaOfflineBanner'
-import PwaInstallPrompt from '~/components/PwaInstallPrompt'
+import PwaInstallPrompt, { usePwaInstall } from '~/components/PwaInstallPrompt'
 import PwaUpdatePrompt from '~/components/PwaUpdatePrompt'
 
 export default defineComponent({
@@ -12,6 +12,7 @@ export default defineComponent({
     const route = useRoute()
     const slots = useSlots()
     const display = useDisplay()
+    const { canInstall, isInstalled, install: installPwa } = usePwaInstall()
     const {
       items: notifications,
       unreadCount,
@@ -380,6 +381,23 @@ export default defineComponent({
                               rounded="lg"
                               base-color="primary"
                             />
+                            {canInstall.value && (
+                              <v-list-item
+                                prepend-icon="mdi-cellphone-arrow-down"
+                                title="Встановити додаток"
+                                onClick={installPwa}
+                                rounded="lg"
+                                base-color="success"
+                              />
+                            )}
+                            {isInstalled.value && (
+                              <v-list-item
+                                prepend-icon="mdi-check-circle-outline"
+                                title="Додаток встановлено"
+                                rounded="lg"
+                                disabled
+                              />
+                            )}
                             <v-list-item
                               prepend-icon="mdi-logout"
                               title="Вийти"
