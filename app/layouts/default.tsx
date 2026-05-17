@@ -2,7 +2,7 @@ import { useDisplay } from 'vuetify'
 import { useNotifications, type AppNotification } from '~/composables/useNotifications'
 import AppNavMenu from '~/components/AppNavMenu'
 import PwaOfflineBanner from '~/components/PwaOfflineBanner'
-import PwaInstallPrompt, { usePwaInstall } from '~/components/PwaInstallPrompt'
+import PwaInstallPrompt from '~/components/PwaInstallPrompt'
 import PwaUpdatePrompt from '~/components/PwaUpdatePrompt'
 
 export default defineComponent({
