@@ -3,6 +3,7 @@ const TYPES = [
   { value: 'DAY_OFF', label: 'Вихідний', color: 'grey', icon: 'mdi-coffee-outline' },
   { value: 'VACATION', label: 'Відпустка', color: 'success', icon: 'mdi-beach' },
   { value: 'SICK_LEAVE', label: 'Лікарняний', color: 'warning', icon: 'mdi-hospital-box-outline' },
+  { value: 'BIRTHDAY', label: 'День народження', color: 'pink', icon: 'mdi-cake-variant-outline' },
 ]
 
 const SHIFTS = [
@@ -565,7 +566,7 @@ export default defineComponent({
                   <v-col cols={12}>
                     <v-autocomplete
                       v-model={form.objectId}
-                      label="Обʼєкт *"
+                      label="Обʼєкт"
                       items={objects.value.map((o: any) => ({ value: o.id, title: o.name }))}
                       density="comfortable"
                     />
@@ -589,7 +590,7 @@ export default defineComponent({
                 color="primary"
                 variant="elevated"
                 loading={saving.value}
-                disabled={!form.userId || !form.date || (form.type === 'WORK' && !form.objectId)}
+                disabled={!form.userId || !form.date}
                 onClick={save}
               >
                 {editMode.value ? 'Зберегти' : 'Створити'}

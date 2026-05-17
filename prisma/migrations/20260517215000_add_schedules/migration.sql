@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "ScheduleType" AS ENUM ('WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE');
+CREATE TYPE "ScheduleType" AS ENUM ('WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE', 'BIRTHDAY');
 
 -- CreateEnum
 CREATE TYPE "ScheduleShift" AS ENUM ('FULL_DAY', 'MORNING', 'AFTERNOON');

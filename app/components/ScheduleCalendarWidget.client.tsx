@@ -11,6 +11,7 @@ const TYPE_COLORS: Record<string, string> = {
   DAY_OFF: '#607D8B',
   VACATION: '#43A047',
   SICK_LEAVE: '#E64A19',
+  BIRTHDAY: '#E91E63',
 }
 
 const SHIFT_SUFFIX: Record<string, string> = {

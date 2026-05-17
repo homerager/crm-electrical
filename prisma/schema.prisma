@@ -735,6 +735,7 @@ enum ScheduleType {
   DAY_OFF
   VACATION
   SICK_LEAVE
+  BIRTHDAY
 }
 
 enum ScheduleShift {

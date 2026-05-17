@@ -18,6 +18,7 @@ export default defineEventHandler((event) => {
     || path.startsWith('/api/audit-logs')
     || path.startsWith('/api/notifications')
     || path.startsWith('/api/schedules')
+    || path.startsWith('/api/task-tags')
     || path === '/api/objects'
     || path === '/api/users/list'
 

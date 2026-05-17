@@ -1,7 +1,7 @@
 import { isElevatedRole } from '../../utils/authz'
 import { getScheduleHours } from '../../utils/scheduleHours'
 
-const VALID_TYPES = ['WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE']
+const VALID_TYPES = ['WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE', 'BIRTHDAY']
 const VALID_SHIFTS = ['FULL_DAY', 'MORNING', 'AFTERNOON']
 
 export default defineEventHandler(async (event) => {
@@ -27,9 +27,7 @@ export default defineEventHandler(async (event) => {
   const scheduleType = type || 'WORK'
   const scheduleShift = shift || 'FULL_DAY'
 
-  if (scheduleType === 'WORK' && !objectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Обʼєкт обов\'язковий для робочого дня' })
-  }
+  // objectId is optional for all types including WORK
 
   const dateObj = new Date(date)
   dateObj.setUTCHours(0, 0, 0, 0)

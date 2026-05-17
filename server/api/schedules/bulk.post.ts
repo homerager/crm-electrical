@@ -1,7 +1,7 @@
 import { isElevatedRole } from '../../utils/authz'
 import { getScheduleHours } from '../../utils/scheduleHours'
 
-const VALID_TYPES = ['WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE']
+const VALID_TYPES = ['WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE', 'BIRTHDAY']
 const VALID_SHIFTS = ['FULL_DAY', 'MORNING', 'AFTERNOON']
 
 export default defineEventHandler(async (event) => {
