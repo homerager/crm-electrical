@@ -60,6 +60,23 @@ export default defineEventHandler(async (event) => {
 
     const effectiveHours = getScheduleHours(shift, hours)
 
+    if (type === 'WORK') {
+      const dayEnd = new Date(dateObj)
+      dayEnd.setUTCHours(23, 59, 59, 999)
+
+      const manualTimeLog = await prisma.timeLog.findFirst({
+        where: {
+          userId,
+          date: { gte: dateObj, lte: dayEnd },
+          schedule: { is: null },
+        },
+      })
+      if (manualTimeLog) {
+        skipped.push(`${userId}@${date}: вже є ручний запис часу`)
+        continue
+      }
+    }
+
     let timeLogId: string | null = null
     if (type === 'WORK') {
       const timeLog = await prisma.timeLog.create({

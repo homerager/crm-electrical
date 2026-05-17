@@ -20,7 +20,11 @@ export default defineEventHandler(async (event) => {
 
   const where: any = {
     ...dateFilter,
-    OR: [{ task: { status: 'DONE' } }, { taskId: null, objectId: { not: null } }],
+    OR: [
+      { task: { status: 'DONE' } },
+      { taskId: null, objectId: { not: null } },
+      { schedule: { isNot: null } },
+    ],
   }
   if (userId) where.userId = userId
 

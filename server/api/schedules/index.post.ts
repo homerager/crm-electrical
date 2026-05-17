@@ -55,6 +55,25 @@ export default defineEventHandler(async (event) => {
 
   const effectiveHours = getScheduleHours(scheduleShift, hours != null ? Number(hours) : null)
 
+  if (scheduleType === 'WORK') {
+    const dayEnd = new Date(dateObj)
+    dayEnd.setUTCHours(23, 59, 59, 999)
+
+    const manualTimeLog = await prisma.timeLog.findFirst({
+      where: {
+        userId,
+        date: { gte: dateObj, lte: dayEnd },
+        schedule: { is: null },
+      },
+    })
+    if (manualTimeLog) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'На цю дату для цього користувача вже є ручний запис часу. Видаліть або відредагуйте його в обліку часу.',
+      })
+    }
+  }
+
   let timeLogId: string | null = null
   if (scheduleType === 'WORK') {
     const timeLog = await prisma.timeLog.create({

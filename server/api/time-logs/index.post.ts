@@ -32,6 +32,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Користувача не знайдено' })
   }
 
+  const logDate = date ? new Date(date) : new Date()
+  const dayStart = new Date(logDate)
+  dayStart.setUTCHours(0, 0, 0, 0)
+
+  const existingSchedule = await prisma.schedule.findFirst({
+    where: { userId, date: dayStart, type: 'WORK' },
+  })
+  if (existingSchedule) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'На цю дату для цього користувача вже є запис у розкладі. Видаліть або відредагуйте запис у розкладі.',
+    })
+  }
+
   const { taskId: resolvedTaskId, objectId: resolvedObjectId } = await resolveManualTimeLogTaskAndObject({
     taskId,
     objectId,
