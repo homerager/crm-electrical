@@ -2,9 +2,9 @@ import { isStrictAdmin } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!isStrictAdmin(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  if (!auth) throw createError({ statusCode: 401 })
+
+  const isAdmin = isStrictAdmin(auth.role)
 
   const users = await prisma.user.findMany({
     select: {
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
       createdAt: true,
       jobTitleId: true,
       jobTitle: { select: { id: true, name: true } },
-      hourlyRate: true,
+      hourlyRate: isAdmin,
     },
     orderBy: { createdAt: 'desc' },
   })
