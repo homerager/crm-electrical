@@ -5,6 +5,8 @@ export default defineComponent({
     useHead({ title: 'Фото-звіти' })
 
     const { isPrivileged } = useAuth()
+    const { isOnline } = useNetworkStatus()
+    const { enqueue } = useOfflineQueue()
     const { data, refresh, pending } = useFetch('/api/photo-reports')
     const { data: objectsData } = useFetch('/api/objects')
 
@@ -51,13 +53,32 @@ export default defineComponent({
       saving.value = true
       error.value = ''
       try {
-        if (editItem.value) {
-          await $fetch(`/api/photo-reports/${editItem.value.id}`, { method: 'PUT', body: form })
+        if (isOnline.value) {
+          if (editItem.value) {
+            await $fetch(`/api/photo-reports/${editItem.value.id}`, { method: 'PUT', body: form })
+          } else {
+            await $fetch('/api/photo-reports', { method: 'POST', body: form })
+          }
         } else {
-          await $fetch('/api/photo-reports', { method: 'POST', body: form })
+          const objectName = objects.value.find((o: any) => o.id === form.objectId)?.name ?? ''
+          if (editItem.value) {
+            await enqueue({
+              url: `/api/photo-reports/${editItem.value.id}`,
+              method: 'PUT',
+              body: { ...form },
+              description: `Оновити фото-звіт "${form.title}"`,
+            })
+          } else {
+            await enqueue({
+              url: '/api/photo-reports',
+              method: 'POST',
+              body: { ...form },
+              description: `Створити фото-звіт "${form.title}" (${objectName})`,
+            })
+          }
         }
         dialog.value = false
-        await refresh()
+        if (isOnline.value) await refresh()
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
       } finally {

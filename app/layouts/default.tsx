@@ -1,6 +1,9 @@
 import { useDisplay } from 'vuetify'
 import { useNotifications, type AppNotification } from '~/composables/useNotifications'
 import AppNavMenu from '~/components/AppNavMenu'
+import PwaOfflineBanner from '~/components/PwaOfflineBanner'
+import PwaInstallPrompt from '~/components/PwaInstallPrompt'
+import PwaUpdatePrompt from '~/components/PwaUpdatePrompt'
 
 export default defineComponent({
   name: 'DefaultLayout',
@@ -396,11 +399,14 @@ export default defineComponent({
         </v-app-bar>
 
         <v-main style="background: var(--v-theme-background)">
+          <PwaInstallPrompt />
+          <PwaOfflineBanner />
           <v-container fluid class="pa-4 pa-sm-6">
             {slots.default?.()}
           </v-container>
         </v-main>
 
+        <PwaUpdatePrompt />
       </v-app>
     )
   },

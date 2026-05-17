@@ -123,3 +123,14 @@
   background: rgb(var(--v-theme-surface));
   color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
 }
+
+/* PWA banners */
+.pwa-offline-banner,
+.pwa-install-banner {
+  z-index: 1;
+}
+
+.pwa-offline-banner .v-banner__content,
+.pwa-install-banner .v-banner__content {
+  padding-block: 6px;
+}

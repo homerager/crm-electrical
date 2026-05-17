@@ -26,6 +26,9 @@ export default defineComponent({
     const route = useRoute()
     const reportId = route.params.id as string
 
+    const { isOnline } = useNetworkStatus()
+    const { enqueue } = useOfflineQueue()
+
     const { data, refresh, pending } = useFetch(`/api/photo-reports/${reportId}`)
     const report = computed(() => (data.value as any)?.report ?? null)
 
@@ -55,7 +58,8 @@ export default defineComponent({
       const photos = report.value?.photos ?? []
       const grouped: Record<string, any[]> = { BEFORE: [], IN_PROGRESS: [], AFTER: [] }
       for (const p of photos) {
-        if (grouped[p.stage]) grouped[p.stage].push(p)
+        const arr = grouped[p.stage]
+        if (arr) arr.push(p)
         else grouped[p.stage] = [p]
       }
       return grouped
@@ -92,22 +96,52 @@ export default defineComponent({
       }
     }
 
+    async function fileToBase64(file: File): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          resolve(result.split(',')[1] ?? '')
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+    }
+
     async function uploadPhotos() {
       if (!selectedFiles.value.length) return
       uploading.value = true
       try {
-        const fd = new FormData()
-        fd.append('stage', uploadStage.value)
-        if (uploadDescription.value) fd.append('description', uploadDescription.value)
-        for (const file of selectedFiles.value) {
-          fd.append('files', file)
+        if (isOnline.value) {
+          const fd = new FormData()
+          fd.append('stage', uploadStage.value)
+          if (uploadDescription.value) fd.append('description', uploadDescription.value)
+          for (const file of selectedFiles.value) {
+            fd.append('files', file)
+          }
+          await $fetch(`/api/photo-reports/${reportId}/photos`, {
+            method: 'POST',
+            body: fd,
+          })
+        } else {
+          for (const file of selectedFiles.value) {
+            const base64 = await fileToBase64(file)
+            await enqueue({
+              url: `/api/photo-reports/${reportId}/photos`,
+              method: 'POST',
+              body: {
+                stage: uploadStage.value,
+                description: uploadDescription.value || undefined,
+              },
+              files: {
+                files: { name: file.name, type: file.type, data: base64 },
+              },
+              description: `Фото "${file.name}" → звіт ${report.value?.title ?? reportId}`,
+            })
+          }
         }
-        await $fetch(`/api/photo-reports/${reportId}/photos`, {
-          method: 'POST',
-          body: fd,
-        })
         uploadDialog.value = false
-        await refresh()
+        if (isOnline.value) await refresh()
       } catch (e: any) {
         console.error('Upload error:', e)
       } finally {
@@ -222,6 +256,12 @@ export default defineComponent({
               </v-btn>
             </div>
           </div>
+
+          {!isOnline.value && (
+            <v-alert type="warning" variant="tonal" class="mb-4" icon="mdi-wifi-off">
+              Ви офлайн — фото буде збережено локально та відправлено після відновлення з'єднання
+            </v-alert>
+          )}
 
           {r.description && (
             <v-alert type="info" variant="tonal" class="mb-4" icon="mdi-text-box-outline">
