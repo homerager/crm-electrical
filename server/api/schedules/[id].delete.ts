@@ -10,11 +10,11 @@ export default defineEventHandler(async (event) => {
   const existing = await prisma.schedule.findUnique({ where: { id } })
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Запис розкладу не знайдено' })
 
-  await prisma.schedule.delete({ where: { id } })
-
   if (existing.timeLogId) {
     await prisma.timeLog.delete({ where: { id: existing.timeLogId } }).catch(() => {})
   }
+
+  await prisma.schedule.delete({ where: { id } })
 
   writeAuditLog({
     userId: auth.userId,
@@ -22,7 +22,12 @@ export default defineEventHandler(async (event) => {
     action: 'DELETE',
     entityType: 'Schedule',
     entityId: id,
-    changes: { userId: existing.userId, date: existing.date.toISOString(), type: existing.type },
+    changes: {
+      userId: existing.userId,
+      date: existing.date.toISOString(),
+      type: existing.type,
+      shift: existing.shift,
+    },
   })
 
   return { success: true }

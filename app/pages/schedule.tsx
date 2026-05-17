@@ -584,6 +584,22 @@ export default defineComponent({
               </v-row>
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
+              {editMode.value && (
+                <v-btn
+                  color="error"
+                  variant="tonal"
+                  prepend-icon="mdi-delete"
+                  onClick={() => {
+                    const entry = schedules.value.find((s: any) => s.id === editId.value)
+                    if (entry) {
+                      dialog.value = false
+                      openDelete(entry)
+                    }
+                  }}
+                >
+                  Видалити
+                </v-btn>
+              )}
               <v-spacer />
               <v-btn variant="outlined" onClick={() => (dialog.value = false)}>Скасувати</v-btn>
               <v-btn
