@@ -40,7 +40,8 @@ export default defineEventHandler(async (event) => {
 
   setCookie(event, 'token', token, {
     httpOnly: true,
-    sameSite: 'strict',
+    secure: !import.meta.dev,
+    sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   })
