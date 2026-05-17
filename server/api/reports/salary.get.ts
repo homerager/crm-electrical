@@ -22,8 +22,7 @@ export default defineEventHandler(async (event) => {
     ...dateFilter,
     OR: [
       { task: { status: 'DONE' } },
-      { taskId: null, objectId: { not: null } },
-      { schedule: { isNot: null } },
+      { taskId: null },
     ],
   }
   if (userId) where.userId = userId

@@ -178,7 +178,6 @@ export default defineComponent({
     const canSubmit = computed(
       () =>
         !!form.userId
-        && !!form.objectId
         && form.hours !== ''
         && Number(form.hours) > 0,
     )
@@ -386,10 +385,11 @@ export default defineComponent({
 
               <v-select
                 v-model={form.objectId}
-                label="Обʼєкт *"
+                label="Обʼєкт"
                 items={objects.value.map((o: any) => ({ value: o.id, title: o.name }))}
                 item-title="title"
                 item-value="value"
+                clearable
                 class="mb-3"
                 hide-details="auto"
               />

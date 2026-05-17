@@ -23,24 +23,12 @@ export async function resolveManualTimeLogTaskAndObject(params: {
     if (task.objectId) {
       resolvedObjectId = task.objectId
     }
-    else if (!resolvedObjectId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'У завдання немає обʼєкта — оберіть обʼєкт вручну',
-      })
-    }
-    else {
+    else if (resolvedObjectId) {
       const obj = await prisma.constructionObject.findUnique({ where: { id: resolvedObjectId } })
       if (!obj) throw createError({ statusCode: 404, statusMessage: 'Обʼєкт не знайдено' })
     }
   }
-  else {
-    if (!resolvedObjectId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Оберіть обʼєкт або завдання',
-      })
-    }
+  else if (resolvedObjectId) {
     const obj = await prisma.constructionObject.findUnique({ where: { id: resolvedObjectId } })
     if (!obj) throw createError({ statusCode: 404, statusMessage: 'Обʼєкт не знайдено' })
   }
