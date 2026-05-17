@@ -107,6 +107,8 @@ model User {
   payments        Payment[]
   paymentSchedules PaymentSchedule[]
   photoReports    PhotoReport[]
+  schedules           Schedule[] @relation("ScheduleUser")
+  schedulesCreated    Schedule[] @relation("ScheduleCreatedBy")
 
   @@map("users")
 }
@@ -157,6 +159,7 @@ model ConstructionObject {
   payments                  Payment[]
   paymentSchedules          PaymentSchedule[]
   photoReports              PhotoReport[]
+  schedules                 Schedule[]
 
   @@map("construction_objects")
 }
@@ -454,6 +457,7 @@ model TimeLog {
   object    ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
   user      User                @relation("TimeLogWork", fields: [userId], references: [id])
   createdBy User?               @relation("TimeLogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  schedule  Schedule?
 
   @@map("time_logs")
 }
@@ -726,6 +730,19 @@ model PaymentSchedule {
   @@map("payment_schedules")
 }
 
+enum ScheduleType {
+  WORK
+  DAY_OFF
+  VACATION
+  SICK_LEAVE
+}
+
+enum ScheduleShift {
+  FULL_DAY
+  MORNING
+  AFTERNOON
+}
+
 enum PhotoStage {
   BEFORE
   IN_PROGRESS
@@ -772,6 +789,33 @@ model PhotoReportPhoto {
 
   @@index([reportId, stage])
   @@map("photo_report_photos")
+}
+
+model Schedule {
+  id          String        @id @default(cuid())
+  userId      String
+  objectId    String?
+  date        DateTime      @db.Date
+  type        ScheduleType  @default(WORK)
+  shift       ScheduleShift @default(FULL_DAY)
+  /// Кількість годин (якщо null — за замовчуванням: FULL_DAY=8, MORNING=4, AFTERNOON=4)
+  hours       Float?
+  /// Зв'язок з автоматично створеним TimeLog
+  timeLogId   String?       @unique
+  description String?
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user      User                @relation("ScheduleUser", fields: [userId], references: [id])
+  object    ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  createdBy User                @relation("ScheduleCreatedBy", fields: [createdById], references: [id])
+  timeLog   TimeLog?            @relation(fields: [timeLogId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, date, shift])
+  @@index([objectId])
+  @@index([date])
+  @@map("schedules")
 }
 
 model AuditLog {

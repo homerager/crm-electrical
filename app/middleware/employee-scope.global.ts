@@ -12,7 +12,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const ok =
     to.path === '/' ||
     to.path.startsWith('/tasks') ||
-    to.path.startsWith('/projects')
+    to.path.startsWith('/projects') ||
+    to.path.startsWith('/schedule')
 
   if (!ok) {
     return navigateTo('/tasks')

@@ -343,7 +343,7 @@ export default defineComponent({
 
                     {isEstimateOrAct.value && (
                       <v-row>
-                        <v-col cols={12} md={4}>
+                        <v-col cols={12} md={6}>
                           <v-text-field
                             v-model={form.vatPercent}
                             label="ПДВ для документа, %"

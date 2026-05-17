@@ -42,7 +42,7 @@ export default defineComponent({
     const { data, refresh, pending } = useFetch(() => `/api/tasks/${id.value}`)
     const task = computed(() => data.value as any)
 
-    const { data: tagsData, refresh: refreshTags } = useFetch('/api/task-tags')
+    const { data: tagsData, refresh: refreshTags } = useFetch('/api/task-tags', { skip: () => isEmployee.value })
     const allTags = computed(() => (tagsData.value as any)?.tags ?? [])
 
     const newTagDialog = ref(false)
@@ -513,15 +513,17 @@ export default defineComponent({
                 <v-card-text class="pa-4">
                   <div class="d-flex flex-column flex-sm-row align-stretch align-sm-start gap-2 mb-3">
                     <div class="text-h6 font-weight-bold" style="flex:1; min-width:0">{t.title}</div>
-                    <v-btn
-                      prepend-icon="mdi-pencil"
-                      variant="outlined"
-                      size="small"
-                      class="align-self-sm-start"
-                      onClick={openEdit}
-                    >
-                      Редагувати
-                    </v-btn>
+                    {!isEmployee.value && (
+                      <v-btn
+                        prepend-icon="mdi-pencil"
+                        variant="outlined"
+                        size="small"
+                        class="align-self-sm-start"
+                        onClick={openEdit}
+                      >
+                        Редагувати
+                      </v-btn>
+                    )}
                   </div>
 
                   <div class="d-flex gap-2 flex-wrap mb-3">
@@ -683,15 +685,18 @@ export default defineComponent({
                                 )}
                               </div>
                             ),
-                            append: () => (
-                              <v-btn
-                                icon="mdi-delete"
-                                size="x-small"
-                                variant="text"
-                                color="error"
-                                onClick={() => deleteSubTask(sub.id)}
-                              />
-                            ),
+                            append: () =>
+                              !isEmployee.value
+                                ? (
+                                    <v-btn
+                                      icon="mdi-delete"
+                                      size="x-small"
+                                      variant="text"
+                                      color="error"
+                                      onClick={() => deleteSubTask(sub.id)}
+                                    />
+                                  )
+                                : null,
                           }}
                         </v-list-item>
                       )
@@ -701,6 +706,7 @@ export default defineComponent({
               )}
 
               {/* Time logs */}
+              {!isEmployee.value && (
               <v-card class="mb-4">
                 <v-card-title class="pa-4 pb-0 d-flex align-center">
                   <v-icon class="mr-2" color="primary">mdi-clock-outline</v-icon>
@@ -781,6 +787,7 @@ export default defineComponent({
                   ))}
                 </v-list>
               </v-card>
+              )}
 
               {/* Attachments */}
               <v-card class="mb-4">
@@ -1212,39 +1219,43 @@ export default defineComponent({
                     </div>
                   ))}
                 </div>
-                <v-divider />
-                <div class="pa-3">
-                  <div class="text-caption text-medium-emphasis mb-2">ТЕГИ</div>
-                  <v-select
-                    modelValue={(t.tags ?? []).map((tag: any) => tag.id)}
-                    onUpdate:modelValue={(val: string[]) => updateTaskTags(val)}
-                    items={allTags.value.map((tag: any) => ({ value: tag.id, title: tag.name }))}
-                    multiple
-                    chips
-                    closable-chips
-                    density="compact"
-                    variant="outlined"
-                    placeholder="Обрати теги"
-                    hide-details
-                  >
-                    {{
-                      'append-item': () => (
-                        <div class="pa-2">
-                          <v-btn
-                            variant="text"
-                            size="small"
-                            prepend-icon="mdi-plus"
-                            color="primary"
-                            block
-                            onClick={() => (newTagDialog.value = true)}
-                          >
-                            Створити тег
-                          </v-btn>
-                        </div>
-                      ),
-                    }}
-                  </v-select>
-                </div>
+                {!isEmployee.value && (
+                  <>
+                    <v-divider />
+                    <div class="pa-3">
+                      <div class="text-caption text-medium-emphasis mb-2">ТЕГИ</div>
+                      <v-select
+                        modelValue={(t.tags ?? []).map((tag: any) => tag.id)}
+                        onUpdate:modelValue={(val: string[]) => updateTaskTags(val)}
+                        items={allTags.value.map((tag: any) => ({ value: tag.id, title: tag.name }))}
+                        multiple
+                        chips
+                        closable-chips
+                        density="compact"
+                        variant="outlined"
+                        placeholder="Обрати теги"
+                        hide-details
+                      >
+                        {{
+                          'append-item': () => (
+                            <div class="pa-2">
+                              <v-btn
+                                variant="text"
+                                size="small"
+                                prepend-icon="mdi-plus"
+                                color="primary"
+                                block
+                                onClick={() => (newTagDialog.value = true)}
+                              >
+                                Створити тег
+                              </v-btn>
+                            </div>
+                          ),
+                        }}
+                      </v-select>
+                    </div>
+                  </>
+                )}
               </v-card>
             </div>
           </div>

@@ -450,6 +450,7 @@ function getPageTitle(path: string): string {
     '/payments': 'Оплати',
     '/reports': 'Репорти',
     '/photo-reports': 'Фото-звіти',
+    '/schedule': 'Розклад',
     '/tasks/calendar': 'Календар завдань',
     '/tasks': 'Завдання',
     '/time-logs/manual': 'Облік часу',

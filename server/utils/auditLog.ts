@@ -19,6 +19,7 @@ export type AuditEntityType =
   | 'Payment'
   | 'PaymentSchedule'
   | 'PhotoReport'
+  | 'Schedule'
 
 interface AuditLogInput {
   userId?: string | null

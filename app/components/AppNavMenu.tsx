@@ -24,6 +24,7 @@ export default defineComponent({
               { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
               { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
               { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
+              { title: 'Мій розклад', icon: 'mdi-calendar-account-outline', to: '/schedule' },
             ],
           },
         ]
@@ -40,6 +41,7 @@ export default defineComponent({
         ],
       }
       if (isPrivileged.value) {
+        projects.children.push({ title: 'Розклад', icon: 'mdi-calendar-account-outline', to: '/schedule' })
         projects.children.push({ title: 'Облік часу', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
         projects.children.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
       }
