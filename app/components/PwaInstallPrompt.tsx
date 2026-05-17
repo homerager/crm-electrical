@@ -7,20 +7,15 @@ export function usePwaInstall() {
   const canInstall = ref(false)
   const isInstalled = ref(false)
   const isIos = ref(false)
-  const isIosPromptDismissed = ref(false)
+  const showIosGuide = ref(false)
   const deferredPrompt = ref<BeforeInstallPromptEvent | null>(null)
 
   if (import.meta.client) {
-    isIos.value = /iphone|ipad|ipod/i.test(navigator.userAgent)
-      && !('standalone' in navigator && (navigator as any).standalone)
+    const ua = navigator.userAgent
+    isIos.value = /iphone|ipad|ipod/i.test(ua)
 
     isInstalled.value = window.matchMedia('(display-mode: standalone)').matches
       || (navigator as any).standalone === true
-
-    const dismissedUntil = localStorage.getItem('pwa-ios-dismissed')
-    if (dismissedUntil && Date.now() < Number(dismissedUntil)) {
-      isIosPromptDismissed.value = true
-    }
 
     onMounted(() => {
       window.addEventListener('beforeinstallprompt', (e) => {
@@ -38,6 +33,10 @@ export function usePwaInstall() {
   }
 
   async function install() {
+    if (isIos.value) {
+      showIosGuide.value = true
+      return
+    }
     if (!deferredPrompt.value) return
     await deferredPrompt.value.prompt()
     const { outcome } = await deferredPrompt.value.userChoice
@@ -48,28 +47,48 @@ export function usePwaInstall() {
     deferredPrompt.value = null
   }
 
-  function dismissIos() {
-    isIosPromptDismissed.value = true
-    localStorage.setItem('pwa-ios-dismissed', String(Date.now() + 7 * 24 * 60 * 60 * 1000))
-  }
-
-  const showIosBanner = computed(
-    () => isIos.value && !isInstalled.value && !isIosPromptDismissed.value,
+  const showInstallOption = computed(
+    () => !isInstalled.value && (canInstall.value || isIos.value),
   )
 
-  return { canInstall, isInstalled, isIos, showIosBanner, install, dismissIos }
+  return {
+    canInstall,
+    isInstalled,
+    isIos,
+    showInstallOption,
+    showIosGuide,
+    install,
+  }
 }
 
 export default defineComponent({
   name: 'PwaInstallPrompt',
   setup() {
-    const { canInstall, showIosBanner, install, dismissIos } = usePwaInstall()
+    const { canInstall, isIos, isInstalled, showIosGuide, install } = usePwaInstall()
+
+    const dismissed = ref(false)
+
+    if (import.meta.client) {
+      const dismissedUntil = localStorage.getItem('pwa-install-dismissed')
+      if (dismissedUntil && Date.now() < Number(dismissedUntil)) {
+        dismissed.value = true
+      }
+    }
+
+    function dismiss() {
+      dismissed.value = true
+      localStorage.setItem('pwa-install-dismissed', String(Date.now() + 7 * 24 * 60 * 60 * 1000))
+    }
+
+    const showBanner = computed(
+      () => !isInstalled.value && !dismissed.value && (canInstall.value || isIos.value),
+    )
 
     return () => (
       <>
-        {canInstall.value && (
+        {showBanner.value && (
           <v-banner
-            icon="mdi-cellphone-arrow-down"
+            icon={isIos.value ? 'mdi-apple' : 'mdi-cellphone-arrow-down'}
             color="primary"
             lines="one"
             stacked={false}
@@ -82,50 +101,99 @@ export default defineComponent({
                 </span>
               ),
               actions: () => (
-                <v-btn
-                  variant="flat"
-                  size="small"
-                  color="primary"
-                  prepend-icon="mdi-download"
-                  class="text-none"
-                  onClick={install}
-                >
-                  Встановити
-                </v-btn>
+                <>
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    class="text-none"
+                    onClick={dismiss}
+                  >
+                    Пізніше
+                  </v-btn>
+                  <v-btn
+                    variant="flat"
+                    size="small"
+                    color="primary"
+                    prepend-icon="mdi-download"
+                    class="text-none"
+                    onClick={install}
+                  >
+                    Встановити
+                  </v-btn>
+                </>
               ),
             }}
           </v-banner>
         )}
 
-        {showIosBanner.value && (
-          <v-banner
-            icon="mdi-apple"
-            color="primary"
-            lines="two"
-            stacked={false}
-            class="pwa-install-banner"
-          >
-            {{
-              default: () => (
-                <span class="text-body-2">
-                  Для встановлення CRM натисніть
-                  <v-icon size="small" class="mx-1">mdi-export-variant</v-icon>
-                  (Поділитись) → <strong>«На початковий екран»</strong>
-                </span>
-              ),
-              actions: () => (
-                <v-btn
-                  variant="text"
-                  size="small"
-                  class="text-none"
-                  onClick={dismissIos}
-                >
-                  Зрозуміло
-                </v-btn>
-              ),
-            }}
-          </v-banner>
-        )}
+        {/* iOS instruction dialog */}
+        <v-dialog
+          modelValue={showIosGuide.value}
+          onUpdate:modelValue={(v: boolean) => { showIosGuide.value = v }}
+          max-width={400}
+        >
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" color="primary">mdi-apple</v-icon>
+              Встановлення на iPhone
+            </v-card-title>
+            <v-card-text>
+              <div class="text-body-1 mb-4">
+                На iOS додаток встановлюється через <strong>Safari</strong>:
+              </div>
+              <v-list density="compact" class="bg-transparent">
+                <v-list-item prepend-icon="mdi-numeric-1-circle-outline">
+                  {{
+                    default: () => (
+                      <span>
+                        Відкрийте CRM в <strong>Safari</strong>
+                        {' '}(не Chrome)
+                      </span>
+                    ),
+                  }}
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-numeric-2-circle-outline">
+                  {{
+                    default: () => (
+                      <span>
+                        Натисніть
+                        <v-icon size="small" class="mx-1">mdi-export-variant</v-icon>
+                        <strong>Поділитись</strong> внизу екрану
+                      </span>
+                    ),
+                  }}
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-numeric-3-circle-outline">
+                  {{
+                    default: () => (
+                      <span>
+                        Оберіть <strong>«На Початковий екран»</strong>
+                      </span>
+                    ),
+                  }}
+                </v-list-item>
+                <v-list-item prepend-icon="mdi-numeric-4-circle-outline">
+                  {{
+                    default: () => (
+                      <span>Натисніть <strong>«Додати»</strong></span>
+                    ),
+                  }}
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              <v-btn
+                color="primary"
+                variant="flat"
+                class="text-none"
+                onClick={() => { showIosGuide.value = false }}
+              >
+                Зрозуміло
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </>
     )
   },

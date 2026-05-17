@@ -12,7 +12,7 @@ export default defineComponent({
     const route = useRoute()
     const slots = useSlots()
     const display = useDisplay()
-    const { canInstall, isInstalled, install: installPwa } = usePwaInstall()
+    const { showInstallOption, isInstalled, install: installPwa } = usePwaInstall()
     const {
       items: notifications,
       unreadCount,
@@ -381,7 +381,7 @@ export default defineComponent({
                               rounded="lg"
                               base-color="primary"
                             />
-                            {canInstall.value && (
+                            {showInstallOption.value && (
                               <v-list-item
                                 prepend-icon="mdi-cellphone-arrow-down"
                                 title="Встановити додаток"
