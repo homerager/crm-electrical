@@ -1,5 +1,30 @@
 :root {
   --v-list-prepend-gap: 15px;
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* PWA standalone — safe area for iPhone notch / Dynamic Island */
+@media all and (display-mode: standalone) {
+  .v-app-bar {
+    padding-top: var(--sat) !important;
+    height: calc(64px + var(--sat)) !important;
+  }
+
+  .v-navigation-drawer {
+    padding-top: var(--sat) !important;
+  }
+
+  .v-main {
+    --v-layout-top: calc(64px + var(--sat)) !important;
+  }
+
+  .v-bottom-navigation,
+  .v-snackbar {
+    padding-bottom: var(--sab) !important;
+  }
 }
 
 @media print {
@@ -133,4 +158,17 @@
 .pwa-offline-banner .v-banner__content,
 .pwa-install-banner .v-banner__content {
   padding-block: 6px;
+}
+
+/* PWA standalone — bottom safe area for action sheets / home indicator */
+@media all and (display-mode: standalone) {
+  .v-dialog > .v-overlay__content {
+    padding-bottom: max(8px, var(--sab));
+  }
+
+  .v-main > .v-container {
+    padding-left: max(16px, var(--sal));
+    padding-right: max(16px, var(--sar));
+    padding-bottom: max(16px, var(--sab));
+  }
 }
