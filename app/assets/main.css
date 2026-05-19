@@ -171,3 +171,23 @@
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   padding-bottom: -webkit-env(safe-area-inset-bottom, 0px) !important;
 }
+
+/* Equipment scanner */
+.equipment-scanner {
+  position: relative;
+  width: 100%;
+}
+
+.scanner-viewport {
+  width: 100%;
+  min-height: 300px;
+}
+
+.scanner-viewport video {
+  width: 100% !important;
+  border-radius: 8px;
+}
+
+#qr-shaded-region {
+  border-color: rgba(var(--v-theme-primary), 0.5) !important;
+}

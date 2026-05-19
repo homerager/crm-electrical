@@ -99,6 +99,16 @@ export default defineComponent({
             { title: 'Товари', icon: 'mdi-package-variant-closed', to: '/products' },
             { title: 'Групи товарів', icon: 'mdi-tag-multiple', to: '/product-groups' },
             { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
+            {
+              title: 'Обладнання',
+              icon: 'mdi-toolbox-outline',
+              value: 'equipment',
+              children: [
+                { title: 'Список', icon: 'mdi-format-list-bulleted', to: '/equipment' },
+                { title: 'Сканер', icon: 'mdi-qrcode-scan', to: '/equipment/scan' },
+                { title: 'Інвентаризація', icon: 'mdi-clipboard-check-outline', to: '/equipment/inventory' },
+              ],
+            },
           ],
         },
         {
@@ -171,7 +181,7 @@ export default defineComponent({
         title={leaf.title}
         to={leaf.to}
         active={activeLeaf.value === leaf.to}
-        active-color="primary"
+        color="primary"
         rounded="lg"
       />
     )
@@ -191,7 +201,7 @@ export default defineComponent({
               prepend-icon={icon}
               title={title}
               active={active}
-              active-color="primary"
+              color="primary"
               rounded="lg"
             />
           ),
