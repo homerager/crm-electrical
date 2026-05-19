@@ -95,6 +95,13 @@ export default defineComponent({
       })),
     })
 
+    // Real-time task updates via SSE
+    useTasksRealtime({
+      onCreated: () => refresh(),
+      onUpdated: () => refresh(),
+      onDeleted: () => refresh(),
+    })
+
     const tasks = computed(() => (tasksData.value as any)?.tasks ?? [])
     const users = computed(() => {
       const v = usersData.value as any

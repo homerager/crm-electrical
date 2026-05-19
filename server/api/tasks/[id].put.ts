@@ -126,5 +126,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Broadcast task update to all connected clients for real-time Kanban
+  broadcastSSE('task-updated', {
+    id: updated.id,
+    title: updated.title,
+    status: updated.status,
+    priority: updated.priority,
+    assignee: updated.assignee,
+    object: updated.object,
+    tags: updated.tags,
+    dueDate: updated.dueDate,
+  })
+
   return updated
 })

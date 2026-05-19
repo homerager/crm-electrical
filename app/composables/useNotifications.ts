@@ -17,14 +17,19 @@ interface NotificationsResponse {
 }
 
 const POLL_INTERVAL = 30_000
+const SSE_RECONNECT_DELAY = 3_000
+
+// Module-level state shared across all composable consumers
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let eventSource: EventSource | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let sseActive = false
 
 export function useNotifications() {
   const items = useState<AppNotification[]>('notifications-items', () => [])
   const unreadCount = useState<number>('notifications-unread', () => 0)
   const loading = useState<boolean>('notifications-loading', () => false)
   const total = useState<number>('notifications-total', () => 0)
-
-  let pollTimer: ReturnType<typeof setInterval> | null = null
 
   async function fetchNotifications(page = 1) {
     loading.value = true
@@ -82,7 +87,7 @@ export function useNotifications() {
       await $fetch(`/api/notifications/${id}`, { method: 'DELETE' })
       const idx = items.value.findIndex((n) => n.id === id)
       if (idx !== -1) {
-        const removed = items.value[idx]
+        const removed = items.value[idx]!
         items.value.splice(idx, 1)
         total.value = Math.max(0, total.value - 1)
         if (!removed.isRead) {
@@ -92,6 +97,83 @@ export function useNotifications() {
     } catch {
       // silently fail
     }
+  }
+
+  function connectSSE() {
+    if (import.meta.server) return
+    if (eventSource) return
+
+    try {
+      eventSource = new EventSource('/api/notifications/stream')
+
+      eventSource.addEventListener('notification', (e) => {
+        try {
+          const notification: AppNotification = JSON.parse(e.data)
+          items.value.unshift(notification)
+          total.value += 1
+          if (!notification.isRead) {
+            unreadCount.value += 1
+          }
+        } catch {
+          // ignore parse errors
+        }
+      })
+
+      eventSource.addEventListener('unread-count', (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          unreadCount.value = data.count
+        } catch {
+          // ignore
+        }
+      })
+
+      // Task real-time events
+      eventSource.addEventListener('task-created', (e) => {
+        try { dispatchTaskSSE('task-created', JSON.parse(e.data)) } catch {}
+      })
+      eventSource.addEventListener('task-updated', (e) => {
+        try { dispatchTaskSSE('task-updated', JSON.parse(e.data)) } catch {}
+      })
+      eventSource.addEventListener('task-deleted', (e) => {
+        try { dispatchTaskSSE('task-deleted', JSON.parse(e.data)) } catch {}
+      })
+
+      eventSource.addEventListener('connected', () => {
+        sseActive = true
+        stopPolling()
+      })
+
+      eventSource.onerror = () => {
+        closeSSE()
+        sseActive = false
+        scheduleReconnect()
+      }
+    } catch {
+      sseActive = false
+      startPolling()
+    }
+  }
+
+  function closeSSE() {
+    if (eventSource) {
+      eventSource.close()
+      eventSource = null
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+  }
+
+  function scheduleReconnect() {
+    if (reconnectTimer) return
+    // Resume polling while SSE is disconnected
+    if (!pollTimer) startPolling()
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
+      connectSSE()
+    }, SSE_RECONNECT_DELAY)
   }
 
   function startPolling() {
@@ -107,6 +189,22 @@ export function useNotifications() {
     }
   }
 
+  function startRealtime() {
+    if (import.meta.server) return
+    if (sseActive && eventSource) return
+    connectSSE()
+    // Start polling as temporary fallback — will be stopped when SSE connects
+    if (!sseActive && !pollTimer) {
+      startPolling()
+    }
+  }
+
+  function stopRealtime() {
+    closeSSE()
+    stopPolling()
+    sseActive = false
+  }
+
   return {
     items,
     unreadCount,
@@ -119,5 +217,7 @@ export function useNotifications() {
     remove,
     startPolling,
     stopPolling,
+    startRealtime,
+    stopRealtime,
   }
 }

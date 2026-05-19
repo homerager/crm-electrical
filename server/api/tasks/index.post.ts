@@ -106,5 +106,19 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Broadcast new task to all connected clients for real-time Kanban
+  broadcastSSE('task-created', {
+    id: task.id,
+    title: task.title,
+    status: 'TODO',
+    priority: task.priority,
+    assignee: task.assignee,
+    object: task.object,
+    project: task.project,
+    tags: task.tags,
+    dueDate: task.dueDate,
+    createdBy: task.createdBy,
+  })
+
   return task
 })

@@ -17,5 +17,8 @@ export default defineEventHandler(async (event) => {
 
   writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'DELETE', entityType: 'Task', entityId: id, changes: { title: task.title } })
 
+  // Broadcast task deletion to all connected clients for real-time Kanban
+  broadcastSSE('task-deleted', { id })
+
   return { ok: true }
 })

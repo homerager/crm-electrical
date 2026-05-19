@@ -21,8 +21,8 @@ export default defineComponent({
       markAsRead,
       markAllAsRead,
       remove: removeNotification,
-      startPolling,
-      stopPolling,
+      startRealtime,
+      stopRealtime,
     } = useNotifications()
 
     const notifMenuOpen = ref(false)
@@ -38,7 +38,7 @@ export default defineComponent({
       (userId) => {
         if (!userId) return
         fetchNotifications()
-        startPolling()
+        startRealtime()
       },
       { immediate: true },
     )
@@ -52,7 +52,7 @@ export default defineComponent({
       previousUnreadCount.value = count
     })
 
-    onUnmounted(() => { stopPolling() })
+    onUnmounted(() => { stopRealtime() })
     /**
      * На SSR у Vuetify `display.width === 0` → `smAndDown` завжди true → рендериться temporary drawer + інший layout,
      * після гідрації на десктопі стан інший — «не клікається» до повного клієнтського оновлення (як після HMR).

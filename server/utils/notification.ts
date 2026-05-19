@@ -10,6 +10,7 @@ interface CreateNotificationInput {
 /**
  * Creates an in-app notification for a specific user.
  * Fire-and-forget: errors are logged, never thrown.
+ * Pushes real-time SSE event to connected clients.
  */
 export async function createNotification(
   input: CreateNotificationInput,
@@ -17,13 +18,24 @@ export async function createNotification(
 ) {
   const db = (tx ?? prisma) as PrismaClient
   try {
-    await db.notification.create({
+    const notification = await db.notification.create({
       data: {
         userId: input.userId,
         title: input.title,
         body: input.body ?? null,
         link: input.link ?? null,
       },
+    })
+
+    // Push real-time update via SSE
+    sendSSEToUser(input.userId, 'notification', {
+      id: notification.id,
+      userId: notification.userId,
+      title: notification.title,
+      body: notification.body,
+      link: notification.link,
+      isRead: notification.isRead,
+      createdAt: notification.createdAt.toISOString(),
     })
   } catch (e) {
     console.error('[Notification] Failed to create:', e)
@@ -32,6 +44,7 @@ export async function createNotification(
 
 /**
  * Creates the same notification for multiple users at once.
+ * Pushes real-time SSE events to connected clients.
  */
 export async function createNotificationForMany(
   userIds: string[],
@@ -49,6 +62,18 @@ export async function createNotificationForMany(
         link: data.link ?? null,
       })),
     })
+
+    // Push real-time update via SSE to each user
+    for (const userId of userIds) {
+      sendSSEToUser(userId, 'notification', {
+        userId,
+        title: data.title,
+        body: data.body ?? null,
+        link: data.link ?? null,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      })
+    }
   } catch (e) {
     console.error('[Notification] Failed to create bulk:', e)
   }
