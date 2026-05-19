@@ -1,2 +1,2 @@
--- AlterEnum
-ALTER TYPE "ScheduleType" ADD VALUE 'BIRTHDAY';
+-- AlterEnum (BIRTHDAY already exists in initial ScheduleType creation, skip)
+-- ALTER TYPE "ScheduleType" ADD VALUE 'BIRTHDAY';

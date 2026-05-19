@@ -109,6 +109,10 @@ model User {
   photoReports    PhotoReport[]
   schedules           Schedule[] @relation("ScheduleUser")
   schedulesCreated    Schedule[] @relation("ScheduleCreatedBy")
+  responsibleEquipment  Equipment[]          @relation("EquipmentResponsible")
+  equipmentMovements    EquipmentMovement[]
+  equipmentStatusLogs   EquipmentStatusLog[]
+  inventorySessions     InventorySession[]
 
   @@map("users")
 }
@@ -127,6 +131,10 @@ model Warehouse {
   invoices                   Invoice[]
   movementsFrom              Movement[]       @relation("MovementFrom")
   movementsTo                Movement[]       @relation("MovementTo")
+  equipment                  Equipment[]
+  equipmentMovementsFrom     EquipmentMovement[] @relation("EqMovementFromWarehouse")
+  equipmentMovementsTo       EquipmentMovement[] @relation("EqMovementToWarehouse")
+  inventorySessions          InventorySession[]
 
   @@map("warehouses")
 }
@@ -160,6 +168,10 @@ model ConstructionObject {
   paymentSchedules          PaymentSchedule[]
   photoReports              PhotoReport[]
   schedules                 Schedule[]
+  equipment                  Equipment[]
+  equipmentMovementsFrom     EquipmentMovement[] @relation("EqMovementFromObject")
+  equipmentMovementsTo       EquipmentMovement[] @relation("EqMovementToObject")
+  inventorySessions          InventorySession[]
 
   @@map("construction_objects")
 }
@@ -833,4 +845,125 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Equipment tracking (QR / barcode scanning)
+// ---------------------------------------------------------------------------
+
+enum EquipmentStatus {
+  IN_STOCK
+  INSTALLED
+  IN_REPAIR
+  DECOMMISSIONED
+  IN_TRANSIT
+}
+
+model Equipment {
+  id                 String          @id @default(cuid())
+  name               String
+  model              String?
+  serialNumber       String?
+  /// Заводський штрих-код (EAN-13, Code128 тощо)
+  barcode            String?         @unique
+  /// Згенерований URL для QR-коду (https://domain/equipment/{id})
+  qrCodeUrl          String?
+  status             EquipmentStatus @default(IN_STOCK)
+  currentWarehouseId String?
+  currentObjectId    String?
+  responsibleUserId  String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  currentWarehouse Warehouse?          @relation(fields: [currentWarehouseId], references: [id], onDelete: SetNull)
+  currentObject    ConstructionObject? @relation(fields: [currentObjectId], references: [id], onDelete: SetNull)
+  responsibleUser  User?               @relation("EquipmentResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
+  movements        EquipmentMovement[]
+  statusHistory    EquipmentStatusLog[]
+  inventoryItems   InventorySessionItem[]
+
+  @@index([status])
+  @@index([currentWarehouseId])
+  @@index([currentObjectId])
+  @@map("equipment")
+}
+
+model EquipmentMovement {
+  id              String   @id @default(cuid())
+  equipmentId     String
+  fromWarehouseId String?
+  fromObjectId    String?
+  toWarehouseId   String?
+  toObjectId      String?
+  reason          String?
+  photoUrl        String?
+  performedById   String
+  createdAt       DateTime @default(now())
+
+  equipment     Equipment           @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  fromWarehouse Warehouse?          @relation("EqMovementFromWarehouse", fields: [fromWarehouseId], references: [id], onDelete: SetNull)
+  fromObject    ConstructionObject? @relation("EqMovementFromObject", fields: [fromObjectId], references: [id], onDelete: SetNull)
+  toWarehouse   Warehouse?          @relation("EqMovementToWarehouse", fields: [toWarehouseId], references: [id], onDelete: SetNull)
+  toObject      ConstructionObject? @relation("EqMovementToObject", fields: [toObjectId], references: [id], onDelete: SetNull)
+  performedBy   User                @relation(fields: [performedById], references: [id])
+
+  @@index([equipmentId])
+  @@index([performedById])
+  @@map("equipment_movements")
+}
+
+model EquipmentStatusLog {
+  id          String          @id @default(cuid())
+  equipmentId String
+  oldStatus   EquipmentStatus
+  newStatus   EquipmentStatus
+  reason      String?
+  photoUrl    String?
+  changedById String
+  createdAt   DateTime        @default(now())
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  changedBy User      @relation(fields: [changedById], references: [id])
+
+  @@index([equipmentId])
+  @@map("equipment_status_logs")
+}
+
+enum InventorySessionStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model InventorySession {
+  id          String                 @id @default(cuid())
+  warehouseId String?
+  objectId    String?
+  status      InventorySessionStatus @default(IN_PROGRESS)
+  startedById String
+  startedAt   DateTime               @default(now())
+  completedAt DateTime?
+
+  warehouse Warehouse?          @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  object    ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  startedBy User                @relation(fields: [startedById], references: [id])
+  items     InventorySessionItem[]
+
+  @@index([warehouseId])
+  @@index([objectId])
+  @@index([status])
+  @@map("inventory_sessions")
+}
+
+model InventorySessionItem {
+  id          String    @id @default(cuid())
+  sessionId   String
+  equipmentId String
+  found       Boolean   @default(false)
+  scannedAt   DateTime?
+
+  session   InventorySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  equipment Equipment        @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, equipmentId])
+  @@map("inventory_session_items")
 }
