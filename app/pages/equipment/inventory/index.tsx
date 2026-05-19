@@ -45,6 +45,29 @@ export default defineComponent({
       return new Date(d).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     }
 
+    // Delete
+    const deleteDialog = ref(false)
+    const deleteTarget = ref<any>(null)
+    const deleteError = ref('')
+
+    function openDelete(item: any) {
+      deleteTarget.value = item
+      deleteError.value = ''
+      deleteDialog.value = true
+    }
+
+    async function confirmDelete() {
+      if (!deleteTarget.value) return
+      deleteError.value = ''
+      try {
+        await $fetch(`/api/inventory-sessions/${deleteTarget.value.id}`, { method: 'DELETE' })
+        deleteDialog.value = false
+        await refresh()
+      } catch (e: any) {
+        deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+      }
+    }
+
     const headers = [
       { title: 'Локація', key: 'location', sortable: false },
       { title: 'Статус', key: 'status', width: 140 },
@@ -52,7 +75,7 @@ export default defineComponent({
       { title: 'Початок', key: 'startedAt' },
       { title: 'Завершено', key: 'completedAt' },
       { title: 'Позицій', key: 'itemsCount', width: 100 },
-      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
+      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 140 },
     ]
 
     return () => (
@@ -109,17 +132,44 @@ export default defineComponent({
                 <span>{item._count?.items ?? 0}</span>
               ),
               'item.actions': ({ item }: any) => (
-                <v-btn
-                  icon={item.status === 'COMPLETED' ? 'mdi-file-chart-outline' : 'mdi-qrcode-scan'}
-                  variant="text"
-                  size="small"
-                  color="primary"
-                  to={`/equipment/inventory/${item.id}`}
-                />
+                <div class="d-flex gap-1 justify-end">
+                  <v-btn
+                    icon={item.status === 'COMPLETED' ? 'mdi-file-chart-outline' : 'mdi-qrcode-scan'}
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    to={`/equipment/inventory/${item.id}`}
+                  />
+                  {isPrivileged.value && (
+                    <v-btn icon="mdi-delete" variant="text" size="small" color="error" onClick={() => openDelete(item)} />
+                  )}
+                </div>
               ),
             }}
           </v-data-table>
         </v-card>
+
+        {/* Delete dialog */}
+        <v-dialog v-model={deleteDialog.value} max-width={420}>
+          <v-card>
+            <v-card-title>Видалити сесію?</v-card-title>
+            <v-card-text>
+              {deleteError.value
+                ? <v-alert type="error" variant="tonal">{deleteError.value}</v-alert>
+                : <span>Сесію інвентаризації для "<strong>{deleteTarget.value?.warehouse?.name || deleteTarget.value?.object?.name}</strong>" буде видалено разом з усіма результатами.</span>
+              }
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              <v-btn variant="outlined" onClick={() => { deleteDialog.value = false; deleteError.value = '' }}>
+                {deleteError.value ? 'Закрити' : 'Скасувати'}
+              </v-btn>
+              {!deleteError.value && (
+                <v-btn color="error" variant="elevated" onClick={confirmDelete}>Видалити</v-btn>
+              )}
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
         {/* Create session dialog */}
         <v-dialog v-model={createDialog.value} max-width={450}>
