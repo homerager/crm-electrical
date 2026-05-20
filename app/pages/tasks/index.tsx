@@ -1,3 +1,5 @@
+import { VueDraggable } from 'vue-draggable-plus'
+
 const STATUSES = [
   { value: 'TODO', label: 'До виконання', color: 'blue-grey', icon: 'mdi-circle-outline' },
   { value: 'IN_PROGRESS', label: 'В роботі', color: 'blue', icon: 'mdi-progress-clock' },
@@ -47,9 +49,8 @@ export default defineComponent({
     const error = ref('')
     const deleteTarget = ref<any>(null)
 
-    // Drag & drop state
-    const dragTaskId = ref<string | null>(null)
-    const dragOverStatus = ref<string | null>(null)
+    const isDragging = ref(false)
+    const kanbanColumns = ref<Record<string, any[]>>({})
 
     const form = reactive({
       title: '',
@@ -118,6 +119,13 @@ export default defineComponent({
       }
       return map
     })
+
+    watch(tasksByStatus, (val) => {
+      if (isDragging.value) return
+      const map: Record<string, any[]> = {}
+      for (const key of Object.keys(val)) map[key] = [...(val[key] ?? [])]
+      kanbanColumns.value = map
+    }, { immediate: true })
 
     function openCreate() {
       Object.assign(form, {
@@ -195,43 +203,15 @@ export default defineComponent({
       return new Date(task.dueDate) < new Date()
     }
 
-    // Drag & drop handlers
-    function onDragStart(e: DragEvent, task: any) {
-      dragTaskId.value = task.id
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move'
-        e.dataTransfer.setData('text/plain', task.id)
-      }
-    }
-
-    function onDragEnd() {
-      dragTaskId.value = null
-      dragOverStatus.value = null
-    }
-
-    function onDragOver(e: DragEvent, status: string) {
-      e.preventDefault()
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
-      dragOverStatus.value = status
-    }
-
-    function onDragLeave(e: DragEvent, colEl: HTMLElement) {
-      // only clear highlight when leaving the column entirely (not just child elements)
-      if (!colEl.contains(e.relatedTarget as Node)) {
-        dragOverStatus.value = null
-      }
-    }
-
-    async function onDrop(e: DragEvent, newStatus: string) {
-      e.preventDefault()
-      const id = dragTaskId.value ?? e.dataTransfer?.getData('text/plain')
-      dragTaskId.value = null
-      dragOverStatus.value = null
-      if (!id) return
-      const task = tasks.value.find((t: any) => t.id === id)
-      if (task && task.status !== newStatus) {
-        await changeStatus(task, newStatus)
-      }
+    async function onKanbanEnd(evt: any) {
+      isDragging.value = false
+      const toStatus = (evt.to as HTMLElement)?.dataset?.status
+      const fromStatus = (evt.from as HTMLElement)?.dataset?.status
+      if (!toStatus || !fromStatus || toStatus === fromStatus) return
+      const taskId = (evt.item as HTMLElement)?.dataset?.id
+      if (!taskId) return
+      const task = tasks.value.find((t: any) => t.id === taskId)
+      if (task) await changeStatus(task, toStatus)
     }
 
     const headers = [
@@ -344,172 +324,146 @@ export default defineComponent({
         {/* Kanban view */}
         {viewMode.value === 'kanban' && (
           <div class="d-flex overflow-x-auto pb-2" style="gap: 16px; align-items: flex-start">
-            {STATUSES.map((col) => {
-              const isOver = dragOverStatus.value === col.value
-              return (
-                <div
-                  key={col.value}
-                  style="min-width:272px; width:272px; flex-shrink:0"
-                  onDragover={(e: DragEvent) => onDragOver(e, col.value)}
-                  onDragleave={(e: DragEvent) => {
-                    const el = (e.currentTarget as HTMLElement)
-                    onDragLeave(e, el)
-                  }}
-                  onDrop={(e: DragEvent) => onDrop(e, col.value)}
-                >
-                  <v-card
-                    variant="outlined"
-                    style={{
-                      transition: 'box-shadow 0.15s, border-color 0.15s',
-                      ...(isOver ? { boxShadow: '0 0 0 2px currentColor', opacity: 1 } : {}),
-                    }}
-                    class={isOver ? `border-${col.color}` : ''}
-                  >
-                    <div class="pa-3 d-flex align-center gap-2">
-                      <v-icon color={col.color} size="18">{col.icon}</v-icon>
-                      <span class="text-subtitle-2 font-weight-bold">{col.label}</span>
-                      <v-chip size="x-small" class="ml-auto" color={col.color} variant="tonal">
-                        {tasksByStatus.value[col.value]?.length ?? 0}
-                      </v-chip>
-                    </div>
-                    <v-divider />
-
-                    <div
-                      class="pa-2 d-flex flex-column"
-                      style={{
-                        gap: '8px',
-                        minHeight: '120px',
-                        background: isOver ? 'rgba(var(--v-theme-primary), 0.04)' : undefined,
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      {pending.value
-                        ? <v-skeleton-loader type="card" />
-                        : tasksByStatus.value[col.value]?.map((task: any) => (
-                          <v-card
-                            key={task.id}
-                            variant="elevated"
-                            elevation={dragTaskId.value === task.id ? 8 : 1}
-                            class="pa-3"
-                            draggable={true}
-                            style={{
-                              cursor: 'grab',
-                              opacity: dragTaskId.value === task.id ? 0.45 : 1,
-                              transition: 'opacity 0.15s, box-shadow 0.15s',
-                            }}
-                            onDragstart={(e: DragEvent) => onDragStart(e, task)}
-                            onDragend={onDragEnd}
-                            onClick={() => navigateTo(`/tasks/${task.id}`)}
-                          >
-                            <div class="d-flex align-start gap-1 mb-2">
-                              <v-chip
-                                size="x-small"
-                                color={priorityMeta(task.priority).color}
-                                variant="tonal"
-                                prepend-icon={priorityMeta(task.priority).icon}
-                              >
-                                {priorityMeta(task.priority).label}
-                              </v-chip>
-                              <v-spacer />
-                              <v-menu>
-                                {{
-                                  activator: ({ props }: any) => (
-                                    <v-btn
-                                      {...props}
-                                      icon="mdi-dots-vertical"
-                                      size="x-small"
-                                      variant="text"
-                                      onClick={(e: Event) => e.stopPropagation()}
-                                    />
-                                  ),
-                                  default: () => (
-                                    <v-list density="compact">
-                                      {STATUSES.filter((s) => s.value !== task.status).map((s) => (
-                                        <v-list-item
-                                          key={s.value}
-                                          prepend-icon={s.icon}
-                                          title={`→ ${s.label}`}
-                                          onClick={(e: Event) => { e.stopPropagation(); changeStatus(task, s.value) }}
-                                        />
-                                      ))}
-                                      <v-divider />
-                                      <v-list-item
-                                        prepend-icon="mdi-delete"
-                                        title="Видалити"
-                                        base-color="error"
-                                        onClick={(e: Event) => { e.stopPropagation(); openDelete(task) }}
-                                      />
-                                    </v-list>
-                                  ),
-                                }}
-                              </v-menu>
-                            </div>
-                            <div class="text-body-2 font-weight-medium mb-2" style="line-height:1.3">
-                              {task.title}
-                            </div>
-                            {task.tags?.length > 0 && (
-                              <div class="d-flex flex-wrap gap-1 mb-2">
-                                {task.tags.map((tag: any) => (
-                                  <v-chip
-                                    key={tag.id}
-                                    size="x-small"
-                                    color={tag.color}
-                                    variant="tonal"
-                                    prepend-icon="mdi-tag"
-                                  >
-                                    {tag.name}
-                                  </v-chip>
-                                ))}
-                              </div>
-                            )}
-                            <div class="d-flex align-center gap-1 flex-wrap">
-                              {task.assignee && (
-                                <v-chip size="x-small" prepend-icon="mdi-account" variant="text">
-                                  {task.assignee.name}
-                                </v-chip>
-                              )}
-                              {task.dueDate && (
+            {STATUSES.map((col) => (
+              <div key={col.value} style="min-width:272px; width:272px; flex-shrink:0">
+                <v-card variant="outlined">
+                  <div class="pa-3 d-flex align-center gap-2">
+                    <v-icon color={col.color} size="18">{col.icon}</v-icon>
+                    <span class="text-subtitle-2 font-weight-bold">{col.label}</span>
+                    <v-chip size="x-small" class="ml-auto" color={col.color} variant="tonal">
+                      {kanbanColumns.value[col.value]?.length ?? 0}
+                    </v-chip>
+                  </div>
+                  <v-divider />
+                  {pending.value
+                    ? <div class="pa-2"><v-skeleton-loader type="card" /></div>
+                    : (
+                      <div class="pa-2" style="position: relative">
+                        <VueDraggable
+                          modelValue={kanbanColumns.value[col.value] || []}
+                          {...{ 'onUpdate:modelValue': (val: any[]) => { kanbanColumns.value[col.value] = val } }}
+                          group="kanban-board"
+                          animation={200}
+                          ghostClass="kanban-ghost"
+                          dragClass="kanban-drag"
+                          chosenClass="kanban-chosen"
+                          data-status={col.value}
+                          class="d-flex flex-column"
+                          style={{ gap: '8px', minHeight: '100px' }}
+                          onStart={() => { isDragging.value = true }}
+                          onEnd={onKanbanEnd}
+                        >
+                          {(kanbanColumns.value[col.value] || []).map((task: any) => (
+                            <v-card
+                              key={task.id}
+                              data-id={task.id}
+                              variant="elevated"
+                              elevation={1}
+                              class="pa-3 kanban-task-card"
+                              onClick={() => navigateTo(`/tasks/${task.id}`)}
+                            >
+                              <div class="d-flex align-start gap-1 mb-2">
                                 <v-chip
                                   size="x-small"
-                                  prepend-icon="mdi-calendar"
-                                  color={isOverdue(task) ? 'error' : 'default'}
-                                  variant="text"
+                                  color={priorityMeta(task.priority).color}
+                                  variant="tonal"
+                                  prepend-icon={priorityMeta(task.priority).icon}
                                 >
-                                  {formatDate(task.dueDate)}
+                                  {priorityMeta(task.priority).label}
                                 </v-chip>
+                                <v-spacer />
+                                <v-menu>
+                                  {{
+                                    activator: ({ props }: any) => (
+                                      <v-btn
+                                        {...props}
+                                        icon="mdi-dots-vertical"
+                                        size="x-small"
+                                        variant="text"
+                                        onClick={(e: Event) => e.stopPropagation()}
+                                      />
+                                    ),
+                                    default: () => (
+                                      <v-list density="compact">
+                                        {STATUSES.filter((s) => s.value !== task.status).map((s) => (
+                                          <v-list-item
+                                            key={s.value}
+                                            prepend-icon={s.icon}
+                                            title={`→ ${s.label}`}
+                                            onClick={(e: Event) => { e.stopPropagation(); changeStatus(task, s.value) }}
+                                          />
+                                        ))}
+                                        <v-divider />
+                                        <v-list-item
+                                          prepend-icon="mdi-delete"
+                                          title="Видалити"
+                                          base-color="error"
+                                          onClick={(e: Event) => { e.stopPropagation(); openDelete(task) }}
+                                        />
+                                      </v-list>
+                                    ),
+                                  }}
+                                </v-menu>
+                              </div>
+                              <div class="text-body-2 font-weight-medium mb-2" style="line-height:1.3">
+                                {task.title}
+                              </div>
+                              {task.tags?.length > 0 && (
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                  {task.tags.map((tag: any) => (
+                                    <v-chip
+                                      key={tag.id}
+                                      size="x-small"
+                                      color={tag.color}
+                                      variant="tonal"
+                                      prepend-icon="mdi-tag"
+                                    >
+                                      {tag.name}
+                                    </v-chip>
+                                  ))}
+                                </div>
                               )}
-                            {task.totalHours > 0 && (
-                              <v-chip size="x-small" prepend-icon="mdi-clock-outline" variant="text">
-                                {task.totalHours.toFixed(1)}г
-                              </v-chip>
-                            )}
-                            {task._count?.subTasks > 0 && (
-                              <v-chip size="x-small" prepend-icon="mdi-file-tree" variant="text">
-                                {task._count.subTasks}
-                              </v-chip>
-                            )}
-                            </div>
-                          </v-card>
-                        ))
-                      }
-                      {!pending.value && tasksByStatus.value[col.value]?.length === 0 && (
-                        <div
-                          class="text-center text-disabled text-caption d-flex align-center justify-center"
-                          style={{
-                            minHeight: '80px',
-                            border: isOver ? '2px dashed rgba(var(--v-theme-primary), 0.5)' : '2px dashed transparent',
-                            borderRadius: '8px',
-                            transition: 'border 0.15s',
-                          }}
-                        >
-                          {isOver ? 'Відпустіть тут' : 'Немає завдань'}
-                        </div>
-                      )}
-                    </div>
-                  </v-card>
-                </div>
-              )
-            })}
+                              <div class="d-flex align-center gap-1 flex-wrap">
+                                {task.assignee && (
+                                  <v-chip size="x-small" prepend-icon="mdi-account" variant="text">
+                                    {task.assignee.name}
+                                  </v-chip>
+                                )}
+                                {task.dueDate && (
+                                  <v-chip
+                                    size="x-small"
+                                    prepend-icon="mdi-calendar"
+                                    color={isOverdue(task) ? 'error' : 'default'}
+                                    variant="text"
+                                  >
+                                    {formatDate(task.dueDate)}
+                                  </v-chip>
+                                )}
+                                {task.totalHours > 0 && (
+                                  <v-chip size="x-small" prepend-icon="mdi-clock-outline" variant="text">
+                                    {task.totalHours.toFixed(1)}г
+                                  </v-chip>
+                                )}
+                                {task._count?.subTasks > 0 && (
+                                  <v-chip size="x-small" prepend-icon="mdi-file-tree" variant="text">
+                                    {task._count.subTasks}
+                                  </v-chip>
+                                )}
+                              </div>
+                            </v-card>
+                          ))}
+                        </VueDraggable>
+                        {(kanbanColumns.value[col.value]?.length ?? 0) === 0 && (
+                          <div class="kanban-empty-hint">
+                            Немає завдань
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+                </v-card>
+              </div>
+            ))}
           </div>
         )}
 

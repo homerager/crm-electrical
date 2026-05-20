@@ -93,6 +93,10 @@
   flex-shrink: 0;
 }
 
+.fc .fc-col-header-cell-cushion {
+  color: black;
+}
+
 @media (min-width: 1280px) {
   .task-detail-layout {
     flex-direction: row;
@@ -190,4 +194,48 @@
 
 #qr-shaded-region {
   border-color: rgba(var(--v-theme-primary), 0.5) !important;
+}
+
+/* Kanban drag-and-drop animations */
+.kanban-task-card {
+  cursor: grab;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.kanban-task-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.kanban-task-card:active {
+  cursor: grabbing;
+}
+
+.kanban-ghost {
+  opacity: 0.35;
+  border: 2px dashed rgb(var(--v-theme-primary)) !important;
+  border-radius: 8px;
+  background: rgba(var(--v-theme-primary), 0.06) !important;
+  box-shadow: none !important;
+}
+
+.kanban-drag {
+  opacity: 1 !important;
+  transform: rotate(1.5deg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
+  z-index: 100;
+}
+
+.kanban-chosen {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+.kanban-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0.45;
+  font-size: 0.75rem;
 }
