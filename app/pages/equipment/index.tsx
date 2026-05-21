@@ -30,6 +30,7 @@ export default defineComponent({
     useHead({ title: 'Обладнання' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const router = useRouter()
 
     const filterStatus = ref('')
@@ -98,6 +99,7 @@ export default defineComponent({
     async function save() {
       saving.value = true
       error.value = ''
+      const isEdit = !!editItem.value
       try {
         if (editItem.value) {
           await $fetch(`/api/equipment/${editItem.value.id}`, { method: 'PUT', body: form })
@@ -106,8 +108,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Обладнання оновлено' : 'Обладнання створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -130,8 +134,10 @@ export default defineComponent({
         await $fetch(`/api/equipment/${deleteTarget.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Обладнання видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       }
     }
 

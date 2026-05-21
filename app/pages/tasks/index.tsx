@@ -29,6 +29,7 @@ export default defineComponent({
     useHead({ title: 'Завдання' })
 
     const { isPrivileged, isEmployee } = useAuth()
+    const toast = useToast()
     const route = useRoute()
 
     const assigneesUrl = computed(() =>
@@ -91,7 +92,10 @@ export default defineComponent({
         newTagName.value = ''
         newTagColor.value = '#1976D2'
         await refreshTags()
-      } catch {}
+        toast.success('Тег створено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка створення тега')
+      }
       newTagSaving.value = false
     }
 
@@ -163,8 +167,10 @@ export default defineComponent({
         })
         dialog.value = false
         await refresh()
+        toast.success('Завдання створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -177,8 +183,10 @@ export default defineComponent({
       try {
         await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { status: newStatus } })
         await refresh()
-      } catch {
+        toast.success('Статус завдання оновлено')
+      } catch (e: any) {
         await refresh()
+        toast.error(e?.data?.statusMessage || 'Помилка зміни статусу')
       }
     }
 
@@ -195,8 +203,10 @@ export default defineComponent({
         deleteDialog.value = false
         deleteTarget.value = null
         await refresh()
+        toast.success('Завдання видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       } finally {
         deleting.value = false
       }

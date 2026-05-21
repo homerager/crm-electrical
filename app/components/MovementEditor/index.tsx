@@ -27,6 +27,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const router = useRouter()
     const route = useRoute()
+    const toast = useToast()
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: objectsData } = useFetch('/api/objects')
 
@@ -327,12 +328,14 @@ export default defineComponent({
           },
         })
         const movementId = (result as any).movement.id
+        toast.success('Переміщення створено')
         emit('success', movementId)
         if (props.layout === 'page') {
           await router.push(`/movements/${movementId}`)
         }
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }

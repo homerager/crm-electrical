@@ -15,6 +15,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
 
     const route = useRoute()
+    const toast = useToast()
     const isNew = computed(() => route.params.id === 'new')
 
     useHead({ title: computed(() => (isNew.value ? 'Нова КП' : 'Редагування КП')) })
@@ -235,12 +236,15 @@ export default defineComponent({
       try {
         if (isNew.value) {
           const res = await $fetch('/api/proposals', { method: 'POST', body: buildBody() }) as any
+          toast.success('Пропозицію створено')
           await navigateTo(`/proposals/${res.proposal.id}`)
         } else {
           await $fetch(`/api/proposals/${route.params.id}`, { method: 'PUT', body: buildBody() })
+          toast.success('Пропозицію збережено')
         }
       } catch (e: any) {
         saveError.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(saveError.value)
       } finally {
         saving.value = false
       }

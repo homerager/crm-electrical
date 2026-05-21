@@ -5,6 +5,7 @@ export default defineComponent({
 
     const route = useRoute()
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const id = route.params.id as string
     const { data, pending } = useFetch(`/api/invoices/${id}`)
     const invoice = computed(() => (data.value as any)?.invoice)
@@ -22,7 +23,10 @@ export default defineComponent({
       deleting.value = true
       try {
         await $fetch(`/api/invoices/${id}`, { method: 'DELETE' })
+        toast.success('Накладну видалено')
         await router.push('/invoices')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка видалення')
       } finally {
         deleting.value = false
       }

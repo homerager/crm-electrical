@@ -28,6 +28,7 @@ export default defineComponent({
     const projectId = computed(() => route.params.id as string)
 
     const { isEmployee } = useAuth()
+    const toast = useToast()
 
     const viewMode = ref<'kanban' | 'list' | 'gantt'>('kanban')
     const filterStatus = ref('')
@@ -123,8 +124,10 @@ export default defineComponent({
         })
         taskDialog.value = false
         await refreshTasks()
+        toast.success('Завдання створено')
       } catch (e: any) {
         taskError.value = e?.data?.message || e?.data?.statusMessage || 'Помилка'
+        toast.error(taskError.value)
       } finally {
         saving.value = false
       }
@@ -136,7 +139,11 @@ export default defineComponent({
       try {
         await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { status: newStatus } })
         await refreshTasks()
-      } catch { await refreshTasks() }
+        toast.success('Статус завдання оновлено')
+      } catch (e: any) {
+        await refreshTasks()
+        toast.error(e?.data?.statusMessage || 'Помилка зміни статусу')
+      }
     }
 
     function openDeleteTask(task: any) { deleteTarget.value = task; deleteTaskDialog.value = true }
@@ -149,6 +156,9 @@ export default defineComponent({
         deleteTaskDialog.value = false
         deleteTarget.value = null
         await refreshTasks()
+        toast.success('Завдання видалено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка видалення')
       } finally { deleting.value = false }
     }
 

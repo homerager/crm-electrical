@@ -33,6 +33,7 @@ export default defineComponent({
     useHead({ title: 'Оплати' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const route = useRoute()
 
     const filterDirection = ref('')
@@ -139,6 +140,7 @@ export default defineComponent({
           contractorId: form.contractorId || null,
           invoiceId: form.invoiceId || null,
         }
+        const isEdit = editMode.value
         if (editMode.value) {
           await $fetch(`/api/payments/${editId.value}`, { method: 'PUT', body: payload })
         } else {
@@ -146,8 +148,10 @@ export default defineComponent({
         }
         dialog.value = false
         await Promise.all([refresh(), refreshSummary()])
+        toast.success(isEdit ? 'Оплату оновлено' : 'Оплату створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -166,8 +170,10 @@ export default defineComponent({
         deleteDialog.value = false
         deleteTarget.value = null
         await Promise.all([refresh(), refreshSummary()])
+        toast.success('Оплату видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       } finally {
         deleting.value = false
       }

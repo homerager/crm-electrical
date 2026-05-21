@@ -16,6 +16,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const route = useRoute()
     const filterProjectId = ref((route.query.projectId as string) || '')
 
@@ -72,6 +73,7 @@ export default defineComponent({
     async function save() {
       saving.value = true
       error.value = ''
+      const isEdit = !!editItem.value
       try {
         if (editItem.value) {
           await $fetch(`/api/objects/${editItem.value.id}`, { method: 'PUT', body: form })
@@ -80,8 +82,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Обʼєкт оновлено' : 'Обʼєкт створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -93,8 +97,10 @@ export default defineComponent({
         await $fetch(`/api/objects/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Обʼєкт видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       }
     }
 

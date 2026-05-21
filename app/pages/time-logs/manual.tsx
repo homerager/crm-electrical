@@ -21,6 +21,8 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth', 'admin'] })
     useHead({ title: 'Журнал робіт' })
 
+    const toast = useToast()
+
     const listQuery = reactive({
       userId: '' as string,
       objectId: '' as string,
@@ -112,9 +114,11 @@ export default defineComponent({
         await $fetch(`/api/time-logs/${item.id}/duplicate`, { method: 'POST' })
         success.value = 'Запис продубльовано'
         await refreshLogs()
+        toast.success('Запис журналу продубльовано')
       }
       catch (e: any) {
         actionError.value = e?.data?.statusMessage || 'Не вдалося продублювати запис'
+        toast.error(actionError.value)
       }
       finally {
         duplicatingId.value = null
@@ -130,9 +134,11 @@ export default defineComponent({
         deleteRow.value = null
         await refreshLogs()
         success.value = 'Запис видалено'
+        toast.success('Запис журналу видалено')
       }
       catch {
         actionError.value = 'Не вдалося видалити запис'
+        toast.error(actionError.value)
       }
       finally {
         deleting.value = false

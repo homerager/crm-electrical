@@ -31,6 +31,7 @@ export default defineComponent({
     const id = computed(() => route.params.id as string)
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
 
     const { data, refresh, pending } = useFetch(computed(() => `/api/equipment/${id.value}`))
     const eq = computed(() => (data.value as any)?.equipment)
@@ -61,8 +62,10 @@ export default defineComponent({
         await $fetch(`/api/equipment/${id.value}/movements`, { method: 'POST', body: moveForm })
         moveDialog.value = false
         await refresh()
+        toast.success('Обладнання переміщено')
       } catch (e: any) {
         moveError.value = e?.data?.statusMessage || 'Помилка переміщення'
+        toast.error(moveError.value)
       } finally {
         moveSaving.value = false
       }
@@ -88,8 +91,10 @@ export default defineComponent({
         await $fetch(`/api/equipment/${id.value}/status`, { method: 'POST', body: statusForm })
         statusDialog.value = false
         await refresh()
+        toast.success('Статус обладнання змінено')
       } catch (e: any) {
         statusError.value = e?.data?.statusMessage || 'Помилка зміни статусу'
+        toast.error(statusError.value)
       } finally {
         statusSaving.value = false
       }

@@ -36,6 +36,7 @@ export default defineComponent({
     useHead({ title: 'Роботи за день' })
 
     const route = useRoute()
+    const toast = useToast()
 
     /** Активна дата сторінки (з query ?date=, інакше — сьогодні). */
     const date = computed(() => {
@@ -96,9 +97,11 @@ export default defineComponent({
         await $fetch(`/api/time-logs/${item.id}/duplicate`, { method: 'POST' })
         success.value = 'Запис продубльовано'
         await refreshLogs()
+        toast.success('Запис журналу продубльовано')
       }
       catch (e: any) {
         actionError.value = e?.data?.statusMessage || 'Не вдалося продублювати запис'
+        toast.error(actionError.value)
       }
       finally {
         duplicatingId.value = null
@@ -114,9 +117,11 @@ export default defineComponent({
         deleteRow.value = null
         await refreshLogs()
         success.value = 'Запис видалено'
+        toast.success('Запис журналу видалено')
       }
       catch {
         actionError.value = 'Не вдалося видалити запис'
+        toast.error(actionError.value)
       }
       finally {
         deleting.value = false

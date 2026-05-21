@@ -6,6 +6,7 @@ export default defineComponent({
     useHead({ title: 'Клієнти' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const { data, refresh, pending } = useFetch('/api/clients')
     const clients = computed(() => (data.value as any)?.clients ?? [])
 
@@ -67,6 +68,7 @@ export default defineComponent({
     async function save() {
       saving.value = true
       error.value = ''
+      const isEdit = !!editItem.value
       try {
         if (editItem.value) {
           await $fetch(`/api/clients/${editItem.value.id}`, { method: 'PUT', body: form })
@@ -75,8 +77,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Клієнта оновлено' : 'Клієнта створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -88,8 +92,10 @@ export default defineComponent({
         await $fetch(`/api/clients/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Клієнта видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       }
     }
 

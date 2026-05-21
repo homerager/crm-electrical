@@ -5,6 +5,7 @@ export default defineComponent({
     useHead({ title: 'Товари для КП' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
 
     const { data, refresh, pending } = useFetch('/api/proposal-products', { query: { active: 'false' } })
     const items = computed(() => (data.value as any)?.items ?? [])
@@ -108,6 +109,7 @@ export default defineComponent({
           notes: form.notes.trim() || undefined,
           isActive: form.isActive,
         }
+        const isEdit = !!editItem.value
         if (editItem.value) {
           await $fetch(`/api/proposal-products/${editItem.value.id}`, { method: 'PUT', body })
         } else {
@@ -115,8 +117,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Товар оновлено' : 'Товар створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -139,8 +143,10 @@ export default defineComponent({
         await $fetch(`/api/proposal-products/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Товар видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       }
     }
 

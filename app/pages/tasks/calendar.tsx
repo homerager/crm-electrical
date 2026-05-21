@@ -36,6 +36,7 @@ export default defineComponent({
 
     const router = useRouter()
     const { isEmployee, isPrivileged } = useAuth()
+    const toast = useToast()
 
     const filterStatus = ref('')
     const filterObjectId = ref('')
@@ -66,11 +67,17 @@ export default defineComponent({
     const tasksWithoutDate = computed(() => tasks.value.filter((t: any) => !t.dueDate))
 
     async function handleDateChange(taskId: string, newDate: string) {
-      await $fetch(`/api/tasks/${taskId}`, {
-        method: 'PUT',
-        body: { dueDate: newDate ? new Date(newDate).toISOString() : null },
-      })
-      await refresh()
+      try {
+        await $fetch(`/api/tasks/${taskId}`, {
+          method: 'PUT',
+          body: { dueDate: newDate ? new Date(newDate).toISOString() : null },
+        })
+        await refresh()
+        toast.success('Дедлайн завдання оновлено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка зміни дедлайну')
+        await refresh()
+      }
     }
 
     function handleTaskClick(taskId: string) {

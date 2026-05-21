@@ -27,6 +27,7 @@ export default defineComponent({
     const route = useRoute()
     const docId = computed(() => route.params.id as string)
 
+    const toast = useToast()
     const loaded = ref<any>(null)
     const loadError = ref('')
     const docType = ref<'estimate' | 'act' | 'contract'>('estimate')
@@ -236,6 +237,7 @@ export default defineComponent({
         return true
       } catch (e: any) {
         saveError.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(saveError.value)
         return false
       }
     }
@@ -248,6 +250,7 @@ export default defineComponent({
       if (ok) {
         savedAt.value = new Date().toLocaleString('uk-UA')
         await loadDoc()
+        toast.success('Документ збережено')
       }
     }
 

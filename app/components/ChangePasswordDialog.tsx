@@ -6,6 +6,7 @@ export default defineComponent({
   emits: ['update:modelValue'],
   setup(props, { emit }) {
     const MIN_LEN = 8
+    const toast = useToast()
 
     const currentPassword = ref('')
     const newPassword = ref('')
@@ -59,8 +60,10 @@ export default defineComponent({
           },
         })
         success.value = true
+        toast.success('Пароль змінено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Не вдалося змінити пароль'
+        toast.error(error.value)
       } finally {
         loading.value = false
       }

@@ -28,6 +28,7 @@ export default defineComponent({
 
     const { isOnline } = useNetworkStatus()
     const { enqueue } = useOfflineQueue()
+    const toast = useToast()
 
     const { data, refresh, pending } = useFetch(`/api/photo-reports/${reportId}`)
     const report = computed(() => (data.value as any)?.report ?? null)
@@ -141,9 +142,16 @@ export default defineComponent({
           }
         }
         uploadDialog.value = false
-        if (isOnline.value) await refresh()
+        const photoCount = selectedFiles.value.length
+        if (isOnline.value) {
+          await refresh()
+          toast.success(photoCount > 1 ? `Завантажено фото: ${photoCount}` : 'Фото завантажено')
+        } else {
+          toast.info('Фото додано в чергу — відправиться при підключенні')
+        }
       } catch (e: any) {
         console.error('Upload error:', e)
+        toast.error(e?.data?.statusMessage || 'Помилка завантаження фото')
       } finally {
         uploading.value = false
       }
@@ -180,8 +188,10 @@ export default defineComponent({
         })
         editPhotoDialog.value = false
         await refresh()
+        toast.success('Фото оновлено')
       } catch (e: any) {
         console.error('Edit error:', e)
+        toast.error(e?.data?.statusMessage || 'Помилка збереження фото')
       }
     }
 
@@ -198,8 +208,10 @@ export default defineComponent({
         })
         deletePhotoDialog.value = false
         await refresh()
+        toast.success('Фото видалено')
       } catch (e: any) {
         console.error('Delete error:', e)
+        toast.error(e?.data?.statusMessage || 'Помилка видалення фото')
       }
     }
 

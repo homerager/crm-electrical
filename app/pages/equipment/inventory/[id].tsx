@@ -7,6 +7,7 @@ export default defineComponent({
     const router = useRouter()
     const id = computed(() => route.params.id as string)
 
+    const toast = useToast()
     const { data, refresh, pending } = useFetch(computed(() => `/api/inventory-sessions/${id.value}`))
     const session = computed(() => (data.value as any)?.session)
 
@@ -84,7 +85,10 @@ export default defineComponent({
         await refresh()
         tab.value = 'report'
         await loadReport()
-      } catch {}
+        toast.success('Інвентаризацію завершено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка завершення інвентаризації')
+      }
     }
 
     function formatDate(d: string | null) {

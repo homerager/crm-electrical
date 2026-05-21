@@ -16,6 +16,7 @@ export default defineComponent({
     useHead({ title: 'Графік платежів' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
 
     const filterObjectId = ref('')
     const filterStatus = ref('')
@@ -90,6 +91,7 @@ export default defineComponent({
           amount: Number(form.amount),
           clientId: form.clientId || null,
         }
+        const isEdit = editMode.value
         if (editMode.value) {
           await $fetch(`/api/payment-schedules/${editId.value}`, { method: 'PUT', body: payload })
         } else {
@@ -97,8 +99,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Запис графіку оновлено' : 'Запис графіку створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -111,7 +115,10 @@ export default defineComponent({
           body: { status: newStatus },
         })
         await refresh()
-      } catch {}
+        toast.success('Статус платежу оновлено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка збереження')
+      }
     }
 
     function openDelete(schedule: any) {
@@ -127,8 +134,10 @@ export default defineComponent({
         deleteDialog.value = false
         deleteTarget.value = null
         await refresh()
+        toast.success('Запис графіку видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       } finally {
         deleting.value = false
       }

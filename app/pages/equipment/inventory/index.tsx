@@ -5,6 +5,7 @@ export default defineComponent({
     useHead({ title: 'Інвентаризація' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const router = useRouter()
 
     const { data, refresh, pending } = useFetch('/api/inventory-sessions')
@@ -32,9 +33,11 @@ export default defineComponent({
       try {
         const res = await $fetch('/api/inventory-sessions', { method: 'POST', body: createForm }) as any
         createDialog.value = false
+        toast.success('Сесію інвентаризації створено')
         router.push(`/equipment/inventory/${res.session.id}`)
       } catch (e: any) {
         createError.value = e?.data?.statusMessage || 'Помилка створення сесії'
+        toast.error(createError.value)
       } finally {
         creating.value = false
       }
@@ -63,8 +66,10 @@ export default defineComponent({
         await $fetch(`/api/inventory-sessions/${deleteTarget.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Сесію інвентаризації видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       }
     }
 

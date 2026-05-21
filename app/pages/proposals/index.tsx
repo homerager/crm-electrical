@@ -5,6 +5,7 @@ export default defineComponent({
     useHead({ title: 'Комерційні пропозиції' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const { data, refresh, pending } = useFetch('/api/proposals')
     const proposals = computed(() => (data.value as any)?.proposals ?? [])
 
@@ -24,9 +25,10 @@ export default defineComponent({
       duplicatingId.value = item.id
       try {
         const res = await $fetch(`/api/proposals/${item.id}/duplicate`, { method: 'POST' }) as any
+        toast.success('Пропозицію продубльовано')
         await navigateTo(`/proposals/${res.proposal.id}`)
       } catch (e: any) {
-        alert(e?.data?.statusMessage || 'Помилка дублювання')
+        toast.error(e?.data?.statusMessage || 'Помилка дублювання')
       } finally {
         duplicatingId.value = null
       }
@@ -49,8 +51,10 @@ export default defineComponent({
         await $fetch(`/api/proposals/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Пропозицію видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       }
     }
 

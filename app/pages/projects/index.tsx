@@ -11,6 +11,7 @@ export default defineComponent({
     useHead({ title: 'Проєкти' })
 
     const { isPrivileged, isEmployee } = useAuth()
+    const toast = useToast()
     const dialog = ref(false)
     const editDialog = ref(false)
     const deleteDialog = ref(false)
@@ -93,8 +94,10 @@ export default defineComponent({
         })
         dialog.value = false
         await refresh()
+        toast.success('Проєкт створено')
       } catch (e: any) {
         error.value = e?.data?.message || 'Помилка'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -142,8 +145,10 @@ export default defineComponent({
 
         editDialog.value = false
         await refresh()
+        toast.success('Проєкт оновлено')
       } catch (e: any) {
         error.value = e?.data?.message || 'Помилка'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -156,6 +161,9 @@ export default defineComponent({
         await $fetch(`/api/projects/${deleteTarget.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Проєкт видалено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || e?.data?.message || 'Помилка видалення')
       } finally {
         deleting.value = false
       }

@@ -19,6 +19,7 @@ export default defineComponent({
     useHead({ title: 'Документи' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
 
     const { data, refresh, pending } = useFetch('/api/documents')
     const { data: objectsData } = useFetch('/api/objects')
@@ -121,9 +122,11 @@ export default defineComponent({
           },
         }) as any
         createDialog.value = false
+        toast.success('Документ створено')
         await navigateTo(`/documents/${res.document.id}`)
       } catch (e: any) {
         createError.value = e?.data?.statusMessage || e?.message || 'Помилка створення документа'
+        toast.error(createError.value)
       } finally {
         creating.value = false
       }
@@ -149,8 +152,10 @@ export default defineComponent({
         await $fetch(`/api/documents/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Документ видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       } finally {
         deleting.value = false
       }

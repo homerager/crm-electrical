@@ -8,6 +8,7 @@ export default defineComponent({
     })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const { data, refresh, pending } = useFetch('/api/product-groups')
     const groups = computed(() => (data.value as any)?.groups ?? [])
 
@@ -42,6 +43,7 @@ export default defineComponent({
     async function save() {
       saving.value = true
       error.value = ''
+      const isEdit = !!editItem.value
       try {
         if (editItem.value) {
           await $fetch(`/api/product-groups/${editItem.value.id}`, { method: 'PUT', body: form })
@@ -50,8 +52,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Групу оновлено' : 'Групу створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -65,8 +69,10 @@ export default defineComponent({
         await $fetch(`/api/product-groups/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Групу видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       }
     }
 

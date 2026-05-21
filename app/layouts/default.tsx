@@ -5,6 +5,7 @@ import PwaOfflineBanner from '~/components/PwaOfflineBanner'
 import PwaInstallPrompt from '~/components/PwaInstallPrompt'
 import PwaUpdatePrompt from '~/components/PwaUpdatePrompt'
 import ChangePasswordDialog from '~/components/ChangePasswordDialog'
+import AppToast from '~/components/AppToast'
 
 export default defineComponent({
   name: 'DefaultLayout',
@@ -434,6 +435,7 @@ export default defineComponent({
 
         <PwaUpdatePrompt />
         <ChangePasswordDialog v-model={changePasswordOpen.value} />
+        <AppToast />
       </v-app>
     )
   },

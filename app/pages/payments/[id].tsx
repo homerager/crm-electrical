@@ -31,6 +31,7 @@ export default defineComponent({
     })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
 
     const editDialog = ref(false)
     const saving = ref(false)
@@ -88,8 +89,10 @@ export default defineComponent({
         })
         editDialog.value = false
         await refresh()
+        toast.success('Оплату оновлено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -102,9 +105,11 @@ export default defineComponent({
       deleting.value = true
       try {
         await $fetch(`/api/payments/${id}`, { method: 'DELETE' })
+        toast.success('Оплату видалено')
         navigateTo('/payments')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       } finally {
         deleting.value = false
       }

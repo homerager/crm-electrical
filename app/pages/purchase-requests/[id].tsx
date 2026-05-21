@@ -26,6 +26,7 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
 
     const route = useRoute()
+    const toast = useToast()
     const id = route.params.id as string
     const { data, pending, refresh } = useFetch(`/api/purchase-requests/${id}`)
     const { data: objectsData } = useFetch('/api/objects')
@@ -174,8 +175,10 @@ export default defineComponent({
         })
         editing.value = false
         await refresh()
+        toast.success('Заявку оновлено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження заявки'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }

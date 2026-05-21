@@ -18,6 +18,7 @@ export default defineComponent({
     useHead({ title: 'Налаштування CRM' })
 
     const { isAdmin } = useAuth()
+    const toast = useToast()
 
     // ── Markup settings ──────────────────────────────────────
     const markupLoading = ref(true)
@@ -58,8 +59,10 @@ export default defineComponent({
         await $fetch('/api/settings', { method: 'PUT', body: markupForm })
         markupSaved.value = true
         setTimeout(() => { markupSaved.value = false }, 3000)
+        toast.success('Налаштування збережено')
       } catch (e: any) {
         markupError.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(markupError.value)
       } finally {
         markupSaving.value = false
       }
@@ -112,6 +115,7 @@ export default defineComponent({
       reqSaving.value = true
       reqError.value = ''
       try {
+        const isEdit = !!editReq.value
         if (editReq.value) {
           await $fetch(`/api/requisites/${editReq.value.id}`, { method: 'PUT', body: reqForm })
         } else {
@@ -119,8 +123,10 @@ export default defineComponent({
         }
         reqDialog.value = false
         await refreshReq()
+        toast.success(isEdit ? 'Реквізити оновлено' : 'Реквізити створено')
       } catch (e: any) {
         reqError.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(reqError.value)
       } finally {
         reqSaving.value = false
       }
@@ -132,8 +138,10 @@ export default defineComponent({
         await $fetch(`/api/requisites/${deleteReq.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refreshReq()
+        toast.success('Реквізити видалено')
       } catch (e: any) {
         reqError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(reqError.value)
       }
     }
 
@@ -141,7 +149,10 @@ export default defineComponent({
       try {
         await $fetch(`/api/requisites/${item.id}`, { method: 'PUT', body: { ...item, isDefault: true } })
         await refreshReq()
-      } catch { /* ignore */ }
+        toast.success('Реквізити за замовчуванням оновлено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка збереження')
+      }
     }
 
     onMounted(loadMarkup)

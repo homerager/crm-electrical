@@ -18,6 +18,7 @@ export default defineComponent({
     })
 
     const router = useRouter()
+    const toast = useToast()
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: contractorsData } = useFetch('/api/contractors')
     const { data: productsData } = useFetch('/api/products')
@@ -113,9 +114,11 @@ export default defineComponent({
           method: 'POST',
           body: payload,
         })
+        toast.success('Накладну створено')
         await router.push(`/invoices/${(result as any).invoice.id}`)
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }

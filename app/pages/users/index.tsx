@@ -5,6 +5,7 @@ export default defineComponent({
     useHead({ title: 'Користувачі' })
 
     const { isAdmin, user: currentUser } = useAuth()
+    const toast = useToast()
     const router = useRouter()
 
     if (!isAdmin.value) {
@@ -71,8 +72,10 @@ export default defineComponent({
           body: { password: resetPwdValue.value },
         })
         resetPwdDone.value = true
+        toast.success('Пароль скинуто')
       } catch (e: any) {
         resetPwdError.value = e?.data?.statusMessage || 'Помилка скидання паролю'
+        toast.error(resetPwdError.value)
       } finally {
         resetPwdSaving.value = false
       }
@@ -163,8 +166,10 @@ export default defineComponent({
           hourlyRate: '',
         })
         await refresh()
+        toast.success('Користувача створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка створення'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -189,19 +194,26 @@ export default defineComponent({
         })
         editDialog.value = false
         await refresh()
+        toast.success('Користувача оновлено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
     }
 
     async function toggleActive(item: any) {
-      await $fetch(`/api/users/${item.id}`, {
-        method: 'PUT',
-        body: { isActive: !item.isActive },
-      })
-      await refresh()
+      try {
+        await $fetch(`/api/users/${item.id}`, {
+          method: 'PUT',
+          body: { isActive: !item.isActive },
+        })
+        await refresh()
+        toast.success(item.isActive ? 'Користувача деактивовано' : 'Користувача активовано')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка збереження')
+      }
     }
 
     const headers = [

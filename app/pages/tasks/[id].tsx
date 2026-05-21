@@ -31,6 +31,7 @@ export default defineComponent({
 
     const route = useRoute()
     const { user, isPrivileged, isEmployee } = useAuth()
+    const toast = useToast()
 
     const assigneesUrl = computed(() =>
       isPrivileged.value ? '/api/users' : '/api/users/list',
@@ -62,7 +63,10 @@ export default defineComponent({
         newTagName.value = ''
         newTagColor.value = '#1976D2'
         await refreshTags()
-      } catch {}
+        toast.success('Тег створено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка створення тега')
+      }
       newTagSaving.value = false
     }
 
@@ -73,7 +77,10 @@ export default defineComponent({
           body: { tagIds },
         })
         await refresh()
-      } catch {}
+        toast.success('Теги завдання оновлено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка оновлення тегів')
+      }
     }
 
     useHead(computed(() => ({ title: task.value?.title ?? 'Завдання' })))
@@ -142,8 +149,10 @@ export default defineComponent({
         })
         editDialog.value = false
         await refresh()
+        toast.success('Завдання оновлено')
       } catch (e: any) {
         editError.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(editError.value)
       } finally {
         editSaving.value = false
       }
@@ -153,7 +162,10 @@ export default defineComponent({
       try {
         await $fetch(`/api/tasks/${id.value}`, { method: 'PUT', body: { status: newStatus } })
         await refresh()
-      } catch {}
+        toast.success('Статус завдання оновлено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка зміни статусу')
+      }
     }
 
     // Time logs
@@ -186,8 +198,10 @@ export default defineComponent({
         })
         timeLogDialog.value = false
         await refresh()
+        toast.success('Час роботи додано')
       } catch (e: any) {
         timeLogError.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(timeLogError.value)
       } finally {
         timeLogSaving.value = false
       }
@@ -197,7 +211,10 @@ export default defineComponent({
       try {
         await $fetch(`/api/time-logs/${logId}`, { method: 'DELETE' })
         await refresh()
-      } catch {}
+        toast.success('Запис часу видалено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка видалення')
+      }
     }
 
     // Attachments
@@ -226,8 +243,10 @@ export default defineComponent({
           body: formData,
         })
         await refresh()
+        toast.success('Файли додано')
       } catch (e: any) {
         uploadError.value = e?.data?.statusMessage || 'Помилка завантаження'
+        toast.error(uploadError.value)
       } finally {
         uploading.value = false
         input.value = ''
@@ -238,7 +257,10 @@ export default defineComponent({
       try {
         await $fetch(`/api/attachments/${attId}`, { method: 'DELETE' })
         await refresh()
-      } catch {}
+        toast.success('Файл видалено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка видалення')
+      }
     }
 
     function isImage(mime: string) {
@@ -348,6 +370,7 @@ export default defineComponent({
         }
       } catch (e: any) {
         commentError.value = e?.data?.statusMessage || 'Помилка завантаження'
+        toast.error(commentError.value)
       } finally {
         commentFileUploading.value = false
         input.value = ''
@@ -367,6 +390,7 @@ export default defineComponent({
       const html = commentHtml.value
       commentSaving.value = true
       commentError.value = ''
+      const isEditComment = !!editingId.value
       try {
         if (editingId.value) {
           const pending = pendingCommentFiles.value.map((f) => f.id)
@@ -390,8 +414,10 @@ export default defineComponent({
         }
         clearCommentComposer()
         await refresh()
+        toast.success(isEditComment ? 'Коментар оновлено' : 'Коментар додано')
       } catch (e: any) {
         commentError.value = e?.data?.statusMessage || 'Не вдалося зберегти'
+        toast.error(commentError.value)
       } finally {
         commentSaving.value = false
       }
@@ -403,8 +429,10 @@ export default defineComponent({
         if (editingId.value === c.id) clearCommentComposer()
         await $fetch(`/api/tasks/${id.value}/comments/${c.id}`, { method: 'DELETE' })
         await refresh()
+        toast.success('Коментар видалено')
       } catch (e: any) {
         commentError.value = e?.data?.statusMessage || 'Не вдалося видалити'
+        toast.error(commentError.value)
       }
     }
 
@@ -438,8 +466,10 @@ export default defineComponent({
         })
         subTaskDialog.value = false
         await refresh()
+        toast.success('Підзавдання створено')
       } catch (e: any) {
         subTaskError.value = e?.data?.statusMessage || 'Помилка створення'
+        toast.error(subTaskError.value)
       } finally {
         subTaskSaving.value = false
       }
@@ -449,14 +479,20 @@ export default defineComponent({
       try {
         await $fetch(`/api/tasks/${subTask.id}`, { method: 'PUT', body: { status: newStatus } })
         await refresh()
-      } catch {}
+        toast.success('Статус підзавдання оновлено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка зміни статусу')
+      }
     }
 
     async function deleteSubTask(subTaskId: string) {
       try {
         await $fetch(`/api/tasks/${subTaskId}`, { method: 'DELETE' })
         await refresh()
-      } catch {}
+        toast.success('Підзавдання видалено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка видалення')
+      }
     }
 
     function formatDate(d: string | null) {

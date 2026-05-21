@@ -21,6 +21,7 @@ export default defineComponent({
     success: () => true,
   },
   setup(props, { emit }) {
+    const toast = useToast()
     const { data: warehousesData } = useFetch('/api/warehouses')
     const warehouses = computed(
       () => (warehousesData.value as any)?.warehouses?.filter((w: any) => w.isActive !== false) ?? [],
@@ -125,8 +126,10 @@ export default defineComponent({
         })
         writeOffOpen.value = false
         emit('success')
+        toast.success('Списання з обʼєкта виконано')
       } catch (e: any) {
         errW.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(errW.value)
       } finally {
         savingW.value = false
       }
@@ -171,8 +174,10 @@ export default defineComponent({
         })
         returnOpen.value = false
         emit('success')
+        toast.success('Повернення на склад виконано')
       } catch (e: any) {
         errR.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(errR.value)
       } finally {
         savingR.value = false
       }

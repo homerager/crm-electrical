@@ -5,6 +5,7 @@ export default defineComponent({
     useHead({ title: 'Фото-звіти' })
 
     const { isPrivileged } = useAuth()
+    const toast = useToast()
     const { isOnline } = useNetworkStatus()
     const { enqueue } = useOfflineQueue()
     const { data, refresh, pending } = useFetch('/api/photo-reports')
@@ -52,6 +53,8 @@ export default defineComponent({
     async function save() {
       saving.value = true
       error.value = ''
+      const isEdit = !!editItem.value
+      const wasOnline = isOnline.value
       try {
         if (isOnline.value) {
           if (editItem.value) {
@@ -79,8 +82,14 @@ export default defineComponent({
         }
         dialog.value = false
         if (isOnline.value) await refresh()
+        if (wasOnline) {
+          toast.success(isEdit ? 'Фото-звіт оновлено' : 'Фото-звіт створено')
+        } else {
+          toast.info('Збережено в чергу — відправиться при підключенні')
+        }
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -92,8 +101,10 @@ export default defineComponent({
         await $fetch(`/api/photo-reports/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Фото-звіт видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       }
     }
 

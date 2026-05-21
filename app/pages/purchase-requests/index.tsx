@@ -27,6 +27,7 @@ export default defineComponent({
 
     useHead({ title: 'Заявки на закупівлю' })
 
+    const toast = useToast()
     const filterStatus = ref<string | null>(null)
     const { data, pending, refresh } = useFetch('/api/purchase-requests', {
       query: computed(() => (filterStatus.value ? { status: filterStatus.value } : {})),
@@ -168,8 +169,10 @@ export default defineComponent({
         })
         createDialog.value = false
         await refresh()
+        toast.success('Заявку на закупівлю створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження заявки'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -197,8 +200,10 @@ export default defineComponent({
         })
         generateDialog.value = false
         await refresh()
+        toast.success('Заявку сформовано з обʼєкта')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Не вдалося сформувати заявку'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -212,8 +217,10 @@ export default defineComponent({
           body: { status },
         })
         await refresh()
+        toast.success('Статус заявки оновлено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Не вдалося змінити статус'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -253,8 +260,10 @@ export default defineComponent({
         })
         receiveDialog.value = false
         await refresh()
+        toast.success('Товар за заявкою отримано')
       } catch (e: any) {
         receiveError.value = e?.data?.statusMessage || 'Не вдалося отримати товар'
+        toast.error(receiveError.value)
       } finally {
         saving.value = false
       }

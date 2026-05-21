@@ -19,6 +19,7 @@ export default defineComponent({
     success: () => true,
   },
   setup(props, { emit }) {
+    const toast = useToast()
     const { data: warehousesData } = useFetch('/api/warehouses')
     const warehouses = computed(
       () => (warehousesData.value as any)?.warehouses?.filter((w: any) => w.isActive !== false) ?? [],
@@ -134,8 +135,10 @@ export default defineComponent({
         })
         reserveOpen.value = false
         emit('success')
+        toast.success('Резерв створено')
       } catch (e: any) {
         err.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(err.value)
       } finally {
         saving.value = false
       }
@@ -172,8 +175,10 @@ export default defineComponent({
         })
         releaseOpen.value = false
         emit('success')
+        toast.success('Резерв знято')
       } catch (e: any) {
         err.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(err.value)
       } finally {
         saving.value = false
       }

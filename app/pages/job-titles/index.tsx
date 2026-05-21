@@ -5,6 +5,7 @@ export default defineComponent({
     useHead({ title: 'Посади' })
 
     const { isAdmin } = useAuth()
+    const toast = useToast()
     const router = useRouter()
 
     if (!isAdmin.value) {
@@ -45,6 +46,7 @@ export default defineComponent({
     async function save() {
       saving.value = true
       error.value = ''
+      const isEdit = !!editItem.value
       try {
         if (editItem.value) {
           await $fetch(`/api/job-titles/${editItem.value.id}`, {
@@ -59,8 +61,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Посаду оновлено' : 'Посаду створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -74,8 +78,10 @@ export default defineComponent({
         await $fetch(`/api/job-titles/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
+        toast.success('Посаду видалено')
       } catch (e: any) {
         deleteError.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(deleteError.value)
       }
     }
 

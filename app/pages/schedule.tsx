@@ -26,6 +26,7 @@ export default defineComponent({
     useHead({ title: 'Розклад' })
 
     const { isPrivileged, isEmployee } = useAuth()
+    const toast = useToast()
 
     const viewMode = ref<'calendar' | 'table'>('calendar')
     const colorBy = ref<'type' | 'user'>('type')
@@ -139,6 +140,7 @@ export default defineComponent({
           objectId: form.type === 'WORK' ? (form.objectId || null) : null,
           hours: form.hours ? Number(form.hours) : null,
         }
+        const isEdit = editMode.value
         if (editMode.value) {
           await $fetch(`/api/schedules/${editId.value}`, { method: 'PUT', body: payload })
         } else {
@@ -146,8 +148,10 @@ export default defineComponent({
         }
         dialog.value = false
         await refresh()
+        toast.success(isEdit ? 'Подію оновлено' : 'Подію створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       } finally {
         saving.value = false
       }
@@ -166,16 +170,24 @@ export default defineComponent({
         deleteDialog.value = false
         deleteTarget.value = null
         await refresh()
+        toast.success('Подію видалено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка видалення'
+        toast.error(error.value)
       } finally {
         deleting.value = false
       }
     }
 
     async function handleDrop(id: string, newDate: string) {
-      await $fetch(`/api/schedules/${id}`, { method: 'PUT', body: { date: newDate } })
-      await refresh()
+      try {
+        await $fetch(`/api/schedules/${id}`, { method: 'PUT', body: { date: newDate } })
+        await refresh()
+        toast.success('Подію перенесено')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Помилка перенесення')
+        await refresh()
+      }
     }
 
     function handleEntryClick(id: string) {

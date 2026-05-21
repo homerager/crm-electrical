@@ -16,6 +16,7 @@ export default defineComponent({
   },
   emits: ['update:open', 'saved'],
   setup(props, { emit }) {
+    const toast = useToast()
     const dialogModel = computed({
       get: () => props.open,
       set: (v: boolean) => emit('update:open', v),
@@ -146,17 +147,20 @@ export default defineComponent({
           description: form.description.trim() || null,
           date: form.date || null,
         }
+        const isEdit = !!editingId.value
         if (editingId.value) {
           await $fetch(`/api/time-logs/${editingId.value}`, { method: 'PUT', body })
         }
         else {
           await $fetch('/api/time-logs', { method: 'POST', body })
         }
-        emit('saved', editingId.value ? 'updated' : 'created')
+        emit('saved', isEdit ? 'updated' : 'created')
         dialogModel.value = false
+        toast.success(isEdit ? 'Запис журналу оновлено' : 'Запис журналу створено')
       }
       catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
+        toast.error(error.value)
       }
       finally {
         saving.value = false
