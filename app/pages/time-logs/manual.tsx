@@ -267,8 +267,8 @@ export default defineComponent({
     }
 
     return () => (
-      <div>
-        <div class="page-toolbar">
+      <div class="time-logs">
+       <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Журнал робіт</div>
           <v-spacer />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
@@ -278,7 +278,6 @@ export default defineComponent({
             До завдань
           </v-btn>
         </div>
-
         <v-alert type="info" variant="tonal" class="mb-4" density="compact">
           Щоденний облік робіт: хто з працівників, на якому обʼєкті чи складі та скільки годин
           працював. Кнопка «День» відкриває детальну сторінку конкретної дати. Записи без завдання
@@ -286,19 +285,21 @@ export default defineComponent({
           «Виконано».
         </v-alert>
 
-        {success.value && (
-          <v-alert type="success" variant="tonal" class="mb-4" closable onClick:close={() => (success.value = '')}>
-            {success.value}
-          </v-alert>
-        )}
+        <client-only>
+          {success.value && (
+            <v-alert type="success" variant="tonal" class="mb-4" closable onClick:close={() => (success.value = '')}>
+              {success.value}
+            </v-alert>
+          )}
 
-        {actionError.value && (
-          <v-alert type="error" variant="tonal" class="mb-4" closable onClick:close={() => (actionError.value = '')}>
-            {actionError.value}
-          </v-alert>
-        )}
+          {actionError.value && (
+            <v-alert type="error" variant="tonal" class="mb-4" closable onClick:close={() => (actionError.value = '')}>
+              {actionError.value}
+            </v-alert>
+          )}
+        </client-only>
 
-        <v-card class="mb-4">
+         <v-card class="mb-4">
           <v-card-title class="text-subtitle-1">Фільтри</v-card-title>
           <v-card-text class="pb-2">
             <v-row dense>

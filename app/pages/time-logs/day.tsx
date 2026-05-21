@@ -181,17 +181,19 @@ export default defineComponent({
           </v-btn>
         </div>
 
-        {success.value && (
-          <v-alert type="success" variant="tonal" class="mb-4" closable onClick:close={() => (success.value = '')}>
-            {success.value}
-          </v-alert>
-        )}
+        <client-only>
+          {success.value && (
+            <v-alert type="success" variant="tonal" class="mb-4" closable onClick:close={() => (success.value = '')}>
+              {success.value}
+            </v-alert>
+          )}
 
-        {actionError.value && (
-          <v-alert type="error" variant="tonal" class="mb-4" closable onClick:close={() => (actionError.value = '')}>
-            {actionError.value}
-          </v-alert>
-        )}
+          {actionError.value && (
+            <v-alert type="error" variant="tonal" class="mb-4" closable onClick:close={() => (actionError.value = '')}>
+              {actionError.value}
+            </v-alert>
+          )}
+        </client-only>
 
         <v-card class="mb-4">
           <v-card-text>
