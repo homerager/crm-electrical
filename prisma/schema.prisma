@@ -114,6 +114,7 @@ model User {
   equipmentStatusLogs   EquipmentStatusLog[]
   inventorySessions     InventorySession[]
   passwordResetTokens   PasswordResetToken[]
+  documents             Document[]
 
   @@map("users")
 }
@@ -193,6 +194,7 @@ model ConstructionObject {
   equipmentMovementsFrom     EquipmentMovement[] @relation("EqMovementFromObject")
   equipmentMovementsTo       EquipmentMovement[] @relation("EqMovementToObject")
   inventorySessions          InventorySession[]
+  documents                  Document[]
 
   @@map("construction_objects")
 }
@@ -216,6 +218,7 @@ model Client {
   objects          ConstructionObject[]
   payments         Payment[]
   paymentSchedules PaymentSchedule[]
+  documents        Document[]
 
   @@map("clients")
 }
@@ -993,4 +996,44 @@ model InventorySessionItem {
 
   @@unique([sessionId, equipmentId])
   @@map("inventory_session_items")
+}
+
+// ---------------------------------------------------------------------------
+// Generated documents (estimate / completion act / contract)
+// ---------------------------------------------------------------------------
+
+enum DocumentType {
+  /// Кошторис
+  ESTIMATE
+  /// Акт виконаних робіт
+  ACT
+  /// Договір
+  CONTRACT
+}
+
+/// Збережений документ. На момент створення робиться знімок (snapshot) даних
+/// обʼєкта — матеріали, роботи, реквізити — у полі `data` (JSON). Документ
+/// можна редагувати та повторно генерувати PDF без звʼязку з живими даними.
+model Document {
+  id          String       @id @default(cuid())
+  type        DocumentType
+  number      String
+  date        DateTime
+  objectId    String?
+  clientId    String?
+  /// Знімок та редаговані дані: object, client, materials[], labor[], totals, умови договору
+  data        Json
+  notes       String?
+  createdById String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  object    ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  client    Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User                @relation(fields: [createdById], references: [id])
+
+  @@index([type])
+  @@index([objectId])
+  @@index([createdById])
+  @@map("documents")
 }
