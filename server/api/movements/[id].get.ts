@@ -1,3 +1,4 @@
+import { getProductSupplyHistory, attachSupplyHistory } from '../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -15,5 +16,14 @@ export default defineEventHandler(async (event) => {
 
   if (!movement) throw createError({ statusCode: 404, statusMessage: 'Переміщення не знайдено' })
 
-  return { movement }
+  const productIds = movement.items.map((i) => i.productId)
+  const warehouseId = movement.fromWarehouseId ?? movement.toWarehouseId ?? undefined
+  const supplyMap = await getProductSupplyHistory(productIds, warehouseId)
+
+  return {
+    movement: {
+      ...movement,
+      items: attachSupplyHistory(movement.items, supplyMap),
+    },
+  }
 })

@@ -1,3 +1,5 @@
+import { getProductSupplyHistory } from '../../utils/productSupplyHistory'
+
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = query.search as string | undefined
@@ -15,6 +17,9 @@ export default defineEventHandler(async (event) => {
     },
     orderBy: { name: 'asc' },
   })
+
+  const productIds = products.map((p) => p.id)
+  const supplyMap = await getProductSupplyHistory(productIds)
 
   const reservationSums = await prisma.warehouseObjectReservation.groupBy({
     by: ['warehouseId', 'productId'],
@@ -39,6 +44,7 @@ export default defineEventHandler(async (event) => {
 
   const enriched = products.map((p) => ({
     ...p,
+    supplyHistory: supplyMap.get(p.id) ?? [],
     stock: p.stock.map((s) => {
       const key = `${s.warehouseId}:${p.id}`
       const reservedOnWarehouse = reservedByWhProduct.get(key) ?? 0

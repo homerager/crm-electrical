@@ -63,6 +63,8 @@ export default defineComponent({
         sortable: false,
       },
       { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 130, sortable: false },
+      { title: 'Постачальники', key: 'supplyHistory', sortable: false },
+      { title: 'Накладні', key: 'invoices', sortable: false },
     ]
 
     const movementHeaders = [
@@ -71,6 +73,7 @@ export default defineComponent({
       { title: 'Позиції', key: 'itemsPreview', sortable: false, minWidth: 220 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Примітки', key: 'notes' },
+      { title: '', key: 'link', sortable: false, width: 60 },
     ]
 
     const stockOnSiteHeaders = [
@@ -78,6 +81,8 @@ export default defineComponent({
       { title: 'Артикул', key: 'product.sku', width: 120 },
       { title: 'Залишок', key: 'quantity', align: 'end' as const, width: 140 },
       { title: 'Одиниця', key: 'product.unit', align: 'center' as const, width: 100 },
+      { title: 'Постачальники', key: 'supplyHistory', sortable: false },
+      { title: 'Накладні', key: 'invoices', sortable: false },
     ]
 
     const reservationHeaders = [
@@ -86,6 +91,8 @@ export default defineComponent({
       { title: 'Артикул', key: 'product.sku', width: 120 },
       { title: 'Зарезервовано', key: 'quantity', align: 'end' as const, width: 140 },
       { title: 'Одиниця', key: 'product.unit', align: 'center' as const, width: 100 },
+      { title: 'Постачальники', key: 'supplyHistory', sortable: false },
+      { title: 'Накладні', key: 'invoices', sortable: false },
     ]
 
     const consumedHeaders = [
@@ -101,6 +108,8 @@ export default defineComponent({
         sortable: false,
       },
       { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 118, sortable: false },
+      { title: 'Постачальники', key: 'supplyHistory', sortable: false },
+      { title: 'Накладні', key: 'invoices', sortable: false },
     ]
 
     const writeOffLogHeaders = [
@@ -108,6 +117,7 @@ export default defineComponent({
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Позицій', key: 'items', sortable: false, width: 100 },
       { title: 'Примітки', key: 'notes' },
+      { title: '', key: 'link', sortable: false, width: 60 },
     ]
 
     const returnLogHeaders = [
@@ -116,6 +126,7 @@ export default defineComponent({
       { title: 'Позиції', key: 'itemsPreview', sortable: false, minWidth: 220 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
       { title: 'Примітки', key: 'notes' },
+      { title: '', key: 'link', sortable: false, width: 60 },
     ]
 
     const laborHeaders = [
@@ -127,6 +138,76 @@ export default defineComponent({
 
     const hoursStr = (h: number) =>
       h.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
+    function renderContractors(item: any) {
+      const contractors = [
+        ...new Map<string, string>(
+          (item.supplyHistory ?? [])
+            .filter((s: any) => s.contractor)
+            .map((s: any) => [s.contractor.id, s.contractor.name] as [string, string]),
+        ).values(),
+      ]
+      if (!contractors.length) return <span class="text-medium-emphasis">—</span>
+      const visible = contractors.slice(0, 2)
+      const rest = contractors.slice(2)
+      return (
+        <div class="d-flex flex-wrap gap-1 align-center">
+          {visible.map((name, i) => (
+            <v-chip key={i} size="x-small" variant="tonal" color="secondary">{name}</v-chip>
+          ))}
+          {rest.length > 0 && (
+            <v-tooltip>
+              {{
+                activator: ({ props }: any) => (
+                  <v-chip {...props} size="x-small" variant="tonal">+{rest.length}</v-chip>
+                ),
+                default: () => (
+                  <div>{rest.map((name, i) => <div key={i}>{name}</div>)}</div>
+                ),
+              }}
+            </v-tooltip>
+          )}
+        </div>
+      )
+    }
+
+    function renderInvoices(item: any) {
+      const invoices = [
+        ...new Map(
+          (item.supplyHistory ?? []).map((s: any) => [s.invoice.id, s.invoice]),
+        ).values(),
+      ] as any[]
+      if (!invoices.length) return <span class="text-medium-emphasis">—</span>
+      const visible = invoices.slice(0, 2)
+      const rest = invoices.slice(2)
+      return (
+        <div class="d-flex flex-wrap gap-1 align-center">
+          {visible.map((inv: any) => (
+            <v-chip key={inv.id} size="x-small" variant="outlined" to={`/invoices/${inv.id}`}>
+              {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+            </v-chip>
+          ))}
+          {rest.length > 0 && (
+            <v-tooltip>
+              {{
+                activator: ({ props }: any) => (
+                  <v-chip {...props} size="x-small" variant="tonal">+{rest.length}</v-chip>
+                ),
+                default: () => (
+                  <div>
+                    {rest.map((inv: any) => (
+                      <div key={inv.id}>
+                        {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                      </div>
+                    ))}
+                  </div>
+                ),
+              }}
+            </v-tooltip>
+          )}
+        </div>
+      )
+    }
 
     function printReport() {
       window.print()
@@ -224,7 +305,7 @@ export default defineComponent({
       return (
         <>
           <v-row class="mb-4">
-            <v-col cols={12} md={6}>
+            <v-col cols={12} md={12}>
               <v-card variant="outlined" class="fill-height">
                 <v-card-title class="d-flex align-center flex-wrap">
                   <v-icon class="mr-2" icon="mdi-lock-outline" size="small" />
@@ -256,12 +337,14 @@ export default defineComponent({
                       'item.quantity': ({ item }: any) => (
                         <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
                       ),
+                      'item.supplyHistory': ({ item }: any) => renderContractors(item),
+                      'item.invoices': ({ item }: any) => renderInvoices(item),
                     }}
                   </v-data-table>
                 )}
               </v-card>
             </v-col>
-            <v-col cols={12} md={6}>
+            <v-col cols={12} md={12}>
               <v-card variant="outlined" class="fill-height">
                 <v-card-title class="d-flex align-center flex-wrap">
                   <v-icon class="mr-2" icon="mdi-map-marker-outline" size="small" />
@@ -287,6 +370,8 @@ export default defineComponent({
                       'item.quantity': ({ item }: any) => (
                         <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
                       ),
+                      'item.supplyHistory': ({ item }: any) => renderContractors(item),
+                      'item.invoices': ({ item }: any) => renderInvoices(item),
                     }}
                   </v-data-table>
                 )}
@@ -349,6 +434,8 @@ export default defineComponent({
                   'item.totalAmount': ({ item }: any) => (
                     <strong>{uah(Number(item.totalAmount) || 0)}</strong>
                   ),
+                  'item.supplyHistory': ({ item }: any) => renderContractors(item),
+                  'item.invoices': ({ item }: any) => renderInvoices(item),
                 }}
               </v-data-table>
             )}
@@ -381,6 +468,9 @@ export default defineComponent({
                       'item.notes': ({ item }: any) => (
                         <span class="text-medium-emphasis">{item.notes || '—'}</span>
                       ),
+                      'item.link': ({ item }: any) => (
+                        <v-btn icon="mdi-eye" variant="text" size="small" color="primary" to={`/movements/${item.id}`} />
+                      ),
                     }}
                   </v-data-table>
                 )}
@@ -411,6 +501,9 @@ export default defineComponent({
                       'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
                       'item.notes': ({ item }: any) => (
                         <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                      ),
+                      'item.link': ({ item }: any) => (
+                        <v-btn icon="mdi-eye" variant="text" size="small" color="primary" to={`/movements/${item.id}`} />
                       ),
                     }}
                   </v-data-table>
@@ -472,6 +565,8 @@ export default defineComponent({
                 'item.totalAmount': ({ item }: any) => (
                   <strong>{uah(Number(item.totalAmount) || 0)}</strong>
                 ),
+                'item.supplyHistory': ({ item }: any) => renderContractors(item),
+                'item.invoices': ({ item }: any) => renderInvoices(item),
               }}
             </v-data-table>
             <v-divider />
@@ -546,6 +641,8 @@ export default defineComponent({
                       ) : (
                         <strong>{uah(Number(item.totalAmount) || 0)}</strong>
                       ),
+                    'item.supplyHistory': ({ item }: any) => renderContractors(item),
+                    'item.invoices': ({ item }: any) => renderInvoices(item),
                   }}
                 </v-data-table>
                 <v-divider />
@@ -636,6 +733,9 @@ export default defineComponent({
                   'item.notes': ({ item }: any) => (
                     <span class="text-medium-emphasis">{item.notes || '—'}</span>
                   ),
+                  'item.link': ({ item }: any) => (
+                    <v-btn icon="mdi-eye" variant="text" size="small" color="primary" to={`/movements/${item.id}`} />
+                  ),
                 }}
               </v-data-table>
             )}
@@ -660,6 +760,9 @@ export default defineComponent({
                   'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
                   'item.notes': ({ item }: any) => (
                     <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                  ),
+                  'item.link': ({ item }: any) => (
+                    <v-btn icon="mdi-eye" variant="text" size="small" color="primary" to={`/movements/${item.id}`} />
                   ),
                 }}
               </v-data-table>
@@ -878,6 +981,9 @@ export default defineComponent({
                       ),
                       'item.notes': ({ item }: any) => (
                         <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                      ),
+                      'item.link': ({ item }: any) => (
+                        <v-btn icon="mdi-eye" variant="text" size="small" color="primary" to={`/movements/${item.id}`} />
                       ),
                     }}
                   </v-data-table>

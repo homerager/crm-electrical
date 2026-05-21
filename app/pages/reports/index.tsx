@@ -131,19 +131,89 @@ export default defineComponent({
                         <th>Артикул</th>
                         <th class="text-right">Кількість</th>
                         <th class="text-center">Од.</th>
+                        <th>Постачальники</th>
+                        <th>Накладні</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {warehouse.stock.map((s: any) => (
-                        <tr key={s.id}>
-                          <td>{s.product.name}</td>
-                          <td class="text-medium-emphasis">{s.product.sku || '—'}</td>
-                          <td class={`text-right font-weight-medium ${Number(s.quantity) < 5 ? 'text-error' : ''}`}>
-                            {Number(s.quantity).toLocaleString('uk-UA')}
-                          </td>
-                          <td class="text-center">{s.product.unit}</td>
-                        </tr>
-                      ))}
+                      {warehouse.stock.map((s: any) => {
+                        const contractors = [
+                          ...new Map(
+                            (s.supplyHistory ?? [])
+                              .filter((h: any) => h.contractor)
+                              .map((h: any) => [h.contractor.id, h.contractor.name]),
+                          ).values(),
+                        ] as string[]
+                        const invoices = [
+                          ...new Map(
+                            (s.supplyHistory ?? []).map((h: any) => [h.invoice.id, h.invoice]),
+                          ).values(),
+                        ] as any[]
+                        const visibleC = contractors.slice(0, 2)
+                        const restC = contractors.slice(2)
+                        const visibleI = invoices.slice(0, 2)
+                        const restI = invoices.slice(2)
+                        return (
+                          <tr key={s.id}>
+                            <td>{s.product.name}</td>
+                            <td class="text-medium-emphasis">{s.product.sku || '—'}</td>
+                            <td class={`text-right font-weight-medium ${Number(s.quantity) < 5 ? 'text-error' : ''}`}>
+                              {Number(s.quantity).toLocaleString('uk-UA')}
+                            </td>
+                            <td class="text-center">{s.product.unit}</td>
+                            <td>
+                              {visibleC.length > 0
+                                ? <div class="d-flex flex-wrap gap-1 align-center">
+                                    {visibleC.map((name, i) => (
+                                      <v-chip key={i} size="x-small" variant="tonal" color="secondary">{name}</v-chip>
+                                    ))}
+                                    {restC.length > 0 && (
+                                      <v-tooltip>
+                                        {{
+                                          activator: ({ props }: any) => (
+                                            <v-chip {...props} size="x-small" variant="tonal">+{restC.length}</v-chip>
+                                          ),
+                                          default: () => (
+                                            <div>{restC.map((name, i) => <div key={i}>{name}</div>)}</div>
+                                          ),
+                                        }}
+                                      </v-tooltip>
+                                    )}
+                                  </div>
+                                : <span class="text-medium-emphasis">—</span>}
+                            </td>
+                            <td>
+                              {visibleI.length > 0
+                                ? <div class="d-flex flex-wrap gap-1 align-center">
+                                    {visibleI.map((inv: any) => (
+                                      <v-chip key={inv.id} size="x-small" variant="outlined" to={`/invoices/${inv.id}`}>
+                                        {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                                      </v-chip>
+                                    ))}
+                                    {restI.length > 0 && (
+                                      <v-tooltip>
+                                        {{
+                                          activator: ({ props }: any) => (
+                                            <v-chip {...props} size="x-small" variant="tonal">+{restI.length}</v-chip>
+                                          ),
+                                          default: () => (
+                                            <div>
+                                              {restI.map((inv: any) => (
+                                                <div key={inv.id}>
+                                                  {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ),
+                                        }}
+                                      </v-tooltip>
+                                    )}
+                                  </div>
+                                : <span class="text-medium-emphasis">—</span>}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </v-table>
                 )}

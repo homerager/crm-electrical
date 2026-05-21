@@ -38,6 +38,8 @@ export default defineComponent({
       { title: 'Артикул', key: 'product.sku' },
       { title: 'Кількість', key: 'quantity', align: 'end' as const },
       { title: 'Одиниця', key: 'product.unit', align: 'end' as const },
+      { title: 'Постачальники', key: 'supplyHistory', sortable: false },
+      { title: 'Накладні', key: 'invoices', sortable: false },
       { title: '', key: 'actions', sortable: false, align: 'end' as const, width: 64 },
     ]
 
@@ -135,6 +137,74 @@ export default defineComponent({
                     {Number(item.quantity).toLocaleString('uk-UA')}
                   </span>
                 ),
+                'item.supplyHistory': ({ item }: any) => {
+                  const contractors = [
+                    ...new Map(
+                      (item.supplyHistory ?? [])
+                        .filter((s: any) => s.contractor)
+                        .map((s: any) => [s.contractor.id, s.contractor.name]),
+                    ).values(),
+                  ] as string[]
+                  if (!contractors.length) return <span class="text-medium-emphasis">—</span>
+                  const visible = contractors.slice(0, 2)
+                  const rest = contractors.slice(2)
+                  return (
+                    <div class="d-flex flex-wrap gap-1 align-center">
+                      {visible.map((name, i) => (
+                        <v-chip key={i} size="x-small" variant="tonal" color="secondary">{name}</v-chip>
+                      ))}
+                      {rest.length > 0 && (
+                        <v-tooltip>
+                          {{
+                            activator: ({ props }: any) => (
+                              <v-chip {...props} size="x-small" variant="tonal">+{rest.length}</v-chip>
+                            ),
+                            default: () => (
+                              <div>{rest.map((name, i) => <div key={i}>{name}</div>)}</div>
+                            ),
+                          }}
+                        </v-tooltip>
+                      )}
+                    </div>
+                  )
+                },
+                'item.invoices': ({ item }: any) => {
+                  const invoices = [
+                    ...new Map(
+                      (item.supplyHistory ?? []).map((s: any) => [s.invoice.id, s.invoice]),
+                    ).values(),
+                  ] as any[]
+                  if (!invoices.length) return <span class="text-medium-emphasis">—</span>
+                  const visible = invoices.slice(0, 2)
+                  const rest = invoices.slice(2)
+                  return (
+                    <div class="d-flex flex-wrap gap-1 align-center">
+                      {visible.map((inv: any) => (
+                        <v-chip key={inv.id} size="x-small" variant="outlined" to={`/invoices/${inv.id}`}>
+                          {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                        </v-chip>
+                      ))}
+                      {rest.length > 0 && (
+                        <v-tooltip>
+                          {{
+                            activator: ({ props }: any) => (
+                              <v-chip {...props} size="x-small" variant="tonal">+{rest.length}</v-chip>
+                            ),
+                            default: () => (
+                              <div>
+                                {rest.map((inv: any) => (
+                                  <div key={inv.id}>
+                                    {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                                  </div>
+                                ))}
+                              </div>
+                            ),
+                          }}
+                        </v-tooltip>
+                      )}
+                    </div>
+                  )
+                },
                 'item.actions': ({ item }: any) => (
                   <div class="d-flex justify-end">
                     <v-tooltip text="Перемістити цей товар" location="start">
@@ -262,23 +332,93 @@ export default defineComponent({
                               <th class="text-left">Артикул</th>
                               <th class="text-right">Кількість</th>
                               <th class="text-left">Одиниця</th>
+                              <th class="text-left">Постачальники</th>
+                              <th class="text-left">Накладні</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {item.items.map((line: any) => (
-                              <tr key={line.id}>
-                                <td class="pl-10">{line.product.name}</td>
-                                <td>
-                                  <v-chip size="x-small" variant="outlined">
-                                    {line.product.sku || '—'}
-                                  </v-chip>
-                                </td>
-                                <td class="text-right font-weight-medium">
-                                  {Number(line.quantity).toLocaleString('uk-UA')}
-                                </td>
-                                <td class="text-medium-emphasis">{line.product.unit}</td>
-                              </tr>
-                            ))}
+                            {item.items.map((line: any) => {
+                              const cList = [
+                                ...new Map(
+                                  (line.supplyHistory ?? [])
+                                    .filter((s: any) => s.contractor)
+                                    .map((s: any) => [s.contractor.id, s.contractor.name]),
+                                ).values(),
+                              ] as string[]
+                              const iList = [
+                                ...new Map(
+                                  (line.supplyHistory ?? []).map((s: any) => [s.invoice.id, s.invoice]),
+                                ).values(),
+                              ] as any[]
+                              const visC = cList.slice(0, 2)
+                              const restC = cList.slice(2)
+                              const visI = iList.slice(0, 2)
+                              const restI = iList.slice(2)
+                              return (
+                                <tr key={line.id}>
+                                  <td class="pl-10">{line.product.name}</td>
+                                  <td>
+                                    <v-chip size="x-small" variant="outlined">
+                                      {line.product.sku || '—'}
+                                    </v-chip>
+                                  </td>
+                                  <td class="text-right font-weight-medium">
+                                    {Number(line.quantity).toLocaleString('uk-UA')}
+                                  </td>
+                                  <td class="text-medium-emphasis">{line.product.unit}</td>
+                                  <td>
+                                    {visC.length > 0 ? (
+                                      <div class="d-flex flex-wrap gap-1 align-center">
+                                        {visC.map((name, i) => (
+                                          <v-chip key={i} size="x-small" variant="tonal" color="secondary">{name}</v-chip>
+                                        ))}
+                                        {restC.length > 0 && (
+                                          <v-tooltip>
+                                            {{
+                                              activator: ({ props }: any) => (
+                                                <v-chip {...props} size="x-small" variant="tonal">+{restC.length}</v-chip>
+                                              ),
+                                              default: () => (
+                                                <div>{restC.map((name, i) => <div key={i}>{name}</div>)}</div>
+                                              ),
+                                            }}
+                                          </v-tooltip>
+                                        )}
+                                      </div>
+                                    ) : <span class="text-medium-emphasis">—</span>}
+                                  </td>
+                                  <td>
+                                    {visI.length > 0 ? (
+                                      <div class="d-flex flex-wrap gap-1 align-center">
+                                        {visI.map((inv: any) => (
+                                          <v-chip key={inv.id} size="x-small" variant="outlined" to={`/invoices/${inv.id}`}>
+                                            {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                                          </v-chip>
+                                        ))}
+                                        {restI.length > 0 && (
+                                          <v-tooltip>
+                                            {{
+                                              activator: ({ props }: any) => (
+                                                <v-chip {...props} size="x-small" variant="tonal">+{restI.length}</v-chip>
+                                              ),
+                                              default: () => (
+                                                <div>
+                                                  {restI.map((inv: any) => (
+                                                    <div key={inv.id}>
+                                                      {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              ),
+                                            }}
+                                          </v-tooltip>
+                                        )}
+                                      </div>
+                                    ) : <span class="text-medium-emphasis">—</span>}
+                                  </td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </v-table>
                       </td>

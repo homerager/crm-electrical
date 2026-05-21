@@ -1,3 +1,4 @@
+import { getProductSupplyHistory, attachSupplyHistory } from '../../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -28,5 +29,13 @@ export default defineEventHandler(async (event) => {
     orderBy: { date: 'desc' },
   })
 
-  return { movements }
+  const allProductIds = [...new Set(movements.flatMap((m) => m.items.map((i) => i.productId)))]
+  const supplyMap = await getProductSupplyHistory(allProductIds, id)
+
+  const enriched = movements.map((m) => ({
+    ...m,
+    items: attachSupplyHistory(m.items, supplyMap),
+  }))
+
+  return { movements: enriched }
 })

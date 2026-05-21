@@ -1,3 +1,4 @@
+import { getProductSupplyHistory, attachSupplyHistory } from '../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -15,5 +16,13 @@ export default defineEventHandler(async (event) => {
 
   if (!warehouse) throw createError({ statusCode: 404, statusMessage: 'Склад не знайдено' })
 
-  return { warehouse }
+  const productIds = warehouse.stock.map((s) => s.productId)
+  const supplyMap = await getProductSupplyHistory(productIds, id)
+
+  return {
+    warehouse: {
+      ...warehouse,
+      stock: attachSupplyHistory(warehouse.stock, supplyMap),
+    },
+  }
 })

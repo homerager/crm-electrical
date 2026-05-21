@@ -8,10 +8,27 @@ export default defineComponent({
     })
 
     const filterType = ref<string | null>(null)
-    const { data, pending, refresh } = useFetch('/api/invoices', {
-      query: computed(() => (filterType.value ? { type: filterType.value } : {})),
+    const search = ref('')
+    const filterContractorId = ref<string | null>(null)
+    const filterWarehouseId = ref<string | null>(null)
+
+    const fetchQuery = computed(() => {
+      const q: Record<string, string> = {}
+      if (filterType.value) q.type = filterType.value
+      if (search.value) q.search = search.value
+      if (filterContractorId.value) q.contractorId = filterContractorId.value
+      if (filterWarehouseId.value) q.warehouseId = filterWarehouseId.value
+      return q
     })
+
+    const { data, pending, refresh } = useFetch('/api/invoices', { query: fetchQuery })
     const invoices = computed(() => (data.value as any)?.invoices ?? [])
+
+    const { data: contractorsData } = useFetch('/api/contractors')
+    const contractors = computed(() => (contractorsData.value as any)?.contractors ?? [])
+
+    const { data: warehousesData } = useFetch('/api/warehouses')
+    const warehouses = computed(() => (warehousesData.value as any)?.warehouses ?? [])
 
     const typeOptions = [
       { title: 'Всі', value: null },
@@ -42,13 +59,51 @@ export default defineComponent({
 
         <v-card>
           <v-card-text class="pb-0">
-            <v-btn-toggle v-model={filterType.value} rounded="lg" density="compact" class="mb-2">
-              {typeOptions.map((opt) => (
-                <v-btn key={String(opt.value)} value={opt.value}>
-                  {opt.title}
-                </v-btn>
-              ))}
-            </v-btn-toggle>
+            <v-row align="center" class="mb-2">
+              <v-col cols={12} sm="auto">
+                <v-btn-toggle v-model={filterType.value} rounded="lg" density="compact">
+                  {typeOptions.map((opt) => (
+                    <v-btn key={String(opt.value)} value={opt.value}>
+                      {opt.title}
+                    </v-btn>
+                  ))}
+                </v-btn-toggle>
+              </v-col>
+              <v-col cols={12} sm={3}>
+                <v-text-field
+                  v-model={search.value}
+                  label="Пошук за номером"
+                  prepend-inner-icon="mdi-magnify"
+                  clearable
+                  hide-details
+                  density="compact"
+                />
+              </v-col>
+              <v-col cols={12} sm={3}>
+                <v-select
+                  v-model={filterContractorId.value}
+                  label="Контрагент"
+                  items={contractors.value}
+                  item-title="name"
+                  item-value="id"
+                  clearable
+                  hide-details
+                  density="compact"
+                />
+              </v-col>
+              <v-col cols={12} sm={3}>
+                <v-select
+                  v-model={filterWarehouseId.value}
+                  label="Склад"
+                  items={warehouses.value}
+                  item-title="name"
+                  item-value="id"
+                  clearable
+                  hide-details
+                  density="compact"
+                />
+              </v-col>
+            </v-row>
           </v-card-text>
           <v-data-table headers={headers} items={invoices.value} loading={pending.value} hover>
             {{

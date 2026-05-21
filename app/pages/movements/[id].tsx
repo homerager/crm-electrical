@@ -55,6 +55,8 @@ export default defineComponent({
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },
       { title: 'Кількість', key: 'quantity', align: 'end' as const, width: 140 },
+      { title: 'Постачальники', key: 'supplyHistory', sortable: false },
+      { title: 'Накладні', key: 'invoices', sortable: false },
     ]
 
     return () => (
@@ -113,6 +115,74 @@ export default defineComponent({
                     'item.quantity': ({ item }: any) => (
                       <strong>{Number(item.quantity).toLocaleString('uk-UA')} {item.product?.unit}</strong>
                     ),
+                    'item.supplyHistory': ({ item }: any) => {
+                      const contractors = [
+                        ...new Map(
+                          (item.supplyHistory ?? [])
+                            .filter((s: any) => s.contractor)
+                            .map((s: any) => [s.contractor.id, s.contractor.name]),
+                        ).values(),
+                      ] as string[]
+                      if (!contractors.length) return <span class="text-medium-emphasis">—</span>
+                      const visible = contractors.slice(0, 2)
+                      const rest = contractors.slice(2)
+                      return (
+                        <div class="d-flex flex-wrap gap-1 align-center">
+                          {visible.map((name, i) => (
+                            <v-chip key={i} size="x-small" variant="tonal" color="secondary">{name}</v-chip>
+                          ))}
+                          {rest.length > 0 && (
+                            <v-tooltip>
+                              {{
+                                activator: ({ props }: any) => (
+                                  <v-chip {...props} size="x-small" variant="tonal">+{rest.length}</v-chip>
+                                ),
+                                default: () => (
+                                  <div>{rest.map((name, i) => <div key={i}>{name}</div>)}</div>
+                                ),
+                              }}
+                            </v-tooltip>
+                          )}
+                        </div>
+                      )
+                    },
+                    'item.invoices': ({ item }: any) => {
+                      const invoices = [
+                        ...new Map(
+                          (item.supplyHistory ?? []).map((s: any) => [s.invoice.id, s.invoice]),
+                        ).values(),
+                      ] as any[]
+                      if (!invoices.length) return <span class="text-medium-emphasis">—</span>
+                      const visible = invoices.slice(0, 2)
+                      const rest = invoices.slice(2)
+                      return (
+                        <div class="d-flex flex-wrap gap-1 align-center">
+                          {visible.map((inv: any) => (
+                            <v-chip key={inv.id} size="x-small" variant="outlined" to={`/invoices/${inv.id}`}>
+                              {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                            </v-chip>
+                          ))}
+                          {rest.length > 0 && (
+                            <v-tooltip>
+                              {{
+                                activator: ({ props }: any) => (
+                                  <v-chip {...props} size="x-small" variant="tonal">+{rest.length}</v-chip>
+                                ),
+                                default: () => (
+                                  <div>
+                                    {rest.map((inv: any) => (
+                                      <div key={inv.id}>
+                                        {inv.number} ({new Date(inv.date).toLocaleDateString('uk-UA')})
+                                      </div>
+                                    ))}
+                                  </div>
+                                ),
+                              }}
+                            </v-tooltip>
+                          )}
+                        </div>
+                      )
+                    },
                   }}
                 </v-data-table>
               </v-card>

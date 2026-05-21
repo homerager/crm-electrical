@@ -1,3 +1,5 @@
+import { getProductSupplyHistory } from '../../../utils/productSupplyHistory'
+
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
 
@@ -216,15 +218,42 @@ export default defineEventHandler(async (event) => {
     ? Math.round((totalExpenses / budget) * 10000) / 100
     : null
 
+  const allProductIds = [
+    ...new Set([
+      ...summary.map((r) => r.product.id),
+      ...stockOnSite.map((s) => s.productId),
+      ...warehouseReservations.map((r) => r.productId),
+      ...consumedSummary.map((r) => r.product.id),
+    ]),
+  ]
+  const supplyMap = await getProductSupplyHistory(allProductIds)
+
+  const enrichedSummary = summary.map((r) => ({
+    ...r,
+    supplyHistory: supplyMap.get(r.product.id) ?? [],
+  }))
+  const enrichedStockOnSite = stockOnSite.map((s) => ({
+    ...s,
+    supplyHistory: supplyMap.get(s.productId) ?? [],
+  }))
+  const enrichedReservations = warehouseReservations.map((r) => ({
+    ...r,
+    supplyHistory: supplyMap.get(r.productId) ?? [],
+  }))
+  const enrichedConsumed = consumedSummary.map((r) => ({
+    ...r,
+    supplyHistory: supplyMap.get(r.product.id) ?? [],
+  }))
+
   return {
     object,
-    warehouseReservations,
+    warehouseReservations: enrichedReservations,
     movements,
-    summary,
+    summary: enrichedSummary,
     summaryTotalAmount,
     summaryHasMissingPrice,
-    stockOnSite,
-    consumedSummary,
+    stockOnSite: enrichedStockOnSite,
+    consumedSummary: enrichedConsumed,
     consumedTotalAmount,
     consumedHasMissingPrice,
     writeOffMovements,

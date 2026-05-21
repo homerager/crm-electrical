@@ -50,6 +50,7 @@ export default defineComponent({
             value: 'objects',to: '/objects'
            
           },
+          { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents' },
           { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
           { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
           { title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' },
@@ -80,7 +81,6 @@ export default defineComponent({
           value: 'commerce',
           children: [
             { title: 'Клієнти', icon: 'mdi-account-tie', to: '/clients' },
-            { title: 'Контрагенти', icon: 'mdi-domain', to: '/contractors' },
             {
               title: 'Комерційні пропозиції',
               icon: 'mdi-briefcase-edit-outline',
@@ -90,7 +90,6 @@ export default defineComponent({
                 { title: 'Товари для КП', icon: 'mdi-tag-text-outline', to: '/proposals/products' },
               ],
             },
-            { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents' },
           ],
         },
         {
@@ -102,16 +101,16 @@ export default defineComponent({
             { title: 'Товари', icon: 'mdi-package-variant-closed', to: '/products' },
             { title: 'Групи товарів', icon: 'mdi-tag-multiple', to: '/product-groups' },
             { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
-            {
-              title: 'Обладнання',
-              icon: 'mdi-toolbox-outline',
-              value: 'equipment',
-              children: [
-                { title: 'Список', icon: 'mdi-format-list-bulleted', to: '/equipment' },
-                { title: 'Сканер', icon: 'mdi-qrcode-scan', to: '/equipment/scan' },
-                { title: 'Інвентаризація', icon: 'mdi-clipboard-check-outline', to: '/equipment/inventory' },
-              ],
-            },
+          ],
+        },
+        {
+          title: 'Обладнання',
+          icon: 'mdi-toolbox-outline',
+          value: 'equipment',
+          children: [
+            { title: 'Список', icon: 'mdi-format-list-bulleted', to: '/equipment' },
+            { title: 'Сканер', icon: 'mdi-qrcode-scan', to: '/equipment/scan' },
+            { title: 'Інвентаризація', icon: 'mdi-clipboard-check-outline', to: '/equipment/inventory' },
           ],
         },
         projects,
@@ -129,6 +128,7 @@ export default defineComponent({
           icon: 'mdi-cart-outline',
           value: 'purchase',
           children: [
+            { title: 'Контрагенти', icon: 'mdi-domain', to: '/contractors' },
             { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
             { title: 'Заявки на закупівлю', icon: 'mdi-cart-arrow-down', to: '/purchase-requests' },
           ],
