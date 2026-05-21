@@ -448,9 +448,9 @@ export default defineComponent({
             >
               {{
                 'item.title': ({ item }: any) => (
-                  <NuxtLink to={`/tasks/${item.id}`} class="text-primary text-decoration-none font-weight-medium">
+                  <nuxt-link to={`/tasks/${item.id}`} class="text-primary text-decoration-none font-weight-medium">
                     {item.title}
-                  </NuxtLink>
+                  </nuxt-link>
                 ),
                 'item.status': ({ item }: any) => {
                   const s = statusMeta(item.status)

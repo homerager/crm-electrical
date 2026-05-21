@@ -1221,10 +1221,10 @@ export default defineComponent({
                       <v-icon size="18" color={row.error ? 'error' : 'medium-emphasis'}>{row.icon}</v-icon>
                       <span class="text-body-2 text-medium-emphasis" style="flex:1; white-space:nowrap">{row.label}</span>
                       {row.link ? (
-                        <NuxtLink to={row.link} class="text-body-2 font-weight-medium text-decoration-none d-flex align-center" style="gap:4px; max-width:140px">
+                        <nuxt-link to={row.link} class="text-body-2 font-weight-medium text-decoration-none d-flex align-center" style="gap:4px; max-width:140px">
                           {row.color && <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: row.color, flexShrink: 0 }} />}
                           <span class="text-truncate" title={row.value}>{row.value}</span>
-                        </NuxtLink>
+                        </nuxt-link>
                       ) : (
                         <span class={`text-body-2 font-weight-medium text-right ${row.error ? 'text-error' : ''}`} style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title={row.value}>
                           {row.value}

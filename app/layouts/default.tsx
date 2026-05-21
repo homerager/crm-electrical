@@ -462,7 +462,7 @@ function getPageTitle(path: string): string {
     '/schedule': 'Розклад',
     '/tasks/calendar': 'Календар завдань',
     '/tasks': 'Завдання',
-    '/time-logs/manual': 'Облік часу',
+    '/time-logs/manual': 'Журнал робіт',
     '/projects': 'Проєкти',
     '/users': 'Користувачі',
     '/job-titles': 'Посади',

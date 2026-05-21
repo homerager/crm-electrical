@@ -58,7 +58,7 @@ export default defineComponent({
       }
       if (isPrivileged.value) {
         projects.children.push({ title: 'Розклад', icon: 'mdi-calendar-account-outline', to: '/schedule' })
-        projects.children.push({ title: 'Облік часу', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
+        projects.children.push({ title: 'Журнал робіт', icon: 'mdi-notebook-edit-outline', to: '/time-logs/manual' })
       }
 
       const reports: NavSection = {

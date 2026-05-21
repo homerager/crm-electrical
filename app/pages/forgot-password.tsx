@@ -103,12 +103,12 @@ export default defineComponent({
                 </v-btn>
 
                 <div class="text-center mt-4">
-                  <NuxtLink
+                  <nuxt-link
                     to="/login"
                     class="text-caption text-primary text-decoration-none"
                   >
                     Повернутися до входу
-                  </NuxtLink>
+                  </nuxt-link>
                 </div>
               </>
             )}

@@ -152,6 +152,7 @@ model Warehouse {
   equipmentMovementsFrom     EquipmentMovement[] @relation("EqMovementFromWarehouse")
   equipmentMovementsTo       EquipmentMovement[] @relation("EqMovementToWarehouse")
   inventorySessions          InventorySession[]
+  timeLogs                   TimeLog[]
 
   @@map("warehouses")
 }
@@ -479,6 +480,8 @@ model TimeLog {
   id          String   @id @default(cuid())
   taskId      String?
   objectId    String?
+  /// Склад, де виконувалась робота (альтернатива обʼєкту — взаємовиключні)
+  warehouseId String?
   userId      String
   /// Хто створив запис (на кого години — userId)
   createdById String?
@@ -489,6 +492,7 @@ model TimeLog {
 
   task      Task?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
   object    ConstructionObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  warehouse Warehouse?          @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
   user      User                @relation("TimeLogWork", fields: [userId], references: [id])
   createdBy User?               @relation("TimeLogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   schedule  Schedule?

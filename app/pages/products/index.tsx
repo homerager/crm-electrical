@@ -10,12 +10,27 @@ export default defineComponent({
     const { isPrivileged } = useAuth()
     const search = ref('')
     const filterGroupId = ref<string | null>(null)
+    const filterContractorId = ref<string | null>(null)
+    const filterInvoiceId = ref<string | null>(null)
 
     const { data, refresh, pending } = useFetch('/api/products', { query: { search } })
+    const allProducts = computed(() => (data.value as any)?.products ?? [])
     const products = computed(() => {
-      const all = (data.value as any)?.products ?? []
-      if (!filterGroupId.value) return all
-      return all.filter((p: any) => p.groupId === filterGroupId.value)
+      let all = allProducts.value
+      if (filterGroupId.value) {
+        all = all.filter((p: any) => p.groupId === filterGroupId.value)
+      }
+      if (filterContractorId.value) {
+        all = all.filter((p: any) =>
+          (p.supplyHistory ?? []).some((s: any) => s.contractor?.id === filterContractorId.value),
+        )
+      }
+      if (filterInvoiceId.value) {
+        all = all.filter((p: any) =>
+          (p.supplyHistory ?? []).some((s: any) => s.invoice?.id === filterInvoiceId.value),
+        )
+      }
+      return all
     })
 
     const { data: groupsData } = useFetch('/api/product-groups')
@@ -25,6 +40,35 @@ export default defineComponent({
       { title: 'Усі групи', value: null },
       ...groups.value.map((g: any) => ({ title: g.name, value: g.id })),
     ])
+
+    const contractorOptions = computed(() => {
+      const map = new Map<string, string>()
+      for (const p of allProducts.value) {
+        for (const s of p.supplyHistory ?? []) {
+          if (s.contractor) map.set(s.contractor.id, s.contractor.name)
+        }
+      }
+      return [
+        { title: 'Усі постачальники', value: null },
+        ...[...map].map(([value, title]) => ({ title, value })),
+      ]
+    })
+
+    const invoiceOptions = computed(() => {
+      const map = new Map<string, any>()
+      for (const p of allProducts.value) {
+        for (const s of p.supplyHistory ?? []) {
+          if (s.invoice) map.set(s.invoice.id, s.invoice)
+        }
+      }
+      return [
+        { title: 'Усі накладні', value: null },
+        ...[...map.values()].map((inv: any) => ({
+          title: `${inv.number} (${new Date(inv.date).toLocaleDateString('uk-UA')})`,
+          value: inv.id,
+        })),
+      ]
+    })
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -130,7 +174,7 @@ export default defineComponent({
         <v-card>
           <v-card-text class="pb-0">
             <v-row>
-              <v-col cols={12} sm={8}>
+              <v-col cols={12} sm={6} md={3}>
                 <v-text-field
                   v-model={search.value}
                   label="Пошук за назвою або артикулом"
@@ -139,13 +183,37 @@ export default defineComponent({
                   hide-details
                 />
               </v-col>
-              <v-col cols={12} sm={4}>
+              <v-col cols={12} sm={6} md={3}>
                 <v-select
                   v-model={filterGroupId.value}
                   label="Фільтр за групою"
                   items={groupOptions.value}
                   item-title="title"
                   item-value="value"
+                  clearable
+                  hide-details
+                />
+              </v-col>
+              <v-col cols={12} sm={6} md={3}>
+                <v-select
+                  v-model={filterContractorId.value}
+                  label="Фільтр за постачальником"
+                  items={contractorOptions.value}
+                  item-title="title"
+                  item-value="value"
+                  prepend-inner-icon="mdi-truck"
+                  clearable
+                  hide-details
+                />
+              </v-col>
+              <v-col cols={12} sm={6} md={3}>
+                <v-select
+                  v-model={filterInvoiceId.value}
+                  label="Фільтр за накладною"
+                  items={invoiceOptions.value}
+                  item-title="title"
+                  item-value="value"
+                  prepend-inner-icon="mdi-file-document"
                   clearable
                   hide-details
                 />

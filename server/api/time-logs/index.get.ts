@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const userId = query.userId as string | undefined
   const objectId = query.objectId as string | undefined
+  const warehouseId = query.warehouseId as string | undefined
   const from = query.from ? new Date(query.from as string) : undefined
   const to = query.to
     ? (() => { const d = new Date(query.to as string); d.setHours(23, 59, 59, 999); return d })()
@@ -25,6 +26,8 @@ export default defineEventHandler(async (event) => {
   if (objectId) {
     where.OR = [{ objectId }, { task: { objectId } }]
   }
+
+  if (warehouseId) where.warehouseId = warehouseId
 
   if (from || to) {
     where.date = { ...(from && { gte: from }), ...(to && { lte: to }) }
@@ -46,6 +49,7 @@ export default defineEventHandler(async (event) => {
           },
         },
         object: { select: { id: true, name: true } },
+        warehouse: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
       },
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],

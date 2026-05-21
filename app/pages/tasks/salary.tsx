@@ -62,7 +62,7 @@ export default defineComponent({
 
     function exportCSV() {
       const rows: string[][] = [
-        ['Виконавець', 'Дата', 'Записав', 'Завдання', 'Проєкт', 'Обʼєкт', 'Опис', 'Годин', 'Ставка грн/год', 'Сума грн'],
+        ['Виконавець', 'Дата', 'Записав', 'Завдання', 'Проєкт', 'Обʼєкт / Склад', 'Опис', 'Годин', 'Ставка грн/год', 'Сума грн'],
       ]
       for (const u of userRows.value) {
         const rateNum = u.hourlyRate != null ? Number(u.hourlyRate) : null
@@ -74,7 +74,7 @@ export default defineComponent({
             log.createdBy?.name ?? '—',
             log.task?.title ?? (log.object?.name ? '(без завдання)' : '—'),
             log.task?.project?.name ?? '—',
-            log.task?.object?.name ?? log.object?.name ?? '—',
+            log.task?.object?.name ?? log.object?.name ?? (log.warehouse?.name ? `Склад: ${log.warehouse.name}` : '—'),
             log.description ?? '—',
             String(log.hours),
             rateNum != null ? String(rateNum) : '',
@@ -268,7 +268,7 @@ export default defineComponent({
                     { title: 'Записав', key: 'createdBy', width: 120 },
                     { title: 'Завдання', key: 'task' },
                     { title: 'Проєкт', key: 'project', width: 160 },
-                    { title: 'Обʼєкт', key: 'object', width: 160 },
+                    { title: 'Обʼєкт / Склад', key: 'object', width: 160 },
                     { title: 'Опис', key: 'description' },
                     { title: 'Год.', key: 'hours', width: 80, align: 'end' as const },
                   ]}
@@ -286,9 +286,9 @@ export default defineComponent({
                     ),
                     'item.task': ({ item }: any) =>
                       item.taskId && item.task ? (
-                        <NuxtLink to={`/tasks/${item.taskId}`} class="text-primary text-decoration-none">
+                        <nuxt-link to={`/tasks/${item.taskId}`} class="text-primary text-decoration-none">
                           {item.task.title}
-                        </NuxtLink>
+                        </nuxt-link>
                       ) : (
                         <span class="text-body-2 text-medium-emphasis">—</span>
                       ),
@@ -302,9 +302,19 @@ export default defineComponent({
                         </div>
                       )
                     },
-                    'item.object': ({ item }: any) => (
-                      <span class="text-body-2">{item.task?.object?.name ?? item.object?.name ?? '—'}</span>
-                    ),
+                    'item.object': ({ item }: any) => {
+                      const objName = item.task?.object?.name ?? item.object?.name
+                      if (objName) return <span class="text-body-2">{objName}</span>
+                      if (item.warehouse?.name) {
+                        return (
+                          <span class="text-body-2">
+                            <v-icon size="x-small" icon="mdi-warehouse" class="mr-1" />
+                            {item.warehouse.name}
+                          </span>
+                        )
+                      }
+                      return <span class="text-body-2 text-medium-emphasis">—</span>
+                    },
                     'item.description': ({ item }: any) => (
                       <span class="text-body-2 text-medium-emphasis">{item.description ?? '—'}</span>
                     ),

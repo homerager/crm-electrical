@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
       user: { select: { id: true, name: true, hourlyRate: true } },
       createdBy: { select: { id: true, name: true } },
       object: { select: { id: true, name: true } },
+      warehouse: { select: { id: true, name: true } },
       task: {
         select: {
           id: true,

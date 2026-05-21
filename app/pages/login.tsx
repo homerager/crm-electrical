@@ -88,12 +88,12 @@ export default defineComponent({
           </v-text-field>
 
           <div class="text-right mt-1">
-            <NuxtLink
+            <nuxt-link
               to="/forgot-password"
               class="text-caption text-primary text-decoration-none"
             >
               Забули пароль?
-            </NuxtLink>
+            </nuxt-link>
           </div>
 
           <v-btn

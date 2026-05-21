@@ -1,5 +1,5 @@
 import { isElevatedRole } from '../../utils/authz'
-import { resolveManualTimeLogTaskAndObject } from '../../utils/manual-time-log-refs'
+import { resolveManualTimeLogRefs } from '../../utils/manual-time-log-refs'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -9,13 +9,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { userId, hours, description, date, taskId, objectId } = body as {
+  const { userId, hours, description, date, taskId, objectId, warehouseId } = body as {
     userId?: string
     hours?: number
     description?: string | null
     date?: string | null
     taskId?: string | null
     objectId?: string | null
+    warehouseId?: string | null
   }
 
   if (!userId?.trim()) {
@@ -46,15 +47,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { taskId: resolvedTaskId, objectId: resolvedObjectId } = await resolveManualTimeLogTaskAndObject({
-    taskId,
-    objectId,
-  })
+  const { taskId: resolvedTaskId, objectId: resolvedObjectId, warehouseId: resolvedWarehouseId }
+    = await resolveManualTimeLogRefs({ taskId, objectId, warehouseId })
 
   const log = await prisma.timeLog.create({
     data: {
       taskId: resolvedTaskId,
       objectId: resolvedObjectId,
+      warehouseId: resolvedWarehouseId,
       userId,
       createdById: auth.userId,
       hours: Number(hours),
@@ -73,6 +73,7 @@ export default defineEventHandler(async (event) => {
         },
       },
       object: { select: { id: true, name: true } },
+      warehouse: { select: { id: true, name: true } },
       createdBy: { select: { id: true, name: true } },
     },
   })

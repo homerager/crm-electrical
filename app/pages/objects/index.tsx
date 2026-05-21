@@ -176,7 +176,7 @@ export default defineComponent({
             {{
               'item.project': ({ item }: any) => (
                 item.project
-                  ? <v-chip size="small" variant="tonal" style={{ borderLeft: `3px solid ${item.project.color}` }}>{item.project.name}</v-chip>
+                  ? <v-chip size="small" variant="tonal" style={{ border: `2px solid ${item.project.color}` }}>{item.project.name}</v-chip>
                   : <span class="text-medium-emphasis">—</span>
               ),
               'item.client': ({ item }: any) => (
@@ -208,9 +208,9 @@ export default defineComponent({
                 <span>{new Date(item.createdAt).toLocaleDateString('uk-UA')}</span>
               ),
               'item.name': ({ item }: any) => (
-                <NuxtLink to={`/tasks?objectId=${item.id}`} class="text-primary text-decoration-none font-weight-medium">
+                <nuxt-link to={`/tasks?objectId=${item.id}`} class="text-primary text-decoration-none font-weight-medium">
                   {item.name}
-                </NuxtLink>
+                </nuxt-link>
               ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
