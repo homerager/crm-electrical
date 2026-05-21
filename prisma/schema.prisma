@@ -158,6 +158,7 @@ model ConstructionObject {
   client                    Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
   projectId                 String?
   project                   Project?   @relation("ProjectObjects", fields: [projectId], references: [id], onDelete: SetNull)
+  invoices                  Invoice[]
   movements                 Movement[]
   stock                     ObjectStock[]
   warehouseStockReservations WarehouseObjectReservation[]
@@ -309,16 +310,18 @@ model Invoice {
   number       String
   type         InvoiceType
   contractorId String?
-  warehouseId  String
+  warehouseId  String?
+  objectId     String?
   createdById  String
   date         DateTime
   notes        String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  contractor Contractor? @relation(fields: [contractorId], references: [id])
-  warehouse  Warehouse   @relation(fields: [warehouseId], references: [id])
-  createdBy  User        @relation(fields: [createdById], references: [id])
+  contractor Contractor?         @relation(fields: [contractorId], references: [id])
+  warehouse  Warehouse?          @relation(fields: [warehouseId], references: [id])
+  object     ConstructionObject? @relation(fields: [objectId], references: [id])
+  createdBy  User                @relation(fields: [createdById], references: [id])
   items      InvoiceItem[]
   purchaseRequests PurchaseRequest[]
   payments   Payment[]

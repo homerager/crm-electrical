@@ -11,10 +11,16 @@ interface InvoiceItemInput {
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth!
   const body = await readBody(event)
-  const { number, type, contractorId, warehouseId, date, notes, items } = body
+  const { number, type, contractorId, warehouseId, objectId, date, notes, items } = body
 
-  if (!number || !type || !warehouseId || !date || !items?.length) {
+  if (!number || !type || !date || !items?.length) {
     throw createError({ statusCode: 400, statusMessage: 'Заповніть всі обовʼязкові поля' })
+  }
+  if (!warehouseId && !objectId) {
+    throw createError({ statusCode: 400, statusMessage: 'Оберіть склад або обʼєкт' })
+  }
+  if (warehouseId && objectId) {
+    throw createError({ statusCode: 400, statusMessage: 'Оберіть або склад, або обʼєкт' })
   }
 
   const invoice = await prisma.$transaction(async (tx) => {
@@ -23,7 +29,8 @@ export default defineEventHandler(async (event) => {
         number,
         type: type as InvoiceType,
         contractorId: contractorId || null,
-        warehouseId,
+        warehouseId: warehouseId || null,
+        objectId: objectId || null,
         createdById: auth.userId,
         date: new Date(date),
         notes,
@@ -42,33 +49,57 @@ export default defineEventHandler(async (event) => {
     for (const item of items as InvoiceItemInput[]) {
       const delta = type === 'INCOMING' ? item.quantity : -item.quantity
 
-      const existing = await tx.warehouseStock.findUnique({
-        where: { productId_warehouseId: { productId: item.productId, warehouseId } },
-      })
-
-      if (existing) {
-        const newQty = Number(existing.quantity) + delta
-        if (newQty < 0) {
-          throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
-        }
-        await tx.warehouseStock.update({
+      if (warehouseId) {
+        const existing = await tx.warehouseStock.findUnique({
           where: { productId_warehouseId: { productId: item.productId, warehouseId } },
-          data: { quantity: newQty },
         })
-      } else {
-        if (delta < 0) {
-          throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
+
+        if (existing) {
+          const newQty = Number(existing.quantity) + delta
+          if (newQty < 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
+          }
+          await tx.warehouseStock.update({
+            where: { productId_warehouseId: { productId: item.productId, warehouseId } },
+            data: { quantity: newQty },
+          })
+        } else {
+          if (delta < 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
+          }
+          await tx.warehouseStock.create({
+            data: { productId: item.productId, warehouseId, quantity: delta },
+          })
         }
-        await tx.warehouseStock.create({
-          data: { productId: item.productId, warehouseId, quantity: delta },
+      } else if (objectId) {
+        const existing = await tx.objectStock.findUnique({
+          where: { objectId_productId: { objectId, productId: item.productId } },
         })
+
+        if (existing) {
+          const newQty = Number(existing.quantity) + delta
+          if (newQty < 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на обʼєкті' })
+          }
+          await tx.objectStock.update({
+            where: { objectId_productId: { objectId, productId: item.productId } },
+            data: { quantity: newQty },
+          })
+        } else {
+          if (delta < 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на обʼєкті' })
+          }
+          await tx.objectStock.create({
+            data: { objectId, productId: item.productId, quantity: delta },
+          })
+        }
       }
     }
 
     return created
   })
 
-  writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Invoice', entityId: invoice.id, changes: { number, type, warehouseId, contractorId, itemCount: items.length } })
+  writeAuditLog({ userId: auth.userId, userName: auth.name, action: 'CREATE', entityType: 'Invoice', entityId: invoice.id, changes: { number, type, warehouseId, objectId, contractorId, itemCount: items.length } })
 
   return { invoice }
 })

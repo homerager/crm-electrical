@@ -11,6 +11,7 @@ export default defineComponent({
     const search = ref('')
     const filterContractorId = ref<string | null>(null)
     const filterWarehouseId = ref<string | null>(null)
+    const filterObjectId = ref<string | null>(null)
 
     const fetchQuery = computed(() => {
       const q: Record<string, string> = {}
@@ -18,6 +19,7 @@ export default defineComponent({
       if (search.value) q.search = search.value
       if (filterContractorId.value) q.contractorId = filterContractorId.value
       if (filterWarehouseId.value) q.warehouseId = filterWarehouseId.value
+      if (filterObjectId.value) q.objectId = filterObjectId.value
       return q
     })
 
@@ -30,6 +32,9 @@ export default defineComponent({
     const { data: warehousesData } = useFetch('/api/warehouses')
     const warehouses = computed(() => (warehousesData.value as any)?.warehouses ?? [])
 
+    const { data: objectsData } = useFetch('/api/objects')
+    const objects = computed(() => (objectsData.value as any)?.objects ?? [])
+
     const typeOptions = [
       { title: 'Всі', value: null },
       { title: 'Прихід', value: 'INCOMING' },
@@ -40,7 +45,7 @@ export default defineComponent({
       { title: '№', key: 'number', width: 100 },
       { title: 'Тип', key: 'type', width: 120 },
       { title: 'Дата', key: 'date', width: 120 },
-      { title: 'Склад', key: 'warehouse.name' },
+      { title: 'Призначення', key: 'destination' },
       { title: 'Контрагент', key: 'contractor.name' },
       { title: 'Позицій', key: 'items', sortable: false, width: 100 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
@@ -69,7 +74,7 @@ export default defineComponent({
                   ))}
                 </v-btn-toggle>
               </v-col>
-              <v-col cols={12} sm={3}>
+              <v-col cols={12} sm={2}>
                 <v-text-field
                   v-model={search.value}
                   label="Пошук за номером"
@@ -79,7 +84,7 @@ export default defineComponent({
                   density="compact"
                 />
               </v-col>
-              <v-col cols={12} sm={3}>
+              <v-col cols={12} sm={2}>
                 <v-select
                   v-model={filterContractorId.value}
                   label="Контрагент"
@@ -91,11 +96,23 @@ export default defineComponent({
                   density="compact"
                 />
               </v-col>
-              <v-col cols={12} sm={3}>
+              <v-col cols={12} sm={2}>
                 <v-select
                   v-model={filterWarehouseId.value}
                   label="Склад"
                   items={warehouses.value}
+                  item-title="name"
+                  item-value="id"
+                  clearable
+                  hide-details
+                  density="compact"
+                />
+              </v-col>
+              <v-col cols={12} sm={2}>
+                <v-select
+                  v-model={filterObjectId.value}
+                  label="Обʼєкт"
+                  items={objects.value}
                   item-title="name"
                   item-value="id"
                   clearable
@@ -115,6 +132,25 @@ export default defineComponent({
               'item.date': ({ item }: any) => (
                 <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
               ),
+              'item.destination': ({ item }: any) => {
+                if (item.warehouse) {
+                  return (
+                    <span>
+                      <v-icon size="small" class="mr-1">mdi-warehouse</v-icon>
+                      {item.warehouse.name}
+                    </span>
+                  )
+                }
+                if (item.object) {
+                  return (
+                    <span>
+                      <v-icon size="small" class="mr-1">mdi-office-building</v-icon>
+                      {item.object.name}
+                    </span>
+                  )
+                }
+                return <span>—</span>
+              },
               'item.contractor.name': ({ item }: any) => (
                 <span>{item.contractor?.name || '—'}</span>
               ),

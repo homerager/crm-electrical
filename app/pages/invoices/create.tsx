@@ -6,6 +6,8 @@ interface InvoiceItemRow {
   _product?: any
 }
 
+type DestinationType = 'warehouse' | 'object'
+
 export default defineComponent({
   name: 'InvoiceCreatePage',
   setup() {
@@ -19,23 +21,33 @@ export default defineComponent({
     const { data: warehousesData } = useFetch('/api/warehouses')
     const { data: contractorsData } = useFetch('/api/contractors')
     const { data: productsData } = useFetch('/api/products')
+    const { data: objectsData } = useFetch('/api/objects')
     const { data: settingsData } = useFetch('/api/settings')
 
     const warehouses = computed(() => (warehousesData.value as any)?.warehouses ?? [])
     const contractors = computed(() => (contractorsData.value as any)?.contractors ?? [])
     const products = computed(() => (productsData.value as any)?.products ?? [])
+    const objects = computed(() => (objectsData.value as any)?.objects ?? [])
     const defaultVatPercent = computed(() => {
       const s = (settingsData.value as any)?.settings
       return s?.defaultVatPercent != null ? Number(s.defaultVatPercent) : 0
     })
 
+    const destinationType = ref<DestinationType>('warehouse')
+
     const form = reactive({
       number: '',
       type: 'INCOMING',
       warehouseId: '',
+      objectId: '',
       contractorId: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
+    })
+
+    watch(destinationType, () => {
+      form.warehouseId = ''
+      form.objectId = ''
     })
 
     const items = ref<InvoiceItemRow[]>([])
@@ -45,6 +57,11 @@ export default defineComponent({
     const typeOptions = [
       { title: 'Прихід', value: 'INCOMING' },
       { title: 'Видаток', value: 'OUTGOING' },
+    ]
+
+    const destinationOptions = [
+      { title: 'Склад', value: 'warehouse' },
+      { title: 'Обʼєкт', value: 'object' },
     ]
 
     function addItem() {
@@ -62,7 +79,8 @@ export default defineComponent({
 
     async function save() {
       error.value = ''
-      if (!form.number || !form.warehouseId || !form.date) {
+      const hasDestination = destinationType.value === 'warehouse' ? form.warehouseId : form.objectId
+      if (!form.number || !hasDestination || !form.date) {
         error.value = 'Заповніть всі обовʼязкові поля'
         return
       }
@@ -77,9 +95,23 @@ export default defineComponent({
 
       saving.value = true
       try {
+        const payload: any = {
+          number: form.number,
+          type: form.type,
+          contractorId: form.contractorId,
+          date: form.date,
+          notes: form.notes,
+          items: items.value.map((i) => ({ productId: i.productId, quantity: i.quantity, pricePerUnit: i.pricePerUnit, vatPercent: i.vatPercent })),
+        }
+        if (destinationType.value === 'warehouse') {
+          payload.warehouseId = form.warehouseId
+        } else {
+          payload.objectId = form.objectId
+        }
+
         const result = await $fetch('/api/invoices', {
           method: 'POST',
-          body: { ...form, items: items.value.map((i) => ({ productId: i.productId, quantity: i.quantity, pricePerUnit: i.pricePerUnit, vatPercent: i.vatPercent })) },
+          body: payload,
         })
         await router.push(`/invoices/${(result as any).invoice.id}`)
       } catch (e: any) {
@@ -119,14 +151,42 @@ export default defineComponent({
                   </v-col>
                 </v-row>
                 <v-row>
+                  <v-col cols={12} md={12}>
+                    <v-btn-toggle
+                        v-model={destinationType.value}
+                        mandatory
+                        rounded="lg"
+                        density="compact"
+                        color="primary"
+                        class="mb-3"
+                      >
+                        {destinationOptions.map((opt) => (
+                          <v-btn key={opt.value} value={opt.value}>
+                            {opt.title}
+                          </v-btn>
+                        ))}
+                      </v-btn-toggle>
+                  </v-col>
+                </v-row>
+                <v-row >
                   <v-col cols={12} md={6}>
-                    <v-select
-                      v-model={form.warehouseId}
-                      label="Склад *"
-                      items={warehouses.value}
-                      item-title="name"
-                      item-value="id"
-                    />
+                    {destinationType.value === 'warehouse' ? (
+                      <v-select
+                        v-model={form.warehouseId}
+                        label="Склад *"
+                        items={warehouses.value}
+                        item-title="name"
+                        item-value="id"
+                      />
+                    ) : (
+                      <v-autocomplete
+                        v-model={form.objectId}
+                        label="Обʼєкт *"
+                        items={objects.value}
+                        item-title="name"
+                        item-value="id"
+                      />
+                    )}
                   </v-col>
                   <v-col cols={12} md={6}>
                     <v-autocomplete

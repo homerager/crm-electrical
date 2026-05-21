@@ -88,7 +88,12 @@ export default defineComponent({
               <v-card class="mb-4">
                 <v-list lines="two">
                   <v-list-item title="Дата" subtitle={new Date(invoice.value.date).toLocaleDateString('uk-UA')} prepend-icon="mdi-calendar" />
-                  <v-list-item title="Склад" subtitle={invoice.value.warehouse?.name} prepend-icon="mdi-warehouse" />
+                  {invoice.value.warehouse && (
+                    <v-list-item title="Склад" subtitle={invoice.value.warehouse.name} prepend-icon="mdi-warehouse" />
+                  )}
+                  {invoice.value.object && (
+                    <v-list-item title="Обʼєкт" subtitle={invoice.value.object.name} prepend-icon="mdi-office-building" />
+                  )}
                   <v-list-item title="Контрагент" subtitle={invoice.value.contractor?.name || '—'} prepend-icon="mdi-domain" />
                   <v-list-item title="Створив" subtitle={invoice.value.createdBy?.name} prepend-icon="mdi-account" />
                   {invoice.value.notes && (

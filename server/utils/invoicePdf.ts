@@ -6,6 +6,7 @@ export type InvoiceForPdf = Prisma.InvoiceGetPayload<{
   include: {
     contractor: true
     warehouse: true
+    object: true
     createdBy: { select: { id: true; name: true } }
     items: { include: { product: true } }
   }
@@ -74,7 +75,7 @@ export async function buildInvoicePdfBuffer(invoice: InvoiceForPdf): Promise<Buf
 
   const infoStack: Record<string, unknown>[] = [
     { text: [{ text: 'Дата: ', bold: true }, dateStr] },
-    { text: [{ text: 'Склад: ', bold: true }, invoice.warehouse.name] },
+    { text: [{ text: invoice.object ? 'Обʼєкт: ' : 'Склад: ', bold: true }, invoice.object?.name || invoice.warehouse?.name || '—'] },
     { text: [{ text: 'Контрагент: ', bold: true }, invoice.contractor?.name || '—'] },
   ]
 
