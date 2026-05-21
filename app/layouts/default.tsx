@@ -4,6 +4,7 @@ import AppNavMenu from '~/components/AppNavMenu'
 import PwaOfflineBanner from '~/components/PwaOfflineBanner'
 import PwaInstallPrompt from '~/components/PwaInstallPrompt'
 import PwaUpdatePrompt from '~/components/PwaUpdatePrompt'
+import ChangePasswordDialog from '~/components/ChangePasswordDialog'
 
 export default defineComponent({
   name: 'DefaultLayout',
@@ -26,6 +27,7 @@ export default defineComponent({
     } = useNotifications()
 
     const notifMenuOpen = ref(false)
+    const changePasswordOpen = ref(false)
     const previousUnreadCount = ref<number | null>(null)
     let notificationAudioContext: AudioContext | null = null
 
@@ -373,6 +375,12 @@ export default defineComponent({
                               rounded="lg"
                             />
                             <v-list-item
+                              prepend-icon="mdi-lock-reset"
+                              title="Змінити пароль"
+                              onClick={() => (changePasswordOpen.value = true)}
+                              rounded="lg"
+                            />
+                            <v-list-item
                               prepend-icon="mdi-send"
                               title="Telegram бот"
                               href="https://t.me/proelectric_crm_bot"
@@ -425,6 +433,7 @@ export default defineComponent({
         </v-main>
 
         <PwaUpdatePrompt />
+        <ChangePasswordDialog v-model={changePasswordOpen.value} />
       </v-app>
     )
   },

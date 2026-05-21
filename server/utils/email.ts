@@ -198,6 +198,61 @@ export function buildTaskCommentEmail(task: {
   return { subject, html: emailLayout(subject, bodyHtml) }
 }
 
+export function buildPasswordResetEmail(
+  userName: string,
+  resetUrl: string,
+  expiresInMinutes: number,
+): { subject: string; html: string } {
+  const subject = 'Відновлення паролю до CRM'
+
+  const bodyHtml = `
+    <h2 style="margin:0 0 8px;color:#1565c0;font-size:18px;">🔐 Відновлення паролю</h2>
+    <h3 style="margin:0 0 24px;color:#212121;font-size:20px;font-weight:700;">Вітаємо, ${userName}!</h3>
+
+    <p style="margin:0 0 8px;color:#424242;font-size:15px;line-height:1.6;">
+      Ми отримали запит на скидання паролю для вашого облікового запису.
+      Натисніть кнопку нижче, щоб встановити новий пароль.
+    </p>
+    <p style="margin:0;color:#757575;font-size:13px;line-height:1.6;">
+      Посилання дійсне ${expiresInMinutes} хв. Якщо ви не надсилали цей запит — просто проігноруйте лист,
+      пароль залишиться незмінним.
+    </p>
+
+    ${ctaButton('Встановити новий пароль', resetUrl)}
+
+    <p style="margin:24px 0 0;color:#9e9e9e;font-size:12px;line-height:1.6;word-break:break-all;">
+      Якщо кнопка не працює, скопіюйте посилання у браузер:<br>
+      <a href="${resetUrl}" style="color:#1565c0;">${resetUrl}</a>
+    </p>
+  `
+
+  return { subject, html: emailLayout(subject, bodyHtml) }
+}
+
+export function buildPasswordChangedEmail(
+  userName: string,
+  appUrl: string,
+): { subject: string; html: string } {
+  const subject = 'Пароль до CRM змінено'
+  const loginUrl = `${appUrl.replace(/\/$/, '')}/login`
+
+  const bodyHtml = `
+    <h2 style="margin:0 0 8px;color:#2e7d32;font-size:18px;">✅ Пароль змінено</h2>
+    <h3 style="margin:0 0 24px;color:#212121;font-size:20px;font-weight:700;">Вітаємо, ${userName}!</h3>
+
+    <p style="margin:0 0 8px;color:#424242;font-size:15px;line-height:1.6;">
+      Пароль до вашого облікового запису CRM було успішно змінено.
+    </p>
+    <p style="margin:0;color:#757575;font-size:13px;line-height:1.6;">
+      Якщо це були не ви — негайно зверніться до адміністратора системи.
+    </p>
+
+    ${ctaButton('Увійти в систему', loginUrl)}
+  `
+
+  return { subject, html: emailLayout(subject, bodyHtml) }
+}
+
 export function buildTaskReassignedEmail(task: {
   id: string
   title: string

@@ -113,8 +113,25 @@ model User {
   equipmentMovements    EquipmentMovement[]
   equipmentStatusLogs   EquipmentStatusLog[]
   inventorySessions     InventorySession[]
+  passwordResetTokens   PasswordResetToken[]
 
   @@map("users")
+}
+
+/// Токен для відновлення паролю (надсилається на email; зберігається лише хеш)
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  /// SHA-256 хеш токена — сам токен у БД не зберігається
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Warehouse {

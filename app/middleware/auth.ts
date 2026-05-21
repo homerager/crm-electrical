@@ -5,7 +5,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await fetchMe()
   }
 
-  const publicRoutes = ['/login']
+  const publicRoutes = ['/login', '/forgot-password', '/reset-password']
   if (publicRoutes.includes(to.path)) {
     if (isLoggedIn.value) return navigateTo('/')
     return

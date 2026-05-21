@@ -23,6 +23,61 @@ export default defineComponent({
     const error = ref('')
     const editItem = ref<any>(null)
 
+    // ── Скидання паролю адміністратором ──────────────────────
+    const resetPwdDialog = ref(false)
+    const resetPwdTarget = ref<any>(null)
+    const resetPwdValue = ref('')
+    const resetPwdShow = ref(false)
+    const resetPwdSaving = ref(false)
+    const resetPwdError = ref('')
+    const resetPwdDone = ref(false)
+    const resetPwdCopied = ref(false)
+
+    function openResetPassword(item: any) {
+      resetPwdTarget.value = item
+      resetPwdValue.value = ''
+      resetPwdShow.value = false
+      resetPwdError.value = ''
+      resetPwdDone.value = false
+      resetPwdCopied.value = false
+      resetPwdDialog.value = true
+    }
+
+    function generatePassword() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+      const arr = new Uint32Array(14)
+      crypto.getRandomValues(arr)
+      resetPwdValue.value = Array.from(arr, (n) => chars[n % chars.length]).join('')
+      resetPwdShow.value = true
+      resetPwdCopied.value = false
+    }
+
+    async function copyPassword() {
+      try {
+        await navigator.clipboard.writeText(resetPwdValue.value)
+        resetPwdCopied.value = true
+      } catch {
+        resetPwdCopied.value = false
+      }
+    }
+
+    async function submitResetPassword() {
+      if (!resetPwdTarget.value || resetPwdValue.value.length < 8) return
+      resetPwdSaving.value = true
+      resetPwdError.value = ''
+      try {
+        await $fetch(`/api/users/${resetPwdTarget.value.id}/reset-password`, {
+          method: 'POST',
+          body: { password: resetPwdValue.value },
+        })
+        resetPwdDone.value = true
+      } catch (e: any) {
+        resetPwdError.value = e?.data?.statusMessage || 'Помилка скидання паролю'
+      } finally {
+        resetPwdSaving.value = false
+      }
+    }
+
     const createForm = reactive({
       name: '',
       email: '',
@@ -486,6 +541,20 @@ export default defineComponent({
                   prepend-icon={editForm.emailNotifications ? 'mdi-email-outline' : 'mdi-email-off-outline'}
                 />
               </div>
+
+              <v-divider class="my-4" />
+              <v-btn
+                variant="tonal"
+                color="warning"
+                prepend-icon="mdi-lock-reset"
+                onClick={() => {
+                  const target = editItem.value
+                  editDialog.value = false
+                  openResetPassword(target)
+                }}
+              >
+                Скинути пароль
+              </v-btn>
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />
@@ -493,6 +562,129 @@ export default defineComponent({
               <v-btn color="primary" variant="elevated" loading={saving.value} disabled={!editForm.name} onClick={saveEdit}>
                 Зберегти
               </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        {/* Reset password dialog */}
+        <v-dialog v-model={resetPwdDialog.value} max-width={460} persistent={resetPwdSaving.value}>
+          <v-card>
+            <v-card-title class="pa-4 d-flex align-center" style="gap:8px">
+              <v-icon color="warning">mdi-lock-reset</v-icon>
+              Скидання паролю
+            </v-card-title>
+            <v-card-text class="pa-4 pt-0">
+              <div class="text-body-2 text-medium-emphasis mb-4">
+                Користувач: <span class="font-weight-medium">{resetPwdTarget.value?.name}</span>
+                {' '}({resetPwdTarget.value?.email})
+              </div>
+
+              {resetPwdDone.value
+                ? (
+                  <>
+                    <v-alert
+                      type="success"
+                      variant="tonal"
+                      density="comfortable"
+                      icon="mdi-lock-check-outline"
+                      class="mb-3"
+                    >
+                      Пароль скинуто. Передайте новий пароль користувачу.
+                    </v-alert>
+                    <v-text-field
+                      modelValue={resetPwdValue.value}
+                      label="Новий пароль"
+                      readonly
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      append-inner-icon={resetPwdCopied.value ? 'mdi-check' : 'mdi-content-copy'}
+                      onClick:appendInner={copyPassword}
+                    />
+                  </>
+                )
+                : (
+                  <>
+                    {resetPwdError.value && (
+                      <v-alert
+                        type="error"
+                        variant="tonal"
+                        density="compact"
+                        class="mb-4"
+                        closable
+                        onUpdate:modelValue={() => (resetPwdError.value = '')}
+                      >
+                        {resetPwdError.value}
+                      </v-alert>
+                    )}
+                    <v-text-field
+                      v-model={resetPwdValue.value}
+                      label="Новий пароль *"
+                      type={resetPwdShow.value ? 'text' : 'password'}
+                      prepend-inner-icon="mdi-lock-outline"
+                      autocomplete="new-password"
+                      hint="Щонайменше 8 символів"
+                      persistent-hint
+                      onKeydown={(e: KeyboardEvent) => e.key === 'Enter' && submitResetPassword()}
+                    >
+                      {{
+                        'append-inner': () => (
+                          <v-btn
+                            type="button"
+                            icon={resetPwdShow.value ? 'mdi-eye-off' : 'mdi-eye'}
+                            variant="text"
+                            size="small"
+                            tabindex={-1}
+                            onMousedown={(e: MouseEvent) => e.preventDefault()}
+                            onClick={(e: MouseEvent) => {
+                              e.stopPropagation()
+                              resetPwdShow.value = !resetPwdShow.value
+                            }}
+                          />
+                        ),
+                      }}
+                    </v-text-field>
+                    <v-btn
+                      variant="text"
+                      color="primary"
+                      size="small"
+                      prepend-icon="mdi-dice-multiple-outline"
+                      class="mt-2"
+                      onClick={generatePassword}
+                    >
+                      Згенерувати пароль
+                    </v-btn>
+                  </>
+                )}
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              {resetPwdDone.value
+                ? (
+                  <v-btn color="primary" variant="elevated" onClick={() => (resetPwdDialog.value = false)}>
+                    Закрити
+                  </v-btn>
+                )
+                : (
+                  <>
+                    <v-btn
+                      variant="outlined"
+                      disabled={resetPwdSaving.value}
+                      onClick={() => (resetPwdDialog.value = false)}
+                    >
+                      Скасувати
+                    </v-btn>
+                    <v-btn
+                      color="warning"
+                      variant="elevated"
+                      loading={resetPwdSaving.value}
+                      disabled={resetPwdValue.value.length < 8}
+                      onClick={submitResetPassword}
+                    >
+                      Скинути пароль
+                    </v-btn>
+                  </>
+                )}
             </v-card-actions>
           </v-card>
         </v-dialog>

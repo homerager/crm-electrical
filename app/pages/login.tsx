@@ -87,12 +87,21 @@ export default defineComponent({
             }}
           </v-text-field>
 
+          <div class="text-right mt-1">
+            <NuxtLink
+              to="/forgot-password"
+              class="text-caption text-primary text-decoration-none"
+            >
+              Забули пароль?
+            </NuxtLink>
+          </div>
+
           <v-btn
             block
             variant="flat"
             color="primary"
             size="large"
-            class="mt-5"
+            class="mt-4"
             prepend-icon="mdi-login-variant"
             loading={loading.value}
             disabled={!form.email || !form.password}
