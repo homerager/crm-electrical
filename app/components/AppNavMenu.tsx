@@ -47,14 +47,12 @@ export default defineComponent({
           {
             title: 'Обʼєкти',
             icon: 'mdi-office-building-outline',
-            value: 'objects',
-            children: [
-              { title: 'Список обʼєктів', icon: 'mdi-format-list-bulleted', to: '/objects' },
-              { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
-              { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
-              { title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' },
-            ],
+            value: 'objects',to: '/objects'
+           
           },
+          { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
+          { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
+          { title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' },
         ],
       }
       if (isPrivileged.value) {
@@ -96,16 +94,6 @@ export default defineComponent({
           ],
         },
         {
-          title: 'Фінанси',
-          icon: 'mdi-cash-multiple',
-          value: 'finance',
-          children: [
-            { title: 'Оплати', icon: 'mdi-bank-transfer', to: '/payments' },
-            { title: 'Графік платежів', icon: 'mdi-calendar-clock', to: '/payments/schedule' },
-          ],
-        },
-        projects,
-        {
           title: 'Склад і товари',
           icon: 'mdi-package-variant',
           value: 'warehouse',
@@ -124,6 +112,16 @@ export default defineComponent({
                 { title: 'Інвентаризація', icon: 'mdi-clipboard-check-outline', to: '/equipment/inventory' },
               ],
             },
+          ],
+        },
+        projects,
+        {
+          title: 'Фінанси',
+          icon: 'mdi-cash-multiple',
+          value: 'finance',
+          children: [
+            { title: 'Оплати', icon: 'mdi-bank-transfer', to: '/payments' },
+            { title: 'Графік платежів', icon: 'mdi-calendar-clock', to: '/payments/schedule' },
           ],
         },
         {

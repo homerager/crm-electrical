@@ -181,29 +181,29 @@ export default defineComponent({
     const hasStock = computed(() => props.stockRows.some((r) => Number(r.quantity) > 0))
 
     return () => (
-      <div class="d-flex flex-wrap gap-2 mb-2 pl-4">
+      <div class="d-flex flex-wrap gap-2">
         <v-btn
-          color="error"
+          color="success"
           variant="tonal"
-          prepend-icon="mdi-minus-circle-outline"
+          size="small"
           disabled={!hasStock.value}
           onClick={openWriteOff}
         >
-          Списати з обʼєкта
+          Використати
         </v-btn>
         <v-btn
           color="primary"
           variant="tonal"
-          prepend-icon="mdi-warehouse"
+          size="small"
           disabled={!hasStock.value}
           onClick={openReturn}
         >
-          Повернути на склад
+          Повернути
         </v-btn>
 
         <v-dialog v-model={writeOffOpen.value} max-width={560}>
           <v-card>
-            <v-card-title>Списання матеріалів</v-card-title>
+            <v-card-title>Використання матеріалів</v-card-title>
             <v-card-text>
               {errW.value && (
                 <v-alert type="error" variant="tonal" class="mb-3">
@@ -211,7 +211,7 @@ export default defineComponent({
                 </v-alert>
               )}
               <p class="text-body-2 text-medium-emphasis mb-3">
-                Фактично використана кількість знімається з залишку на обʼєкті й не повертається на склад.
+                Фактично використана кількість знімається із залишку на обʼєкті.
               </p>
               <v-text-field v-model={wForm.date} label="Дата *" type="date" class="mb-2" disabled={savingW.value} />
               <v-text-field v-model={wForm.notes} label="Примітки" class="mb-2" disabled={savingW.value} />
@@ -274,8 +274,8 @@ export default defineComponent({
               <v-btn variant="text" disabled={savingW.value} onClick={() => (writeOffOpen.value = false)}>
                 Скасувати
               </v-btn>
-              <v-btn color="error" variant="flat" loading={savingW.value} onClick={submitWriteOff}>
-                Списати
+              <v-btn color="success" variant="flat" loading={savingW.value} onClick={submitWriteOff}>
+                Використати
               </v-btn>
             </v-card-actions>
           </v-card>

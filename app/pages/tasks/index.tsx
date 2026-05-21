@@ -337,7 +337,7 @@ export default defineComponent({
               />
             </v-col>
             {(filterStatus.value || filterPriority.value || filterAssignee.value || filterObject.value || filterTag.value) && (
-              <v-col cols={12} class="d-flex align-center">
+              <v-col cols={12} lg={2} class="d-flex align-center">
                 <v-btn
                   variant="text"
                   size="small"

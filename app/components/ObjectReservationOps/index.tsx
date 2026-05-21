@@ -182,24 +182,16 @@ export default defineComponent({
     const hasReservations = computed(() => props.reservationRows.some((r) => Number(r.quantity) > 0))
 
     return () => (
-      <div class="d-flex flex-wrap gap-2 mb-2 pl-4">
+      <div class="d-flex flex-wrap gap-2">
         <v-btn
-          color="secondary"
+          color="primary"
           variant="tonal"
-          prepend-icon="mdi-lock-plus"
+          size="small"
+          prepend-icon="mdi-plus"
           loading={productsPending.value}
           onClick={openReserve}
         >
-          Зарезервувати на складі
-        </v-btn>
-        <v-btn
-          color="warning"
-          variant="tonal"
-          prepend-icon="mdi-lock-open-variant"
-          disabled={!hasReservations.value}
-          onClick={openRelease}
-        >
-          Зняти резерв
+          Зарезервувати
         </v-btn>
 
         <v-dialog v-model={reserveOpen.value} max-width={560}>

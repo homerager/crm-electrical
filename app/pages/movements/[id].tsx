@@ -16,10 +16,10 @@ function movementDetailMeta(type: string) {
       }
     case 'OBJECT_WRITE_OFF':
       return {
-        title: 'Списання з обʼєкта',
-        chip: 'Списання',
-        color: 'error',
-        icon: 'mdi-minus-circle-outline' as const,
+        title: 'Використано на обʼєкті',
+        chip: 'Використано',
+        color: 'success',
+        icon: 'mdi-check-circle-outline' as const,
       }
     case 'OBJECT_TO_WAREHOUSE':
       return {

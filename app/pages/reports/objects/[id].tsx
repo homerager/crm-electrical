@@ -48,6 +48,8 @@ export default defineComponent({
     const uah = (n: number) =>
       `₴${n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+    const activeTab = ref('overview')
+
     const summaryHeaders = [
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },
@@ -89,7 +91,7 @@ export default defineComponent({
     const consumedHeaders = [
       { title: 'Товар', key: 'product.name', minWidth: 160 },
       { title: 'Артикул', key: 'product.sku', width: 112 },
-      { title: 'Списано', key: 'totalQuantity', align: 'end' as const, width: 96 },
+      { title: 'Використано', key: 'totalQuantity', align: 'end' as const, width: 96 },
       { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 88 },
       {
         title: 'Ціна за одиницю, ₴',
@@ -161,16 +163,533 @@ export default defineComponent({
 
     const writeOffLogOpen = ref(false)
 
+    function renderSummaryStats() {
+      return (
+        <v-row class="mb-2">
+          <v-col cols={12} sm={6} md={3}>
+            <v-card variant="outlined" class="pa-3">
+              <div class="d-flex align-center mb-1">
+                <v-icon icon="mdi-package-variant-closed" size="small" class="mr-2 text-medium-emphasis" />
+                <span class="text-body-2 text-medium-emphasis">Матеріали відпущено</span>
+              </div>
+              <div class="text-h6 font-weight-bold">{uah(summaryTotalAmount.value)}</div>
+              <div class="text-caption text-medium-emphasis">{summary.value.length} позицій</div>
+            </v-card>
+          </v-col>
+          <v-col cols={12} sm={6} md={3}>
+            <v-card variant="outlined" class="pa-3">
+              <div class="d-flex align-center mb-1">
+                <v-icon icon="mdi-check-circle-outline" size="small" class="mr-2 text-medium-emphasis" />
+                <span class="text-body-2 text-medium-emphasis">Використано (факт)</span>
+              </div>
+              <div class="text-h6 font-weight-bold">
+                {consumedSummary.value.length > 0 ? uah(consumedTotalAmount.value) : '0 позицій'}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {consumedSummary.value.length > 0
+                  ? `${consumedSummary.value.length} позицій`
+                  : 'не розпочато'}
+              </div>
+            </v-card>
+          </v-col>
+          <v-col cols={12} sm={6} md={3}>
+            <v-card variant="outlined" class="pa-3">
+              <div class="d-flex align-center mb-1">
+                <v-icon icon="mdi-account-clock-outline" size="small" class="mr-2 text-medium-emphasis" />
+                <span class="text-body-2 text-medium-emphasis">Праця</span>
+              </div>
+              <div class="text-h6 font-weight-bold">{uah(laborTotalAmount.value)}</div>
+              <div class="text-caption text-medium-emphasis">
+                {hoursStr(laborTotalHours.value)} год · {laborByUser.value.length} працівників
+              </div>
+            </v-card>
+          </v-col>
+          <v-col cols={12} sm={6} md={3}>
+            <v-card variant="outlined" class="pa-3">
+              <div class="d-flex align-center mb-1">
+                <v-icon icon="mdi-lock-outline" size="small" class="mr-2 text-medium-emphasis" />
+                <span class="text-body-2 text-medium-emphasis">Резерв на складах</span>
+              </div>
+              <div class="text-h6 font-weight-bold">{warehouseReservations.value.length} позицій</div>
+              <div class="text-caption text-medium-emphasis">
+                {warehouseReservations.value.length > 0 ? 'активні резерви' : 'немає активних'}
+              </div>
+            </v-card>
+          </v-col>
+        </v-row>
+      )
+    }
+
+    function renderOverviewTab() {
+      return (
+        <>
+          <v-row class="mb-4">
+            <v-col cols={12} md={6}>
+              <v-card variant="outlined" class="fill-height">
+                <v-card-title class="d-flex align-center flex-wrap">
+                  <v-icon class="mr-2" icon="mdi-lock-outline" size="small" />
+                  Резерв на складах
+                  <v-spacer />
+                  <ObjectReservationOps
+                    objectId={id}
+                    reservationRows={warehouseReservations.value}
+                    onSuccess={() => refresh()}
+                  />
+                </v-card-title>
+                {warehouseReservations.value.length === 0 ? (
+                  <v-card-text class="d-flex flex-column align-center justify-center py-8">
+                    <v-icon icon="mdi-package-variant-remove" size="48" class="text-medium-emphasis mb-2" />
+                    <span class="text-body-2 text-medium-emphasis">Немає активних резервів</span>
+                  </v-card-text>
+                ) : (
+                  <v-data-table
+                    headers={reservationHeaders}
+                    items={warehouseReservations.value}
+                    hide-default-footer
+                    items-per-page={-1}
+                    density="compact"
+                  >
+                    {{
+                      'item.product.sku': ({ item }: any) => (
+                        <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
+                      ),
+                      'item.quantity': ({ item }: any) => (
+                        <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
+                      ),
+                    }}
+                  </v-data-table>
+                )}
+              </v-card>
+            </v-col>
+            <v-col cols={12} md={6}>
+              <v-card variant="outlined" class="fill-height">
+                <v-card-title class="d-flex align-center flex-wrap">
+                  <v-icon class="mr-2" icon="mdi-map-marker-outline" size="small" />
+                  Залишок на обʼєкті
+                  <v-spacer />
+                  <ObjectStockOps objectId={id} stockRows={stockOnSite.value} onSuccess={() => refresh()} />
+                </v-card-title>
+                {stockOnSite.value.length === 0 ? (
+                  <v-card-text class="d-flex flex-column align-center justify-center py-8">
+                    <v-icon icon="mdi-check-all" size="48" class="text-medium-emphasis mb-2" />
+                    <span class="text-body-2 text-medium-emphasis">Всі позиції використані або повернуті</span>
+                  </v-card-text>
+                ) : (
+                  <v-data-table
+                    headers={stockOnSiteHeaders}
+                    items={stockOnSite.value}
+                    hide-default-footer
+                    items-per-page={-1}
+                    density="compact"
+                  >
+                    {{
+                      'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
+                      'item.quantity': ({ item }: any) => (
+                        <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
+                      ),
+                    }}
+                  </v-data-table>
+                )}
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <v-card variant="outlined" class="mb-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-package-variant-closed" size="small" />
+              Відпуск зі складу (оцінка вартості)
+            </v-card-title>
+            <v-card-text>
+              <v-row class="text-center">
+                <v-col cols={4}>
+                  <div class="text-body-2 text-medium-emphasis">Загальна кількість</div>
+                  <div class="text-h5 font-weight-bold">{summary.value.reduce((s: number, r: any) => s + (Number(r.totalQuantity) || 0), 0)}</div>
+                </v-col>
+                <v-col cols={4}>
+                  <div class="text-body-2 text-medium-emphasis">Сер. ціна</div>
+                  <div class="text-h5 font-weight-bold">
+                    {summary.value.length > 0 && summaryTotalAmount.value > 0
+                      ? uah(summaryTotalAmount.value / summary.value.reduce((s: number, r: any) => s + (Number(r.totalQuantity) || 0), 0))
+                      : uah(0)}
+                  </div>
+                </v-col>
+                <v-col cols={4}>
+                  <div class="text-body-2 text-medium-emphasis">Сума</div>
+                  <div class="text-h5 font-weight-bold">{uah(summaryTotalAmount.value)}</div>
+                </v-col>
+              </v-row>
+            </v-card-text>
+            {summary.value.length === 0 ? (
+              <v-card-text class="d-flex flex-column align-center justify-center py-6">
+                <v-icon icon="mdi-package-variant-remove" size="48" class="text-medium-emphasis mb-2" />
+                <span class="text-body-2 text-medium-emphasis">Немає відпусків зі складу</span>
+              </v-card-text>
+            ) : (
+              <v-data-table
+                class="object-report-summary"
+                headers={summaryHeaders}
+                items={summary.value}
+                hide-default-footer
+                items-per-page={-1}
+                density="compact"
+              >
+                {{
+                  'item.product.sku': ({ item }: any) => (
+                    <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
+                  ),
+                  'item.totalQuantity': ({ item }: any) => (
+                    <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
+                  ),
+                  'item.averageUnitPrice': ({ item }: any) =>
+                    item.averageUnitPrice == null ? (
+                      <span class="text-medium-emphasis">—</span>
+                    ) : (
+                      <span>{uah(item.averageUnitPrice)}</span>
+                    ),
+                  'item.totalAmount': ({ item }: any) => (
+                    <strong>{uah(Number(item.totalAmount) || 0)}</strong>
+                  ),
+                }}
+              </v-data-table>
+            )}
+          </v-card>
+
+          <v-row class="mb-4">
+            <v-col cols={12} md={6}>
+              <v-card variant="outlined" class="fill-height">
+                <v-card-title class="d-flex align-center">
+                  <v-icon class="mr-2" icon="mdi-truck-delivery" size="small" />
+                  Переміщення на обʼєкт
+                </v-card-title>
+                {movements.value.length === 0 ? (
+                  <v-card-text class="d-flex flex-column align-center justify-center py-8">
+                    <v-icon icon="mdi-truck-outline" size="48" class="text-medium-emphasis mb-2" />
+                    <span class="text-body-2 text-medium-emphasis">Переміщень ще не було</span>
+                  </v-card-text>
+                ) : (
+                  <v-data-table
+                    headers={movementHeaders}
+                    items={movements.value}
+                    hide-default-footer
+                    density="compact"
+                  >
+                    {{
+                      'item.date': ({ item }: any) => (
+                        <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
+                      ),
+                      'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
+                      'item.notes': ({ item }: any) => (
+                        <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                      ),
+                    }}
+                  </v-data-table>
+                )}
+              </v-card>
+            </v-col>
+            <v-col cols={12} md={6}>
+              <v-card variant="outlined" class="fill-height">
+                <v-card-title class="d-flex align-center">
+                  <v-icon class="mr-2" icon="mdi-keyboard-return" size="small" />
+                  Повернення на склад
+                </v-card-title>
+                {returnMovements.value.length === 0 ? (
+                  <v-card-text class="d-flex flex-column align-center justify-center py-8">
+                    <v-icon icon="mdi-arrow-left-bold-outline" size="48" class="text-medium-emphasis mb-2" />
+                    <span class="text-body-2 text-medium-emphasis">Повернень ще не було</span>
+                  </v-card-text>
+                ) : (
+                  <v-data-table
+                    headers={returnLogHeaders}
+                    items={returnMovements.value}
+                    hide-default-footer
+                    density="compact"
+                  >
+                    {{
+                      'item.date': ({ item }: any) => (
+                        <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
+                      ),
+                      'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
+                      'item.notes': ({ item }: any) => (
+                        <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                      ),
+                    }}
+                  </v-data-table>
+                )}
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <v-card variant="outlined">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-history" size="small" />
+              Історія змін
+            </v-card-title>
+            <AuditLogPanel entityType="ConstructionObject" entityId={id} />
+          </v-card>
+        </>
+      )
+    }
+
+    function renderMaterialsTab() {
+      return (
+        <>
+          <v-card variant="outlined" class="mb-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-package-variant-closed" size="small" />
+              Відпуск зі складу на обʼєкт (для оцінки вартості)
+              <v-chip class="ml-3" size="small" variant="tonal" color="primary">
+                {summary.value.length} позицій
+              </v-chip>
+            </v-card-title>
+            {summaryHasMissingPrice.value && (
+              <v-card-text class="text-body-2 text-medium-emphasis pt-0">
+                Сума за оцінкою: для кожного відпуску береться остання ціна з накладної на той самий
+                склад, звідки відпущено товар. Для деяких залишків ціна в накладних не знайдена — у
+                таблиці &quot;Сер. ціна&quot; стоїть &quot;—&quot; і рядок може бути оцінений
+                неповно.
+              </v-card-text>
+            )}
+            <v-data-table
+              class="object-report-summary"
+              headers={summaryHeaders}
+              items={summary.value}
+              hide-default-footer
+              items-per-page={-1}
+            >
+              {{
+                'item.product.sku': ({ item }: any) => (
+                  <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
+                ),
+                'item.totalQuantity': ({ item }: any) => (
+                  <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
+                ),
+                'item.averageUnitPrice': ({ item }: any) =>
+                  item.averageUnitPrice == null ? (
+                    <span class="text-medium-emphasis">—</span>
+                  ) : (
+                    <span>{uah(item.averageUnitPrice)}</span>
+                  ),
+                'item.totalAmount': ({ item }: any) => (
+                  <strong>{uah(Number(item.totalAmount) || 0)}</strong>
+                ),
+              }}
+            </v-data-table>
+            <v-divider />
+            <v-card-text class="d-flex justify-end py-3">
+              <div class="text-h6">
+                <span class="text-medium-emphasis text-body-1">Всього за матеріалами: </span>
+                <span class="font-weight-bold">{uah(summaryTotalAmount.value)}</span>
+              </div>
+            </v-card-text>
+          </v-card>
+
+          <v-card variant="outlined">
+            <v-card-title class="d-flex align-center flex-wrap gap-2">
+              <v-icon class="mr-2" icon="mdi-check-circle-outline" size="small" />
+              Використано на обʼєкті
+              <v-chip size="small" variant="tonal" color="success">
+                {consumedSummary.value.length} позицій
+              </v-chip>
+              <v-spacer />
+              {writeOffMovements.value.length > 0 && (
+                <v-btn
+                  color="success"
+                  variant="tonal"
+                  size="small"
+                  prepend-icon="mdi-history"
+                  class="no-print"
+                  onClick={() => (writeOffLogOpen.value = true)}
+                >
+                  Журнал використань
+                </v-btn>
+              )}
+            </v-card-title>
+            {consumedSummary.value.length > 0 && consumedHasMissingPrice.value && (
+              <v-card-text class="text-body-2 text-medium-emphasis pt-0">
+                Оцінка вартості: для кожного товару використовується середньозважена ціна з відпусків на
+                обʼєкт. Якщо для товару не вдалося відновити ціну —
+                колонки показують «—», загальна сума рахує лише рядки з відомою ціною.
+              </v-card-text>
+            )}
+            {consumedSummary.value.length === 0 ? (
+              <v-card-text>
+                <v-alert type="info" variant="tonal" density="compact">
+                  Використань ще не було.
+                </v-alert>
+              </v-card-text>
+            ) : (
+              <>
+                <v-data-table
+                  headers={consumedHeaders}
+                  items={consumedSummary.value}
+                  hide-default-footer
+                  items-per-page={-1}
+                  density="compact"
+                >
+                  {{
+                    'item.product.name': ({ item }: any) => (
+                      <span class="text-body-2">{item.product?.name ?? '—'}</span>
+                    ),
+                    'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
+                    'item.totalQuantity': ({ item }: any) => (
+                      <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
+                    ),
+                    'item.averageUnitPrice': ({ item }: any) =>
+                      item.averageUnitPrice == null ? (
+                        <span class="text-medium-emphasis">—</span>
+                      ) : (
+                        <span>{uah(item.averageUnitPrice)}</span>
+                      ),
+                    'item.totalAmount': ({ item }: any) =>
+                      item.hasMissingPrice ? (
+                        <span class="text-medium-emphasis">—</span>
+                      ) : (
+                        <strong>{uah(Number(item.totalAmount) || 0)}</strong>
+                      ),
+                  }}
+                </v-data-table>
+                <v-divider />
+                <v-card-text class="d-flex justify-end py-3">
+                  <div class="text-h6">
+                    <span class="text-medium-emphasis text-body-1">Всього використано (оцінка): </span>
+                    <span class="font-weight-bold">{uah(consumedTotalAmount.value)}</span>
+                  </div>
+                </v-card-text>
+              </>
+            )}
+          </v-card>
+        </>
+      )
+    }
+
+    function renderLaborTab() {
+      return (
+        <v-card variant="outlined">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2" icon="mdi-account-clock-outline" size="small" />
+            Праця на обʼєкті
+            <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
+              {laborLogCount.value} записів часу · {laborByUser.value.length} працівників
+            </v-chip>
+          </v-card-title>
+          {laborHasMissingRate.value && (
+            <v-card-text class="text-body-2 text-medium-emphasis pt-0">
+              Для деяких працівників не задана погодинна ставка в профілі — колонка «Сума» для них
+              показує «—»; загальна сума враховує лише рядки з відомою ставкою.
+            </v-card-text>
+          )}
+          <v-data-table
+            headers={laborHeaders}
+            items={laborByUser.value}
+            hide-default-footer
+            items-per-page={-1}
+          >
+            {{
+              'item.totalHours': ({ item }: any) => <strong>{hoursStr(Number(item.totalHours) || 0)}</strong>,
+              'item.hourlyRate': ({ item }: any) =>
+                item.hourlyRate == null ? (
+                  <span class="text-medium-emphasis">—</span>
+                ) : (
+                  <span>{uah(Number(item.hourlyRate))}</span>
+                ),
+              'item.totalAmount': ({ item }: any) =>
+                item.totalAmount == null ? (
+                  <span class="text-medium-emphasis">—</span>
+                ) : (
+                  <strong>{uah(Number(item.totalAmount))}</strong>
+                ),
+            }}
+          </v-data-table>
+          <v-divider />
+          <v-card-text class="d-flex justify-end py-3">
+            <div class="text-h6">
+              <span class="text-medium-emphasis text-body-1">Всього годин: </span>
+              <span class="font-weight-bold mr-4">{hoursStr(laborTotalHours.value)}</span>
+              <span class="text-medium-emphasis text-body-1">Всього за працею (оцінка): </span>
+              <span class="font-weight-bold">{uah(laborTotalAmount.value)}</span>
+            </div>
+          </v-card-text>
+        </v-card>
+      )
+    }
+
+    function renderMovementsTab() {
+      return (
+        <>
+          <v-card variant="outlined" class="mb-4">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-truck-delivery" size="small" />
+              Переміщення на обʼєкт (відпуск зі складу)
+            </v-card-title>
+            {movements.value.length === 0 ? (
+              <v-card-text class="d-flex flex-column align-center justify-center py-8">
+                <v-icon icon="mdi-truck-outline" size="48" class="text-medium-emphasis mb-2" />
+                <span class="text-body-2 text-medium-emphasis">Переміщень ще не було</span>
+              </v-card-text>
+            ) : (
+              <v-data-table headers={movementHeaders} items={movements.value}>
+                {{
+                  'item.date': ({ item }: any) => (
+                    <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
+                  ),
+                  'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
+                  'item.notes': ({ item }: any) => (
+                    <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                  ),
+                }}
+              </v-data-table>
+            )}
+          </v-card>
+
+          <v-card variant="outlined">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" icon="mdi-keyboard-return" size="small" />
+              Повернення з обʼєкта на склад
+            </v-card-title>
+            {returnMovements.value.length === 0 ? (
+              <v-card-text class="d-flex flex-column align-center justify-center py-8">
+                <v-icon icon="mdi-arrow-left-bold-outline" size="48" class="text-medium-emphasis mb-2" />
+                <span class="text-body-2 text-medium-emphasis">Повернень ще не було</span>
+              </v-card-text>
+            ) : (
+              <v-data-table headers={returnLogHeaders} items={returnMovements.value} hide-default-footer>
+                {{
+                  'item.date': ({ item }: any) => (
+                    <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
+                  ),
+                  'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
+                  'item.notes': ({ item }: any) => (
+                    <span class="text-medium-emphasis">{item.notes || '—'}</span>
+                  ),
+                }}
+              </v-data-table>
+            )}
+          </v-card>
+        </>
+      )
+    }
+
+    function renderHistoryTab() {
+      return (
+        <v-card variant="outlined">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2" icon="mdi-history" size="small" />
+            Історія змін
+          </v-card-title>
+          <AuditLogPanel entityType="ConstructionObject" entityId={id} />
+        </v-card>
+      )
+    }
+
     return () => (
       <div>
         <div class="page-toolbar no-print">
-          <v-btn icon="mdi-arrow-left" variant="text" to="/reports" class="mr-2" />
-          <div>
-            <div class="text-h5 font-weight-bold">{object.value?.name ?? '...'}</div>
-            {object.value?.address && <div class="text-body-2 text-medium-emphasis">{object.value.address}</div>}
-          </div>
+          <v-btn variant="outlined" prepend-icon="mdi-arrow-left" to="/reports" class="mr-2">
+            Назад
+          </v-btn>
+          <div class="text-h5 font-weight-bold">{object.value?.name ?? '...'}</div>
           {object.value && (
-            <v-chip class="ml-3" color={STATUS_COLORS[object.value.status]} variant="tonal">
+            <v-chip class="ml-3" color={STATUS_COLORS[object.value.status]} variant="tonal" size="small">
               {STATUS_LABELS[object.value.status]}
             </v-chip>
           )}
@@ -299,216 +818,39 @@ export default defineComponent({
               </v-card>
             )}
 
-            <v-card class="mb-4">
-              <v-card-title class="d-flex align-center flex-wrap">
-                <v-icon class="mr-2" icon="mdi-lock-outline" />
-                Резерв на складах під цей обʼєкт
-                <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
-                  {warehouseReservations.value.length} позицій
-                </v-chip>
-              </v-card-title>
-              <v-card-text class="text-body-2 text-medium-emphasis">
-                Товар залишається на складі; інші не можуть перемістити зарезервовану кількість на інший склад. При
-                відпуску на цей обʼєкт резерв автоматично зменшується.
-              </v-card-text>
-              <ObjectReservationOps
-                objectId={id}
-                reservationRows={warehouseReservations.value}
-                onSuccess={() => refresh()}
-              />
-              {warehouseReservations.value.length === 0 ? (
-                <v-card-text>
-                  <v-alert type="info" variant="tonal" density="compact">
-                    Немає активних резервів на складах для цього обʼєкта.
-                  </v-alert>
-                </v-card-text>
-              ) : (
-                <v-data-table
-                  headers={reservationHeaders}
-                  items={warehouseReservations.value}
-                  hide-default-footer
-                  items-per-page={-1}
-                >
-                  {{
-                    'item.product.sku': ({ item }: any) => (
-                      <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
-                    ),
-                    'item.quantity': ({ item }: any) => (
-                      <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
-                    ),
-                  }}
-                </v-data-table>
-              )}
-            </v-card>
+            {renderSummaryStats()}
 
-            <v-card class="mb-4">
-              <v-card-title class="d-flex align-center flex-wrap">
-                <v-icon class="mr-2" icon="mdi-package-variant" />
-                Залишок матеріалів на обʼєкті
-                <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
-                  {stockOnSite.value.length} позицій
-                </v-chip>
-              </v-card-title>
-              <v-card-text class="text-body-2 text-medium-emphasis">
-                Після відпуску зі складу товар обліковується тут. Списання зменшує залишок (використано в
-                роботі); повернення переносить кількість обраного складу.
-              </v-card-text>
-              <ObjectStockOps objectId={id} stockRows={stockOnSite.value} onSuccess={() => refresh()} />
-              {stockOnSite.value.length === 0 ? (
-                <v-card-text>
-                  <v-alert type="info" variant="tonal" density="compact">
-                    Немає залишку на обʼєкті (усі позиції списані або повернуті на склад).
-                  </v-alert>
-                </v-card-text>
-              ) : (
-                <v-data-table
-                  headers={stockOnSiteHeaders}
-                  items={stockOnSite.value}
-                  hide-default-footer
-                  items-per-page={-1}
-                >
-                  {{
-                    'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
-                    'item.quantity': ({ item }: any) => (
-                      <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
-                    ),
-                  }}
-                </v-data-table>
-              )}
-            </v-card>
+            <v-tabs v-model={activeTab.value} class="mb-4" color="primary">
+              <v-tab value="overview" prepend-icon="mdi-view-dashboard-outline">Огляд</v-tab>
+              <v-tab value="materials" prepend-icon="mdi-package-variant">
+                Матеріали
+                <v-chip class="ml-2" size="x-small" variant="tonal">{summary.value.length}</v-chip>
+              </v-tab>
+              <v-tab value="labor" prepend-icon="mdi-account-clock-outline">
+                Праця
+                <v-chip class="ml-2" size="x-small" variant="tonal">{laborLogCount.value}</v-chip>
+              </v-tab>
+              <v-tab value="movements" prepend-icon="mdi-swap-horizontal">
+                Переміщення
+                <v-chip class="ml-2" size="x-small" variant="tonal">{movements.value.length}</v-chip>
+              </v-tab>
+              <v-tab value="history" prepend-icon="mdi-history">Історія</v-tab>
+            </v-tabs>
 
-            <v-card class="mb-4">
-              <v-card-title class="d-flex align-center">
-                <v-icon class="mr-2" icon="mdi-package-variant-closed" />
-                Відпуск зі складу на обʼєкт (для оцінки вартості)
-                <v-chip class="ml-3" size="small" variant="tonal" color="primary">
-                  {summary.value.length} позицій
-                </v-chip>
-              </v-card-title>
-              {summaryHasMissingPrice.value && (
-                <v-card-text class="text-body-2 text-medium-emphasis pt-0">
-                  Сума за оцінкою: для кожного відпуску береться остання ціна з накладної на той самий
-                  склад, звідки відпущено товар. Для деяких залишків ціна в накладних не знайдена — у
-                  таблиці &quot;Сер. ціна&quot; стоїть &quot;—&quot; і рядок може бути оцінений
-                  неповно.
-                </v-card-text>
-              )}
-              <v-data-table
-                class="object-report-summary"
-                headers={summaryHeaders}
-                items={summary.value}
-                hide-default-footer
-                items-per-page={-1}
-              >
-                {{
-                  'item.product.sku': ({ item }: any) => (
-                    <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
-                  ),
-                  'item.totalQuantity': ({ item }: any) => (
-                    <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
-                  ),
-                  'item.averageUnitPrice': ({ item }: any) =>
-                    item.averageUnitPrice == null ? (
-                      <span class="text-medium-emphasis">—</span>
-                    ) : (
-                      <span>{uah(item.averageUnitPrice)}</span>
-                    ),
-                  'item.totalAmount': ({ item }: any) => (
-                    <strong>{uah(Number(item.totalAmount) || 0)}</strong>
-                  ),
-                }}
-              </v-data-table>
-              <v-divider />
-              <v-card-text class="d-flex justify-end py-3">
-                <div class="text-h6">
-                  <span class="text-medium-emphasis text-body-1">Всього за матеріалами: </span>
-                  <span class="font-weight-bold">{uah(summaryTotalAmount.value)}</span>
-                </div>
-              </v-card-text>
-            </v-card>
-
-            <v-card class="mb-4">
-              <v-card-title class="d-flex align-center flex-wrap gap-2">
-                <v-icon class="mr-2" icon="mdi-minus-circle-outline" />
-                Списано з обʼєкта (факт використання)
-                <v-chip size="small" variant="tonal" color="error">
-                  {consumedSummary.value.length} позицій
-                </v-chip>
-                <v-spacer />
-                {writeOffMovements.value.length > 0 && (
-                  <v-btn
-                    color="error"
-                    variant="tonal"
-                    size="small"
-                    prepend-icon="mdi-history"
-                    class="no-print"
-                    onClick={() => (writeOffLogOpen.value = true)}
-                  >
-                    Журнал списань
-                  </v-btn>
-                )}
-              </v-card-title>
-              {consumedSummary.value.length > 0 && consumedHasMissingPrice.value && (
-                <v-card-text class="text-body-2 text-medium-emphasis pt-0">
-                  Оцінка вартості списань: для кожного товару використовується середньозважена ціна з відпусків на
-                  обʼєкт (ті самі накладні, що й у блоці вище). Якщо для товару не вдалося відновити ціну —
-                  колонки показують «—», загальна сума рахує лише рядки з відомою ціною.
-                </v-card-text>
-              )}
-              {consumedSummary.value.length === 0 ? (
-                <v-card-text>
-                  <v-alert type="info" variant="tonal" density="compact">
-                    Списань ще не було.
-                  </v-alert>
-                </v-card-text>
-              ) : (
-                <>
-                  <v-data-table
-                    headers={consumedHeaders}
-                    items={consumedSummary.value}
-                    hide-default-footer
-                    items-per-page={-1}
-                    density="compact"
-                  >
-                    {{
-                      'item.product.name': ({ item }: any) => (
-                        <span class="text-body-2">{item.product?.name ?? '—'}</span>
-                      ),
-                      'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
-                      'item.totalQuantity': ({ item }: any) => (
-                        <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
-                      ),
-                      'item.averageUnitPrice': ({ item }: any) =>
-                        item.averageUnitPrice == null ? (
-                          <span class="text-medium-emphasis">—</span>
-                        ) : (
-                          <span>{uah(item.averageUnitPrice)}</span>
-                        ),
-                      'item.totalAmount': ({ item }: any) =>
-                        item.hasMissingPrice ? (
-                          <span class="text-medium-emphasis">—</span>
-                        ) : (
-                          <strong>{uah(Number(item.totalAmount) || 0)}</strong>
-                        ),
-                    }}
-                  </v-data-table>
-                  <v-divider />
-                  <v-card-text class="d-flex justify-end py-3">
-                    <div class="text-h6">
-                      <span class="text-medium-emphasis text-body-1">Всього за списаннями (оцінка): </span>
-                      <span class="font-weight-bold">{uah(consumedTotalAmount.value)}</span>
-                    </div>
-                  </v-card-text>
-                </>
-              )}
-            </v-card>
+            <v-window v-model={activeTab.value}>
+              <v-window-item value="overview">{renderOverviewTab()}</v-window-item>
+              <v-window-item value="materials">{renderMaterialsTab()}</v-window-item>
+              <v-window-item value="labor">{renderLaborTab()}</v-window-item>
+              <v-window-item value="movements">{renderMovementsTab()}</v-window-item>
+              <v-window-item value="history">{renderHistoryTab()}</v-window-item>
+            </v-window>
 
             <v-dialog v-model={writeOffLogOpen.value} max-width={720} scrollable class="no-print">
               <v-card>
                 <v-card-title class="d-flex align-center flex-wrap gap-2">
                   <v-icon icon="mdi-history" class="mr-1" />
-                  Журнал списань
-                  <v-chip size="small" variant="tonal" color="error">
+                  Журнал використань
+                  <v-chip size="small" variant="tonal" color="success">
                     {writeOffMovements.value.length}
                   </v-chip>
                   <v-spacer />
@@ -548,108 +890,7 @@ export default defineComponent({
                 </v-card-actions>
               </v-card>
             </v-dialog>
-
-            <v-card class="mb-4">
-              <v-card-title class="d-flex align-center">
-                <v-icon class="mr-2" icon="mdi-account-clock-outline" />
-                Праця на обʼєкті
-                <v-chip class="ml-3" size="small" variant="tonal" color="secondary">
-                  {laborLogCount.value} записів часу · {laborByUser.value.length} працівників
-                </v-chip>
-              </v-card-title>
-              {laborHasMissingRate.value && (
-                <v-card-text class="text-body-2 text-medium-emphasis pt-0">
-                  Для деяких працівників не задана погодинна ставка в профілі — колонка «Сума» для них
-                  показує «—»; загальна сума враховує лише рядки з відомою ставкою.
-                </v-card-text>
-              )}
-              <v-data-table
-                headers={laborHeaders}
-                items={laborByUser.value}
-                hide-default-footer
-                items-per-page={-1}
-              >
-                {{
-                  'item.totalHours': ({ item }: any) => <strong>{hoursStr(Number(item.totalHours) || 0)}</strong>,
-                  'item.hourlyRate': ({ item }: any) =>
-                    item.hourlyRate == null ? (
-                      <span class="text-medium-emphasis">—</span>
-                    ) : (
-                      <span>{uah(Number(item.hourlyRate))}</span>
-                    ),
-                  'item.totalAmount': ({ item }: any) =>
-                    item.totalAmount == null ? (
-                      <span class="text-medium-emphasis">—</span>
-                    ) : (
-                      <strong>{uah(Number(item.totalAmount))}</strong>
-                    ),
-                }}
-              </v-data-table>
-              <v-divider />
-              <v-card-text class="d-flex justify-end py-3">
-                <div class="text-h6">
-                  <span class="text-medium-emphasis text-body-1">Всього годин: </span>
-                  <span class="font-weight-bold mr-4">{hoursStr(laborTotalHours.value)}</span>
-                  <span class="text-medium-emphasis text-body-1">Всього за працею (оцінка): </span>
-                  <span class="font-weight-bold">{uah(laborTotalAmount.value)}</span>
-                </div>
-              </v-card-text>
-            </v-card>
-
-            <v-card class="mb-4">
-              <v-card-title class="d-flex align-center">
-                <v-icon class="mr-2" icon="mdi-truck-delivery" />
-                Переміщення на обʼєкт (відпуск зі складу)
-              </v-card-title>
-              <v-data-table headers={movementHeaders} items={movements.value}>
-                {{
-                  'item.date': ({ item }: any) => (
-                    <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
-                  ),
-                  'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
-                  'item.notes': ({ item }: any) => (
-                    <span class="text-medium-emphasis">{item.notes || '—'}</span>
-                  ),
-                }}
-              </v-data-table>
-            </v-card>
-
-            <v-card>
-              <v-card-title class="d-flex align-center">
-                <v-icon class="mr-2" icon="mdi-keyboard-return" />
-                Повернення з обʼєкта на склад
-              </v-card-title>
-              {returnMovements.value.length === 0 ? (
-                <v-card-text>
-                  <v-alert type="info" variant="tonal" density="compact">
-                    Повернень ще не було.
-                  </v-alert>
-                </v-card-text>
-              ) : (
-                <v-data-table headers={returnLogHeaders} items={returnMovements.value} hide-default-footer>
-                  {{
-                    'item.date': ({ item }: any) => (
-                      <span>{new Date(item.date).toLocaleDateString('uk-UA')}</span>
-                    ),
-                    'item.itemsPreview': ({ item }: any) => movementLineItemsCell(item.items),
-                    'item.notes': ({ item }: any) => (
-                      <span class="text-medium-emphasis">{item.notes || '—'}</span>
-                    ),
-                  }}
-                </v-data-table>
-              )}
-            </v-card>
           </>
-        )}
-
-        {report.value && (
-          <v-card class="mt-4">
-            <v-card-title class="d-flex align-center">
-              <v-icon class="mr-2" icon="mdi-history" />
-              Історія змін
-            </v-card-title>
-            <AuditLogPanel entityType="ConstructionObject" entityId={id} />
-          </v-card>
         )}
       </div>
     )

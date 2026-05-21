@@ -17,7 +17,7 @@ export default defineComponent({
       { title: 'Всі', value: null },
       { title: 'Між складами', value: 'WAREHOUSE_TO_WAREHOUSE' },
       { title: 'На обʼєкт', value: 'WAREHOUSE_TO_OBJECT' },
-      { title: 'Списання з обʼєкта', value: 'OBJECT_WRITE_OFF' },
+      { title: 'Використано на обʼєкті', value: 'OBJECT_WRITE_OFF' },
       { title: 'Повернення на склад', value: 'OBJECT_TO_WAREHOUSE' },
     ]
 
@@ -28,7 +28,7 @@ export default defineComponent({
         case 'WAREHOUSE_TO_OBJECT':
           return { label: 'На обʼєкт', color: 'warning', icon: 'mdi-truck-delivery' as const }
         case 'OBJECT_WRITE_OFF':
-          return { label: 'Списання', color: 'error', icon: 'mdi-minus-circle-outline' as const }
+          return { label: 'Використано', color: 'success', icon: 'mdi-check-circle-outline' as const }
         case 'OBJECT_TO_WAREHOUSE':
           return { label: 'Повернення', color: 'success', icon: 'mdi-keyboard-return' as const }
         default:
@@ -39,7 +39,7 @@ export default defineComponent({
     function destinationLabel(item: any) {
       if (item.type === 'WAREHOUSE_TO_WAREHOUSE') return item.toWarehouse?.name ?? '—'
       if (item.type === 'WAREHOUSE_TO_OBJECT') return item.object?.name ?? '—'
-      if (item.type === 'OBJECT_WRITE_OFF') return item.object ? `${item.object.name} · списано` : '—'
+      if (item.type === 'OBJECT_WRITE_OFF') return item.object ? `${item.object.name} · використано` : '—'
       if (item.type === 'OBJECT_TO_WAREHOUSE') {
         const o = item.object?.name ?? 'Обʼєкт'
         const w = item.toWarehouse?.name ?? '—'
