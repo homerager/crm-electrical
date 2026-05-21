@@ -21,9 +21,17 @@ export default defineComponent({
             icon: 'mdi-briefcase-outline',
             value: 'projects',
             children: [
-              { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
-              { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
-              { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
+              { title: 'Список проєктів', icon: 'mdi-folder-multiple-outline', to: '/projects' },
+              {
+                title: 'Обʼєкти',
+                icon: 'mdi-office-building-outline',
+                value: 'objects',
+                children: [
+                  { title: 'Список обʼєктів', icon: 'mdi-format-list-bulleted', to: '/objects' },
+                  { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
+                  { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
+                ],
+              },
               { title: 'Мій розклад', icon: 'mdi-calendar-account-outline', to: '/schedule' },
             ],
           },
@@ -35,15 +43,23 @@ export default defineComponent({
         icon: 'mdi-briefcase-outline',
         value: 'projects',
         children: [
-          { title: 'Проєкти', icon: 'mdi-folder-multiple-outline', to: '/projects' },
-          { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
-          { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
+          { title: 'Список проєктів', icon: 'mdi-folder-multiple-outline', to: '/projects' },
+          {
+            title: 'Обʼєкти',
+            icon: 'mdi-office-building-outline',
+            value: 'objects',
+            children: [
+              { title: 'Список обʼєктів', icon: 'mdi-format-list-bulleted', to: '/objects' },
+              { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks' },
+              { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar' },
+              { title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' },
+            ],
+          },
         ],
       }
       if (isPrivileged.value) {
         projects.children.push({ title: 'Розклад', icon: 'mdi-calendar-account-outline', to: '/schedule' })
         projects.children.push({ title: 'Облік часу', icon: 'mdi-clock-plus-outline', to: '/time-logs/manual' })
-        projects.children.push({ title: 'Звіт завдань', icon: 'mdi-chart-bar', to: '/tasks/reports' })
       }
 
       const reports: NavSection = {
@@ -77,7 +93,6 @@ export default defineComponent({
               ],
             },
             { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents' },
-            { title: 'Обʼєкти', icon: 'mdi-office-building-outline', to: '/objects' },
           ],
         },
         {

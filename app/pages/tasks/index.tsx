@@ -29,6 +29,7 @@ export default defineComponent({
     useHead({ title: 'Завдання' })
 
     const { isPrivileged, isEmployee } = useAuth()
+    const route = useRoute()
 
     const assigneesUrl = computed(() =>
       isPrivileged.value ? '/api/users' : '/api/users/list',
@@ -40,6 +41,7 @@ export default defineComponent({
     const filterStatus = ref('')
     const filterPriority = ref('')
     const filterAssignee = ref('')
+    const filterObject = ref((route.query.objectId as string) || '')
     const filterTag = ref('')
 
     const dialog = ref(false)
@@ -98,6 +100,7 @@ export default defineComponent({
         ...(filterStatus.value && { status: filterStatus.value }),
         ...(filterPriority.value && { priority: filterPriority.value }),
         ...(filterAssignee.value && { assignedToId: filterAssignee.value }),
+        ...(filterObject.value && { objectId: filterObject.value }),
         ...(filterTag.value && { tagId: filterTag.value }),
       })),
     })
@@ -236,7 +239,18 @@ export default defineComponent({
       <div>
         {/* Header */}
         <div class="page-toolbar">
-          <div class="text-h5 font-weight-bold">Завдання</div>
+          <div>
+            <div class="text-h5 font-weight-bold">Завдання</div>
+            {filterObject.value && (() => {
+              const obj = objects.value.find((o: any) => o.id === filterObject.value)
+              return obj ? (
+                <div class="d-flex align-center text-body-2 text-medium-emphasis mt-1" style="gap: 6px">
+                  <v-icon size="14">mdi-office-building-outline</v-icon>
+                  {obj.name}
+                </div>
+              ) : null
+            })()}
+          </div>
           <v-spacer />
           {isPrivileged.value && (
             <v-btn variant="outlined" size="small" prepend-icon="mdi-chart-bar" to="/tasks/reports">
@@ -267,7 +281,7 @@ export default defineComponent({
         {/* Filters */}
         <v-card class="mb-4 pa-4">
           <v-row dense>
-            <v-col cols={12} sm={6} md={3}>
+            <v-col cols={12} sm={4} md={3} lg={2}>
               <v-select
                 v-model={filterStatus.value}
                 label="Статус"
@@ -278,7 +292,7 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            <v-col cols={12} sm={6} md={3}>
+            <v-col cols={12} sm={6} md={3} lg={2}>
               <v-select
                 v-model={filterPriority.value}
                 label="Пріоритет"
@@ -289,7 +303,7 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            <v-col cols={12} sm={6} md={3}>
+            <v-col cols={12} sm={6} md={3} lg={2}>
               <v-select
                 v-model={filterAssignee.value}
                 label="Виконавець"
@@ -300,7 +314,18 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            <v-col cols={12} sm={6} md={3}>
+            <v-col cols={12} sm={6} md={3} lg={2}>
+              <v-select
+                v-model={filterObject.value}
+                label="Обʼєкт"
+                items={[{ value: '', title: 'Всі' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
+                density="compact"
+                class="w-100"
+                clearable
+                hide-details
+              />
+            </v-col>
+            <v-col cols={12} sm={6} md={3} lg={2}>
               <v-select
                 v-model={filterTag.value}
                 label="Тег"
@@ -311,14 +336,14 @@ export default defineComponent({
                 hide-details
               />
             </v-col>
-            {(filterStatus.value || filterPriority.value || filterAssignee.value || filterTag.value) && (
+            {(filterStatus.value || filterPriority.value || filterAssignee.value || filterObject.value || filterTag.value) && (
               <v-col cols={12} class="d-flex align-center">
                 <v-btn
                   variant="text"
                   size="small"
                   color="error"
                   prepend-icon="mdi-filter-remove"
-                  onClick={() => { filterStatus.value = ''; filterPriority.value = ''; filterAssignee.value = ''; filterTag.value = '' }}
+                  onClick={() => { filterStatus.value = ''; filterPriority.value = ''; filterAssignee.value = ''; filterObject.value = ''; filterTag.value = '' }}
                 >
                   Скинути
                 </v-btn>

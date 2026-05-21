@@ -15,17 +15,27 @@ export default defineComponent({
   setup() {
     definePageMeta({ middleware: ['auth'] })
 
-    useHead({
-      title: 'Будівельні обʼєкти'
-    })
-
     const { isPrivileged } = useAuth()
-    const { data, refresh, pending } = useFetch('/api/objects')
+    const route = useRoute()
+    const filterProjectId = ref((route.query.projectId as string) || '')
+
+    const { data, refresh, pending } = useFetch('/api/objects', {
+      query: computed(() => ({
+        ...(filterProjectId.value && { projectId: filterProjectId.value }),
+      })),
+    })
     const { data: clientsData } = useFetch('/api/clients')
     const { data: projectsData } = useFetch('/api/projects')
     const objects = computed(() => (data.value as any)?.objects ?? [])
     const clients = computed(() => (clientsData.value as any)?.clients ?? [])
     const projects = computed(() => (projectsData.value as any[]) ?? [])
+    const activeProject = computed(() =>
+      filterProjectId.value ? projects.value.find((p: any) => p.id === filterProjectId.value) : null
+    )
+
+    useHead(computed(() => ({
+      title: activeProject.value ? `${activeProject.value.name} — Обʼєкти` : 'Будівельні обʼєкти',
+    })))
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -44,7 +54,7 @@ export default defineComponent({
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: '', clientId: '', projectId: '' })
+      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: '', clientId: '', projectId: filterProjectId.value || '' })
       dialog.value = true
     }
 
@@ -107,8 +117,53 @@ export default defineComponent({
     return () => (
       <div>
         <div class="page-toolbar">
-          <div class="text-h5 font-weight-bold">Будівельні обʼєкти</div>
+          <div>
+            {activeProject.value && (
+              <div class="d-flex align-center gap-2 mb-1">
+                <v-btn
+                  variant="text"
+                  size="small"
+                  prepend-icon="mdi-chevron-left"
+                  onClick={() => navigateTo('/projects')}
+                  class="text-medium-emphasis"
+                >
+                  Проєкти
+                </v-btn>
+              </div>
+            )}
+            <div class="d-flex align-center gap-2">
+              {activeProject.value && (
+                <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: activeProject.value.color, flexShrink: 0 }} />
+              )}
+              <div class="text-h5 font-weight-bold">
+                {activeProject.value ? activeProject.value.name : 'Будівельні обʼєкти'}
+              </div>
+            </div>
+            {activeProject.value?.description && (
+              <div class="text-body-2 text-medium-emphasis mt-1">{activeProject.value.description}</div>
+            )}
+          </div>
           <v-spacer />
+          {activeProject.value && (
+            <v-btn variant="outlined" size="small" prepend-icon="mdi-checkbox-marked-circle-outline" onClick={() => navigateTo(`/projects/${activeProject.value.id}`)}>
+              Завдання проєкту
+            </v-btn>
+          )}
+          {!activeProject.value && (
+            <v-autocomplete
+              v-model={filterProjectId.value}
+              label="Проєкт"
+              items={projects.value}
+              item-title="name"
+              item-value="id"
+              clearable
+              density="compact"
+              hide-details
+              variant="outlined"
+              style="max-width: 250px"
+              prepend-inner-icon="mdi-folder-outline"
+            />
+          )}
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати обʼєкт
@@ -152,8 +207,14 @@ export default defineComponent({
               'item.createdAt': ({ item }: any) => (
                 <span>{new Date(item.createdAt).toLocaleDateString('uk-UA')}</span>
               ),
+              'item.name': ({ item }: any) => (
+                <NuxtLink to={`/tasks?objectId=${item.id}`} class="text-primary text-decoration-none font-weight-medium">
+                  {item.name}
+                </NuxtLink>
+              ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
+                  <v-btn icon="mdi-clipboard-list-outline" variant="text" size="small" color="primary" to={`/tasks?objectId=${item.id}`} title="Завдання" />
                   <v-btn icon="mdi-chart-bar" variant="text" size="small" color="info" to={`/reports/objects/${item.id}`} title="Репорт" />
                   {isPrivileged.value && (
                     <>

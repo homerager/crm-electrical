@@ -298,7 +298,7 @@ export default defineComponent({
                   <v-card
                     class="h-100"
                     style="cursor:pointer"
-                    onClick={() => router.push(`/projects/${project.id}`)}
+                    onClick={() => router.push(`/objects?projectId=${project.id}`)}
                   >
                     <div style={{ height: '6px', background: project.color, borderRadius: '4px 4px 0 0' }} />
                     <v-card-title class="pt-4 pb-1">{project.name}</v-card-title>
