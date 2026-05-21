@@ -20,8 +20,9 @@ export default defineEventHandler(async (event) => {
           user: { select: { id: true, name: true } },
         },
       },
+      objects: { select: { id: true, name: true, status: true }, orderBy: { name: 'asc' } },
       _count: {
-        select: { tasks: true },
+        select: { tasks: true, objects: true },
       },
     },
     orderBy: { createdAt: 'desc' },

@@ -31,9 +31,17 @@ export default defineEventHandler(async (event) => {
   }
 
   let resolvedObjectId = objectId || null
-  if (projectId && !resolvedObjectId) {
+  let resolvedProjectId = projectId || null
+
+  if (resolvedObjectId) {
+    const obj = await prisma.constructionObject.findUnique({
+      where: { id: resolvedObjectId },
+      select: { projectId: true },
+    })
+    if (obj?.projectId) resolvedProjectId = obj.projectId
+  } else if (resolvedProjectId && !resolvedObjectId) {
     const proj = await prisma.project.findUnique({
-      where: { id: projectId },
+      where: { id: resolvedProjectId },
       select: { defaultObjectId: true },
     })
     resolvedObjectId = proj?.defaultObjectId ?? null
@@ -46,7 +54,7 @@ export default defineEventHandler(async (event) => {
       priority: priority || 'MEDIUM',
       assignedToId: assignedToId || null,
       objectId: resolvedObjectId,
-      projectId: projectId || null,
+      projectId: resolvedProjectId,
       parentId: parentId || null,
       dueDate: dueDate ? new Date(dueDate) : null,
       estimatedHours: estimatedHours ? Number(estimatedHours) : null,

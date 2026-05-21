@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, description, color, memberIds, defaultObjectId } = body
+  const { name, description, color, memberIds, defaultObjectId, objectIds } = body
 
   if (!name?.trim()) {
     throw createError({ statusCode: 400, message: 'Назва проєкту обовʼязкова' })
@@ -39,14 +39,22 @@ export default defineEventHandler(async (event) => {
     include: {
       createdBy: { select: { id: true, name: true } },
       defaultObject: { select: { id: true, name: true } },
+      objects: { select: { id: true, name: true, status: true }, orderBy: { name: 'asc' } },
       members: {
         include: {
           user: { select: { id: true, name: true } },
         },
       },
-      _count: { select: { tasks: true } },
+      _count: { select: { tasks: true, objects: true } },
     },
   })
+
+  if (Array.isArray(objectIds) && objectIds.length > 0) {
+    await prisma.constructionObject.updateMany({
+      where: { id: { in: objectIds } },
+      data: { projectId: project.id },
+    })
+  }
 
   writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'CREATE', entityType: 'Project', entityId: project.id, changes: { name: project.name, color: project.color } })
 

@@ -10,13 +10,14 @@ export default defineEventHandler(async (event) => {
     include: {
       createdBy: { select: { id: true, name: true } },
       defaultObject: { select: { id: true, name: true } },
+      objects: { select: { id: true, name: true, status: true }, orderBy: { name: 'asc' } },
       members: {
         include: {
           user: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'asc' },
       },
-      _count: { select: { tasks: true } },
+      _count: { select: { tasks: true, objects: true } },
     },
   })
 

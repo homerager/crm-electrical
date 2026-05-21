@@ -26,6 +26,7 @@ export default defineComponent({
       color: '#1976D2',
       memberIds: [] as string[],
       defaultObjectId: '' as string,
+      objectIds: [] as string[],
     })
 
     const { data: projectsData, refresh, pending: projectsPending } = useFetch('/api/projects')
@@ -52,6 +53,7 @@ export default defineComponent({
       form.color = '#1976D2'
       form.memberIds = []
       form.defaultObjectId = ''
+      form.objectIds = []
       error.value = ''
       dialog.value = true
     }
@@ -63,6 +65,7 @@ export default defineComponent({
       form.color = project.color ?? '#1976D2'
       form.memberIds = project.members.map((m: any) => m.user.id)
       form.defaultObjectId = project.defaultObject?.id ?? ''
+      form.objectIds = (project.objects ?? []).map((o: any) => o.id)
       error.value = ''
       editDialog.value = true
     }
@@ -85,6 +88,7 @@ export default defineComponent({
             color: form.color,
             memberIds: form.memberIds,
             defaultObjectId: form.defaultObjectId || null,
+            objectIds: form.objectIds.length > 0 ? form.objectIds : undefined,
           },
         })
         dialog.value = false
@@ -122,6 +126,18 @@ export default defineComponent({
         }
         for (const uid of toRemove) {
           await $fetch(`/api/projects/${id}/members/${uid}`, { method: 'DELETE' }).catch(() => {})
+        }
+
+        // Sync objects: link new, unlink removed
+        const currentObjectIds: string[] = (editTarget.value.objects ?? []).map((o: any) => o.id)
+        const objectsToLink = form.objectIds.filter((oid: string) => !currentObjectIds.includes(oid))
+        const objectsToUnlink = currentObjectIds.filter((oid: string) => !form.objectIds.includes(oid))
+
+        for (const oid of objectsToLink) {
+          await $fetch(`/api/objects/${oid}`, { method: 'PUT', body: { projectId: id } }).catch(() => {})
+        }
+        for (const oid of objectsToUnlink) {
+          await $fetch(`/api/objects/${oid}`, { method: 'PUT', body: { projectId: null } }).catch(() => {})
         }
 
         editDialog.value = false
@@ -195,6 +211,24 @@ export default defineComponent({
               density="compact"
               class="mb-4"
               hint="Нові завдання в проєкті отримають цей обʼєкт, якщо не обрано інший"
+              persistentHint
+            />
+          )}
+          {!isEmployee.value && (
+            <v-autocomplete
+              v-model={form.objectIds}
+              label="Обʼєкти проєкту"
+              items={objects.value}
+              itemTitle="name"
+              itemValue="id"
+              multiple
+              chips
+              closableChips
+              variant="outlined"
+              density="compact"
+              class="mb-4"
+              prepend-inner-icon="mdi-office-building-outline"
+              hint="Обʼєкти, що належать цьому проєкту"
               persistentHint
             />
           )}
@@ -272,9 +306,13 @@ export default defineComponent({
                       <v-card-subtitle>{project.description}</v-card-subtitle>
                     )}
                     <v-card-text>
-                      <div class="d-flex align-center mb-3" style="gap:8px">
+                      <div class="d-flex align-center mb-2" style="gap:8px">
                         <v-icon size="16" color="medium-emphasis">mdi-checkbox-marked-circle-outline</v-icon>
                         <span class="text-body-2">{project._count?.tasks ?? 0} завдань</span>
+                      </div>
+                      <div class="d-flex align-center mb-3" style="gap:8px">
+                        <v-icon size="16" color="medium-emphasis">mdi-office-building-outline</v-icon>
+                        <span class="text-body-2">{project._count?.objects ?? 0} обʼєктів</span>
                       </div>
                       {project.defaultObject && (
                         <div class="d-flex align-center mb-3 text-body-2 text-medium-emphasis" style="gap:8px">

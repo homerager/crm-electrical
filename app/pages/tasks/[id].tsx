@@ -101,6 +101,12 @@ export default defineComponent({
     const editSaving = ref(false)
     const editError = ref('')
 
+    const editResolvedProject = computed(() => {
+      if (!editForm.objectId) return null
+      const obj = objects.value.find((o: any) => o.id === editForm.objectId)
+      return obj?.project ?? null
+    })
+
     function openEdit() {
       const t = task.value
       if (!t) return
@@ -1205,6 +1211,7 @@ export default defineComponent({
                     { icon: 'mdi-account-circle', label: 'Виконавець', value: t.assignee?.name ?? 'Не призначено' },
                     { icon: 'mdi-account-plus', label: 'Створив', value: t.createdBy?.name },
                     ...(t.object ? [{ icon: 'mdi-office-building-outline', label: 'Обʼєкт', value: t.object.name }] : []),
+                    ...(t.project ? [{ icon: 'mdi-folder-outline', label: 'Проєкт', value: t.project.name, link: `/projects/${t.project.id}`, color: t.project.color }] : []),
                     { icon: 'mdi-calendar-plus', label: 'Створено', value: formatDate(t.createdAt) },
                     ...(t.dueDate ? [{ icon: 'mdi-calendar-clock', label: 'Дедлайн', value: formatDate(t.dueDate), error: isOverdue() }] : []),
                     { icon: 'mdi-clock-outline', label: 'Витрачено', value: `${(t.totalHours ?? 0).toFixed(1)}г` },
@@ -1213,9 +1220,16 @@ export default defineComponent({
                     <div key={i} class="d-flex align-center py-2 px-1" style="gap:10px; border-bottom: 1px solid rgba(128,128,128,0.1)">
                       <v-icon size="18" color={row.error ? 'error' : 'medium-emphasis'}>{row.icon}</v-icon>
                       <span class="text-body-2 text-medium-emphasis" style="flex:1; white-space:nowrap">{row.label}</span>
-                      <span class={`text-body-2 font-weight-medium text-right ${row.error ? 'text-error' : ''}`} style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title={row.value}>
-                        {row.value}
-                      </span>
+                      {row.link ? (
+                        <NuxtLink to={row.link} class="text-body-2 font-weight-medium text-decoration-none d-flex align-center" style="gap:4px; max-width:140px">
+                          {row.color && <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: row.color, flexShrink: 0 }} />}
+                          <span class="text-truncate" title={row.value}>{row.value}</span>
+                        </NuxtLink>
+                      ) : (
+                        <span class={`text-body-2 font-weight-medium text-right ${row.error ? 'text-error' : ''}`} style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title={row.value}>
+                          {row.value}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1306,6 +1320,14 @@ export default defineComponent({
                     />
                   )}
                 </div>
+                {editResolvedProject.value && (
+                  <v-alert type="info" variant="tonal" density="compact" class="mb-3">
+                    <div class="d-flex align-center" style="gap: 8px">
+                      <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: editResolvedProject.value.color, flexShrink: 0 }} />
+                      <span class="text-body-2">Проєкт: <strong>{editResolvedProject.value.name}</strong></span>
+                    </div>
+                  </v-alert>
+                )}
                 <div class="d-flex flex-wrap gap-4">
                   <v-text-field
                     v-model={editForm.dueDate}

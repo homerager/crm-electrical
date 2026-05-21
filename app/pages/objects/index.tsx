@@ -22,8 +22,10 @@ export default defineComponent({
     const { isPrivileged } = useAuth()
     const { data, refresh, pending } = useFetch('/api/objects')
     const { data: clientsData } = useFetch('/api/clients')
+    const { data: projectsData } = useFetch('/api/projects')
     const objects = computed(() => (data.value as any)?.objects ?? [])
     const clients = computed(() => (clientsData.value as any)?.clients ?? [])
+    const projects = computed(() => (projectsData.value as any[]) ?? [])
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -32,7 +34,7 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, markupPercent: '' as string | number, clientVatPercent: '' as string | number, clientId: '' })
+    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, markupPercent: '' as string | number, clientVatPercent: '' as string | number, clientId: '', projectId: '' })
 
     const statusOptions = [
       { title: 'Активний', value: 'ACTIVE' },
@@ -42,13 +44,13 @@ export default defineComponent({
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: '', clientId: '' })
+      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: '', clientId: '', projectId: '' })
       dialog.value = true
     }
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', markupPercent: item.markupPercent ?? '', clientVatPercent: item.clientVatPercent ?? '', clientId: item.clientId || '' })
+      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', markupPercent: item.markupPercent ?? '', clientVatPercent: item.clientVatPercent ?? '', clientId: item.clientId || '', projectId: item.projectId || '' })
       dialog.value = true
     }
 
@@ -91,6 +93,7 @@ export default defineComponent({
 
     const headers = [
       { title: 'Назва', key: 'name' },
+      { title: 'Проєкт', key: 'project', width: 180 },
       { title: 'Клієнт', key: 'client', width: 180 },
       { title: 'Адреса', key: 'address' },
       { title: 'Бюджет, ₴', key: 'budget', align: 'end' as const, width: 150 },
@@ -116,6 +119,11 @@ export default defineComponent({
         <v-card>
           <v-data-table headers={headers} items={objects.value} loading={pending.value} hover>
             {{
+              'item.project': ({ item }: any) => (
+                item.project
+                  ? <v-chip size="small" variant="tonal" style={{ borderLeft: `3px solid ${item.project.color}` }}>{item.project.name}</v-chip>
+                  : <span class="text-medium-emphasis">—</span>
+              ),
               'item.client': ({ item }: any) => (
                 item.client
                   ? <span>{item.client.name}</span>
@@ -209,6 +217,17 @@ export default defineComponent({
                 clearable
                 prepend-inner-icon="mdi-account-tie"
                 no-data-text="Немає клієнтів"
+                class="mb-3"
+              />
+              <v-autocomplete
+                v-model={form.projectId}
+                label="Проєкт"
+                items={projects.value}
+                item-title="name"
+                item-value="id"
+                clearable
+                prepend-inner-icon="mdi-folder-outline"
+                no-data-text="Немає проєктів"
                 class="mb-3"
               />
               <v-select v-model={form.status} label="Статус" items={statusOptions} item-title="title" item-value="value" class="mb-3" />

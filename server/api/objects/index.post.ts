@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { name, address, description, status, budget, markupPercent, clientVatPercent, clientId } = body
+  const { name, address, description, status, budget, markupPercent, clientVatPercent, clientId, projectId } = body
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'Назва обовʼязкова' })
 
@@ -22,7 +22,9 @@ export default defineEventHandler(async (event) => {
       markupPercent: markupPercent != null && markupPercent !== '' ? Number(markupPercent) : null,
       clientVatPercent: clientVatPercent != null && clientVatPercent !== '' ? Number(clientVatPercent) : null,
       clientId: clientId || null,
+      projectId: projectId || null,
     },
+    include: { client: true, project: { select: { id: true, name: true, color: true } } },
   })
 
   writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'CREATE', entityType: 'ConstructionObject', entityId: object.id, changes: { name, address, description, status: object.status, budget: object.budget, markupPercent: object.markupPercent } })

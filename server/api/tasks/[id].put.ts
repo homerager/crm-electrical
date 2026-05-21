@@ -24,6 +24,19 @@ export default defineEventHandler(async (event) => {
 
   const { title, description, status, priority, assignedToId, objectId, dueDate, estimatedHours, tagIds } = body
 
+  let resolvedProjectId: string | null | undefined = undefined
+  if (objectId !== undefined) {
+    if (objectId) {
+      const obj = await prisma.constructionObject.findUnique({
+        where: { id: objectId },
+        select: { projectId: true },
+      })
+      if (obj?.projectId) resolvedProjectId = obj.projectId
+    } else {
+      resolvedProjectId = null
+    }
+  }
+
   const updated = await prisma.task.update({
     where: { id },
     data: {
@@ -33,6 +46,7 @@ export default defineEventHandler(async (event) => {
       ...(priority !== undefined && { priority }),
       ...(assignedToId !== undefined && { assignedToId: assignedToId || null }),
       ...(objectId !== undefined && { objectId: objectId || null }),
+      ...(resolvedProjectId !== undefined && { projectId: resolvedProjectId }),
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
       ...(estimatedHours !== undefined && { estimatedHours: estimatedHours !== null ? Number(estimatedHours) : null }),
       ...(Array.isArray(tagIds) && { tags: { set: tagIds.map((tid: string) => ({ id: tid })) } }),
@@ -41,6 +55,7 @@ export default defineEventHandler(async (event) => {
       createdBy: { select: { id: true, name: true, telegramChatId: true } },
       assignee: { select: { id: true, name: true, telegramChatId: true } },
       object: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true, color: true } },
       tags: { select: { id: true, name: true, color: true } },
     },
   })

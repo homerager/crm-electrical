@@ -9,9 +9,11 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { name, address, description, status, budget, markupPercent, clientVatPercent, clientId } = body
+  const { name, address, description, status, budget, markupPercent, clientVatPercent, clientId, projectId } = body
 
   const before = await prisma.constructionObject.findUnique({ where: { id } })
+
+  const newProjectId = projectId !== undefined ? (projectId || null) : undefined
 
   const object = await prisma.constructionObject.update({
     where: { id },
@@ -24,8 +26,17 @@ export default defineEventHandler(async (event) => {
       markupPercent: markupPercent != null && markupPercent !== '' ? Number(markupPercent) : null,
       clientVatPercent: clientVatPercent != null && clientVatPercent !== '' ? Number(clientVatPercent) : null,
       clientId: clientId || null,
+      ...(newProjectId !== undefined && { projectId: newProjectId }),
     },
+    include: { client: true, project: { select: { id: true, name: true, color: true } } },
   })
+
+  if (newProjectId !== undefined && before && before.projectId !== newProjectId) {
+    await prisma.task.updateMany({
+      where: { objectId: id },
+      data: { projectId: newProjectId },
+    })
+  }
 
   if (before) {
     const diff = computeChanges(before as unknown as Record<string, unknown>, object as unknown as Record<string, unknown>)

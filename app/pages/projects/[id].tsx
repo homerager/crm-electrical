@@ -75,7 +75,11 @@ export default defineComponent({
     const tasks = computed(() => (tasksData.value as any)?.tasks ?? [])
     const projectMembers = computed(() => project.value?.members ?? [])
     const memberUsers = computed(() => projectMembers.value.map((m: any) => m.user))
-    const objects = computed(() => (objectsData.value as any)?.objects ?? [])
+    const allObjects = computed(() => (objectsData.value as any)?.objects ?? [])
+    const projectObjects = computed(() => project.value?.objects ?? [])
+    const objectsForDropdown = computed(() =>
+      projectObjects.value.length > 0 ? projectObjects.value : allObjects.value
+    )
 
     const tasksByStatus = computed(() => {
       const map: Record<string, any[]> = {}
@@ -274,6 +278,25 @@ export default defineComponent({
               </v-btn>
             )}
           </div>
+
+          {/* Project objects */}
+          {projectObjects.value.length > 0 && (
+            <div class="mb-4 d-flex flex-wrap align-center" style="gap: 8px">
+              <v-icon size="18" color="medium-emphasis">mdi-office-building-outline</v-icon>
+              <span class="text-body-2 text-medium-emphasis mr-1">Обʼєкти:</span>
+              {projectObjects.value.map((obj: any) => (
+                <v-chip
+                  key={obj.id}
+                  size="small"
+                  variant="tonal"
+                  color={obj.status === 'ACTIVE' ? 'success' : obj.status === 'COMPLETED' ? 'primary' : 'warning'}
+                  prepend-icon="mdi-office-building-outline"
+                >
+                  {obj.name}
+                </v-chip>
+              ))}
+            </div>
+          )}
 
           {/* Filters */}
           <v-card class="mb-4 pa-4">
@@ -486,8 +509,10 @@ export default defineComponent({
                 <v-select
                   v-model={form.objectId}
                   label="Обʼєкт"
-                  items={[{ value: '', title: 'Не вказано' }, ...objects.value.map((o: any) => ({ value: o.id, title: o.name }))]}
+                  items={[{ value: '', title: 'Не вказано' }, ...objectsForDropdown.value.map((o: any) => ({ value: o.id, title: o.name }))]}
                   variant="outlined" density="compact"
+                  hint={projectObjects.value.length > 0 ? 'Лише обʼєкти цього проєкту' : undefined}
+                  persistent-hint={projectObjects.value.length > 0}
                 />
               </v-card-text>
               <v-divider />

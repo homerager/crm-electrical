@@ -63,6 +63,12 @@ export default defineComponent({
       tagIds: [] as string[],
     })
 
+    const resolvedProject = computed(() => {
+      if (!form.objectId) return null
+      const obj = objects.value.find((o: any) => o.id === form.objectId)
+      return obj?.project ?? null
+    })
+
     const { data: tagsData, refresh: refreshTags } = useFetch('/api/task-tags')
     const allTags = computed(() => (tagsData.value as any)?.tags ?? [])
 
@@ -561,6 +567,14 @@ export default defineComponent({
                   style="flex:1"
                 />
               </div>
+              {resolvedProject.value && (
+                <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                  <div class="d-flex align-center" style="gap: 8px">
+                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: resolvedProject.value.color, flexShrink: 0 }} />
+                    <span class="text-body-2">Проєкт: <strong>{resolvedProject.value.name}</strong></span>
+                  </div>
+                </v-alert>
+              )}
               <v-text-field
                 v-model={form.estimatedHours}
                 label="Оцінка (год.)"

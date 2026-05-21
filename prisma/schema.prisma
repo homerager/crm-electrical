@@ -156,6 +156,8 @@ model ConstructionObject {
   updatedAt   DateTime     @updatedAt
 
   client                    Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId                 String?
+  project                   Project?   @relation("ProjectObjects", fields: [projectId], references: [id], onDelete: SetNull)
   movements                 Movement[]
   stock                     ObjectStock[]
   warehouseStockReservations WarehouseObjectReservation[]
@@ -506,6 +508,7 @@ model Project {
 
   createdBy     User                 @relation(fields: [createdById], references: [id])
   defaultObject ConstructionObject? @relation(fields: [defaultObjectId], references: [id], onDelete: SetNull)
+  objects       ConstructionObject[] @relation("ProjectObjects")
   members       ProjectMember[]
   tasks         Task[]
 

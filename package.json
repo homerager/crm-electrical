@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "db:backfill-object-project": "npx tsx prisma/backfill-object-project.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
