@@ -1,12 +1,12 @@
-/** Блокує роль USER ("Користувач") від перегляду фінансів (оплати, графік платежів). */
+/** Фінанси (оплати, графік платежів) — лише для ADMIN та MANAGER. */
 export default defineNuxtRouteMiddleware(async () => {
-  const { isUser, fetchMe, initialized } = useAuth()
+  const { isPrivileged, fetchMe, initialized } = useAuth()
 
   if (!initialized.value) {
     await fetchMe()
   }
 
-  if (isUser.value) {
-    return navigateTo('/')
+  if (!isPrivileged.value) {
+    return navigateTo('/tasks')
   }
 })

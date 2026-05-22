@@ -8,7 +8,7 @@ const isSubGroup = (node: NavNode): node is NavSubGroup => 'children' in node
 export default defineComponent({
   name: 'AppNavMenu',
   setup() {
-    const { isAdmin, isPrivileged, isEmployee, isUser } = useAuth()
+    const { isAdmin, isPrivileged, isEmployee } = useAuth()
     const route = useRoute()
 
     const dashboard: NavLeaf = { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' }
@@ -124,7 +124,7 @@ export default defineComponent({
           ],
         },
         projects,
-        ...(isUser.value ? [] : [finance]),
+        ...(isPrivileged.value ? [finance] : []),
         {
           title: 'Закупівля',
           icon: 'mdi-cart-outline',

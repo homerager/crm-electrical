@@ -1,12 +1,14 @@
+import { isElevatedRole } from '../utils/authz'
+
 /**
- * Блокує API фінансів (оплати) для ролі USER ("Користувач").
+ * API фінансів (оплати) — лише для ADMIN та MANAGER.
  */
 export default defineEventHandler((event) => {
   const url = getRequestURL(event)
   if (!url.pathname.startsWith('/api/payments')) return
 
   const auth = event.context.auth
-  if (auth?.role === 'USER') {
+  if (!isElevatedRole(auth?.role)) {
     throw createError({ statusCode: 403, message: 'Недостатньо прав' })
   }
 })
