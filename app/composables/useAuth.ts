@@ -20,6 +20,8 @@ export function useAuth() {
     () => user.value?.role === 'ADMIN' || user.value?.role === 'MANAGER',
   )
   const isEmployee = computed(() => user.value?.role === 'EMPLOYEE')
+  /** Роль USER ("Користувач") — без доступу до фінансів */
+  const isUser = computed(() => user.value?.role === 'USER')
 
   async function fetchMe() {
     try {
@@ -51,5 +53,5 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
-  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, initialized, fetchMe, login, logout }
+  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, isUser, initialized, fetchMe, login, logout }
 }

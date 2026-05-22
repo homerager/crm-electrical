@@ -9,10 +9,12 @@ export default defineComponent({
       title: 'Репорти'
     })
 
+    const { isUser } = useAuth()
+
     const { data, pending } = useFetch('/api/reports/stock')
     const { data: objectsData } = useFetch('/api/objects')
-    const { data: summaryData } = useFetch('/api/payments/summary', { query: { months: 12 } })
-    const { data: debtsData } = useFetch('/api/payments/debts')
+    const { data: summaryData } = useFetch('/api/payments/summary', { query: { months: 12 }, immediate: !isUser.value })
+    const { data: debtsData } = useFetch('/api/payments/debts', { immediate: !isUser.value })
     const { data: profitData } = useFetch('/api/reports/object-profitability')
 
     const warehouses = computed(() => (data.value as any)?.warehouses ?? [])
@@ -91,7 +93,9 @@ export default defineComponent({
         <v-tabs v-model={activeTab.value} class="mb-4" show-arrows>
           <v-tab value="stock" prepend-icon="mdi-warehouse">Залишки на складах</v-tab>
           <v-tab value="objects" prepend-icon="mdi-office-building-outline">По обʼєктах</v-tab>
-          <v-tab value="finance" prepend-icon="mdi-cash-multiple">Фінанси</v-tab>
+          {!isUser.value && (
+            <v-tab value="finance" prepend-icon="mdi-cash-multiple">Фінанси</v-tab>
+          )}
         </v-tabs>
 
         <v-window v-model={activeTab.value}>
@@ -244,6 +248,7 @@ export default defineComponent({
             </v-row>
           </v-window-item>
 
+          {!isUser.value && (
           <v-window-item value="finance">
             {/* Summary cards */}
             <v-row class="mb-4">
@@ -391,6 +396,7 @@ export default defineComponent({
               </v-data-table>
             </v-card>
           </v-window-item>
+          )}
         </v-window>
       </div>
     )

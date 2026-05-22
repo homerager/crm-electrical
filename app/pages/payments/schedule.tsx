@@ -12,7 +12,7 @@ function scheduleStatusMeta(val: string) {
 export default defineComponent({
   name: 'PaymentSchedulePage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth', 'finance'] })
     useHead({ title: 'Графік платежів' })
 
     const { isPrivileged } = useAuth()

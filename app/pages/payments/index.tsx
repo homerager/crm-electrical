@@ -29,7 +29,7 @@ function methodLabel(val: string) {
 export default defineComponent({
   name: 'PaymentsPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth', 'finance'] })
     useHead({ title: 'Оплати' })
 
     const { isPrivileged } = useAuth()

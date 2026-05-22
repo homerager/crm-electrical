@@ -8,7 +8,7 @@ const isSubGroup = (node: NavNode): node is NavSubGroup => 'children' in node
 export default defineComponent({
   name: 'AppNavMenu',
   setup() {
-    const { isAdmin, isPrivileged, isEmployee } = useAuth()
+    const { isAdmin, isPrivileged, isEmployee, isUser } = useAuth()
     const route = useRoute()
 
     const dashboard: NavLeaf = { title: 'Дашборд', icon: 'mdi-view-dashboard', to: '/' }
@@ -74,6 +74,16 @@ export default defineComponent({
         reports.children.push({ title: 'Зарплатний звіт', icon: 'mdi-account-cash-outline', to: '/tasks/salary' })
       }
 
+      const finance: NavSection = {
+        title: 'Фінанси',
+        icon: 'mdi-cash-multiple',
+        value: 'finance',
+        children: [
+          { title: 'Оплати', icon: 'mdi-bank-transfer', to: '/payments' },
+          { title: 'Графік платежів', icon: 'mdi-calendar-clock', to: '/payments/schedule' },
+        ],
+      }
+
       const result: NavSection[] = [
         {
           title: 'Комерція',
@@ -114,15 +124,7 @@ export default defineComponent({
           ],
         },
         projects,
-        {
-          title: 'Фінанси',
-          icon: 'mdi-cash-multiple',
-          value: 'finance',
-          children: [
-            { title: 'Оплати', icon: 'mdi-bank-transfer', to: '/payments' },
-            { title: 'Графік платежів', icon: 'mdi-calendar-clock', to: '/payments/schedule' },
-          ],
-        },
+        ...(isUser.value ? [] : [finance]),
         {
           title: 'Закупівля',
           icon: 'mdi-cart-outline',
