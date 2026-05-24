@@ -24,6 +24,12 @@ export default defineComponent({
     const error = ref('')
     const editItem = ref<any>(null)
 
+    const createPwdShow = ref(false)
+    function generateCreatePassword() {
+      createForm.password = randomPassword()
+      createPwdShow.value = true
+    }
+
     // ── Скидання паролю адміністратором ──────────────────────
     const resetPwdDialog = ref(false)
     const resetPwdTarget = ref<any>(null)
@@ -44,11 +50,15 @@ export default defineComponent({
       resetPwdDialog.value = true
     }
 
-    function generatePassword() {
+    function randomPassword() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
       const arr = new Uint32Array(14)
       crypto.getRandomValues(arr)
-      resetPwdValue.value = Array.from(arr, (n) => chars[n % chars.length]).join('')
+      return Array.from(arr, (n) => chars[n % chars.length]).join('')
+    }
+
+    function generateResetPassword() {
+      resetPwdValue.value = randomPassword()
       resetPwdShow.value = true
       resetPwdCopied.value = false
     }
@@ -426,7 +436,39 @@ export default defineComponent({
               {error.value && <v-alert type="error" variant="tonal" class="mb-4">{error.value}</v-alert>}
               <v-text-field v-model={createForm.name} label="Імʼя *" class="mb-4" />
               <v-text-field v-model={createForm.email} label="Email *" type="email" class="mb-4" />
-              <v-text-field v-model={createForm.password} label="Пароль *" type="password" class="mb-4" />
+              <v-text-field
+                v-model={createForm.password}
+                label="Пароль *"
+                type={createPwdShow.value ? 'text' : 'password'}
+                class="mb-1"
+              >
+                {{
+                  'append-inner': () => (
+                    <v-btn
+                      type="button"
+                      icon={createPwdShow.value ? 'mdi-eye-off' : 'mdi-eye'}
+                      variant="text"
+                      size="small"
+                      tabindex={-1}
+                      onMousedown={(e: MouseEvent) => e.preventDefault()}
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation()
+                        createPwdShow.value = !createPwdShow.value
+                      }}
+                    />
+                  ),
+                }}
+              </v-text-field>
+              <v-btn
+                variant="text"
+                color="primary"
+                size="small"
+                prepend-icon="mdi-dice-multiple-outline"
+                class="mb-4"
+                onClick={generateCreatePassword}
+              >
+                Згенерувати пароль
+              </v-btn>
               <div class="d-flex mb-4" style="gap:16px">
                 <v-select
                   v-model={createForm.role}
@@ -662,7 +704,7 @@ export default defineComponent({
                       size="small"
                       prepend-icon="mdi-dice-multiple-outline"
                       class="mt-2"
-                      onClick={generatePassword}
+                      onClick={generateResetPassword}
                     >
                       Згенерувати пароль
                     </v-btn>
