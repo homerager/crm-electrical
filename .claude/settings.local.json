@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:proelectric.com.ua)"
+      "WebFetch(domain:proelectric.com.ua)",
+      "Bash(npm install *)"
     ]
   }
 }

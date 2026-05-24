@@ -4,6 +4,14 @@ interface InvoiceItemRow {
   pricePerUnit: number
   vatPercent: number
   _product?: any
+  _rawName?: string
+}
+
+interface ParsedPdfFile {
+  storedAs: string
+  filename: string
+  mimeType: string
+  size: number
 }
 
 type DestinationType = 'warehouse' | 'object'
@@ -55,6 +63,12 @@ export default defineComponent({
     const saving = ref(false)
     const error = ref('')
 
+    const pdfFile = ref<ParsedPdfFile | null>(null)
+    const pdfInput = ref<HTMLInputElement | null>(null)
+    const parsing = ref(false)
+    const parseWarnings = ref<string[]>([])
+    const unmatchedItems = ref<string[]>([])
+
     const typeOptions = [
       { title: 'Прихід', value: 'INCOMING' },
       { title: 'Видаток', value: 'OUTGOING' },
@@ -76,6 +90,85 @@ export default defineComponent({
     function onProductChange(index: number, productId: string) {
       const product = products.value.find((p: any) => p.id === productId)
       items.value[index]._product = product
+    }
+
+    function openPdfPicker() {
+      pdfInput.value?.click()
+    }
+
+    async function onPdfSelected(e: Event) {
+      const input = e.target as HTMLInputElement
+      const file = input.files?.[0]
+      input.value = ''
+      if (!file) return
+      if (!/pdf/i.test(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
+        toast.error('Виберіть PDF файл')
+        return
+      }
+
+      parsing.value = true
+      parseWarnings.value = []
+      unmatchedItems.value = []
+      try {
+        const fd = new FormData()
+        fd.append('file', file, file.name)
+        const result: any = await $fetch('/api/invoices/parse-pdf', { method: 'POST', body: fd })
+        pdfFile.value = result.file
+        applyParsed(result.parsed)
+        toast.success('PDF розпізнано — перевірте дані')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Не вдалося обробити PDF')
+      } finally {
+        parsing.value = false
+      }
+    }
+
+    function applyParsed(parsed: any) {
+      if (!parsed) return
+      if (parsed.number && !form.number) form.number = parsed.number
+      if (parsed.date && form.date === new Date().toISOString().split('T')[0]) {
+        form.date = parsed.date
+      } else if (parsed.date && !form.date) {
+        form.date = parsed.date
+      }
+      if (parsed.contractorId && !form.contractorId) {
+        form.contractorId = parsed.contractorId
+      }
+      if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+        const newRows: InvoiceItemRow[] = []
+        const unmatched: string[] = []
+        for (const it of parsed.items) {
+          const row: InvoiceItemRow = {
+            productId: it.productId || '',
+            quantity: Number(it.quantity) || 0,
+            pricePerUnit: Number(it.pricePerUnit) || 0,
+            vatPercent: it.vatPercent != null ? Number(it.vatPercent) : defaultVatPercent.value,
+            _rawName: it.rawName,
+          }
+          if (it.productId) {
+            const product = products.value.find((p: any) => p.id === it.productId)
+            if (product) row._product = product
+          } else if (it.rawName) {
+            unmatched.push(it.rawName)
+          }
+          newRows.push(row)
+        }
+        items.value = newRows
+        unmatchedItems.value = unmatched
+      }
+      if (Array.isArray(parsed.warnings)) parseWarnings.value = parsed.warnings
+      if (parsed.contractorName && !parsed.contractorId) {
+        parseWarnings.value = [
+          ...parseWarnings.value,
+          `Контрагента "${parsed.contractorName}" не знайдено в довіднику — виберіть вручну або додайте.`,
+        ]
+      }
+    }
+
+    function clearPdf() {
+      pdfFile.value = null
+      parseWarnings.value = []
+      unmatchedItems.value = []
     }
 
     async function save() {
@@ -109,6 +202,9 @@ export default defineComponent({
         } else {
           payload.objectId = form.objectId
         }
+        if (pdfFile.value) {
+          payload.pdf = pdfFile.value
+        }
 
         const result = await $fetch('/api/invoices', {
           method: 'POST',
@@ -136,6 +232,81 @@ export default defineComponent({
             {error.value}
           </v-alert>
         )}
+
+        <v-card class="mb-4" variant="tonal" color="primary">
+          <v-card-text class="d-flex align-center flex-wrap gap-3">
+            <v-icon icon="mdi-file-pdf-box" size="32" />
+            <div class="flex-grow-1">
+              <div class="text-subtitle-1 font-weight-medium">
+                {pdfFile.value ? pdfFile.value.filename : 'Завантажити PDF накладної'}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {pdfFile.value
+                  ? `${(pdfFile.value.size / 1024).toFixed(1)} КБ — PDF буде прикріплено до накладної`
+                  : 'Система автоматично спробує розпізнати номер, дату, контрагента та позиції'}
+              </div>
+            </div>
+            <input
+              ref={pdfInput}
+              type="file"
+              accept="application/pdf,.pdf"
+              style="display: none"
+              onChange={onPdfSelected}
+            />
+            {!pdfFile.value ? (
+              <v-btn
+                color="primary"
+                variant="elevated"
+                prepend-icon="mdi-upload"
+                loading={parsing.value}
+                onClick={openPdfPicker}
+              >
+                Вибрати PDF
+              </v-btn>
+            ) : (
+              <>
+                <v-btn
+                  variant="outlined"
+                  prepend-icon="mdi-refresh"
+                  loading={parsing.value}
+                  onClick={openPdfPicker}
+                >
+                  Замінити
+                </v-btn>
+                <v-btn
+                  variant="text"
+                  color="error"
+                  prepend-icon="mdi-close"
+                  onClick={clearPdf}
+                >
+                  Прибрати
+                </v-btn>
+              </>
+            )}
+          </v-card-text>
+          {(parseWarnings.value.length > 0 || unmatchedItems.value.length > 0) && (
+            <v-card-text class="pt-0">
+              {parseWarnings.value.map((w, i) => (
+                <v-alert key={i} type="warning" variant="tonal" density="compact" class="mb-2">
+                  {w}
+                </v-alert>
+              ))}
+              {unmatchedItems.value.length > 0 && (
+                <v-alert type="info" variant="tonal" density="compact">
+                  <div class="text-caption font-weight-medium mb-1">
+                    Не знайдено в довіднику товарів ({unmatchedItems.value.length}):
+                  </div>
+                  <ul class="ml-4 text-caption">
+                    {unmatchedItems.value.map((n, i) => <li key={i}>{n}</li>)}
+                  </ul>
+                  <div class="text-caption mt-2">
+                    Виберіть товар вручну у відповідних позиціях або створіть нові у довіднику.
+                  </div>
+                </v-alert>
+              )}
+            </v-card-text>
+          )}
+        </v-card>
 
         <v-row>
           <v-col cols={12} md={8}>
@@ -230,6 +401,8 @@ export default defineComponent({
                         item-title="name"
                         item-value="id"
                         hide-details
+                        hint={item._rawName && !item.productId ? `З PDF: ${item._rawName}` : undefined}
+                        persistent-hint={!!(item._rawName && !item.productId)}
                         onChange={(val: string) => onProductChange(index, val)}
                       />
                     </v-col>

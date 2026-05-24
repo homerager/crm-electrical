@@ -1,4 +1,5 @@
 import { isElevatedRole } from '../../utils/authz'
+import { removeInvoicePdfFile } from '../../utils/invoiceFile'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -47,6 +48,10 @@ export default defineEventHandler(async (event) => {
 
     await tx.invoice.delete({ where: { id } })
   })
+
+  if (invoice.pdfStoredAs) {
+    await removeInvoicePdfFile(invoice.pdfStoredAs)
+  }
 
   writeAuditLog({ userId: auth!.userId, userName: auth!.name, action: 'DELETE', entityType: 'Invoice', entityId: id, changes: { number: invoice.number, type: invoice.type } })
 

@@ -336,6 +336,11 @@ model Invoice {
   createdById  String
   date         DateTime
   notes        String?
+  /// Оригінальний PDF накладної від постачальника (cuid-base ім'я файлу у public/uploads/invoices)
+  pdfStoredAs  String?
+  pdfFilename  String?
+  pdfMimeType  String?
+  pdfSize      Int?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

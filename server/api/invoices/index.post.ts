@@ -11,7 +11,7 @@ interface InvoiceItemInput {
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth!
   const body = await readBody(event)
-  const { number, type, contractorId, warehouseId, objectId, date, notes, items } = body
+  const { number, type, contractorId, warehouseId, objectId, date, notes, items, pdf } = body
 
   if (!number || !type || !date || !items?.length) {
     throw createError({ statusCode: 400, statusMessage: 'Заповніть всі обовʼязкові поля' })
@@ -34,6 +34,10 @@ export default defineEventHandler(async (event) => {
         createdById: auth.userId,
         date: new Date(date),
         notes,
+        pdfStoredAs: pdf?.storedAs ?? null,
+        pdfFilename: pdf?.filename ?? null,
+        pdfMimeType: pdf?.mimeType ?? null,
+        pdfSize: pdf?.size ?? null,
         items: {
           create: (items as InvoiceItemInput[]).map((item) => ({
             productId: item.productId,

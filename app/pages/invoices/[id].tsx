@@ -7,7 +7,7 @@ export default defineComponent({
     const { isPrivileged } = useAuth()
     const toast = useToast()
     const id = route.params.id as string
-    const { data, pending } = useFetch(`/api/invoices/${id}`)
+    const { data, pending, refresh } = useFetch(`/api/invoices/${id}`)
     const invoice = computed(() => (data.value as any)?.invoice)
     const router = useRouter()
 
@@ -18,6 +18,10 @@ export default defineComponent({
     const deleteDialog = ref(false)
     const deleting = ref(false)
     const pdfPreviewDialog = ref(false)
+    const attachedPreviewDialog = ref(false)
+    const attachInput = ref<HTMLInputElement | null>(null)
+    const attaching = ref(false)
+    const removingAttachment = ref(false)
 
     async function confirmDelete() {
       deleting.value = true
@@ -29,6 +33,46 @@ export default defineComponent({
         toast.error(e?.data?.statusMessage || 'Помилка видалення')
       } finally {
         deleting.value = false
+      }
+    }
+
+    function openAttachPicker() {
+      attachInput.value?.click()
+    }
+
+    async function onAttachSelected(e: Event) {
+      const input = e.target as HTMLInputElement
+      const file = input.files?.[0]
+      input.value = ''
+      if (!file) return
+      if (!/pdf/i.test(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
+        toast.error('Виберіть PDF файл')
+        return
+      }
+      attaching.value = true
+      try {
+        const fd = new FormData()
+        fd.append('file', file, file.name)
+        await $fetch(`/api/invoices/${id}/attachment`, { method: 'POST', body: fd })
+        toast.success('PDF прикріплено')
+        await refresh()
+      } catch (err: any) {
+        toast.error(err?.data?.statusMessage || 'Не вдалося прикріпити PDF')
+      } finally {
+        attaching.value = false
+      }
+    }
+
+    async function removeAttachment() {
+      removingAttachment.value = true
+      try {
+        await $fetch(`/api/invoices/${id}/attachment`, { method: 'DELETE' })
+        toast.success('PDF прибрано')
+        await refresh()
+      } catch (err: any) {
+        toast.error(err?.data?.statusMessage || 'Не вдалося прибрати PDF')
+      } finally {
+        removingAttachment.value = false
       }
     }
 
@@ -46,6 +90,12 @@ export default defineComponent({
         0,
       ),
     )
+
+    function formatFileSize(bytes: number) {
+      if (bytes < 1024) return `${bytes} Б`
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`
+      return `${(bytes / (1024 * 1024)).toFixed(2)} МБ`
+    }
 
     return () => (
       <div>
@@ -105,6 +155,96 @@ export default defineComponent({
                   )}
                 </v-list>
               </v-card>
+
+              <v-card class="mb-4">
+                <v-card-title class="d-flex align-center">
+                  <v-icon icon="mdi-paperclip" class="mr-2" />
+                  Оригінал PDF
+                </v-card-title>
+                <v-card-text>
+                  <input
+                    ref={attachInput}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    style="display: none"
+                    onChange={onAttachSelected}
+                  />
+                  {invoice.value.pdfStoredAs ? (
+                    <div>
+                      <div class="d-flex align-center mb-3">
+                        <v-icon icon="mdi-file-pdf-box" color="error" size="40" class="mr-3" />
+                        <div class="flex-grow-1" style="min-width:0">
+                          <div class="text-body-2 font-weight-medium text-truncate">
+                            {invoice.value.pdfFilename || 'invoice.pdf'}
+                          </div>
+                          <div class="text-caption text-medium-emphasis">
+                            {invoice.value.pdfSize ? formatFileSize(invoice.value.pdfSize) : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="d-flex flex-wrap gap-2">
+                        <v-btn
+                          size="small"
+                          variant="elevated"
+                          color="primary"
+                          prepend-icon="mdi-eye"
+                          onClick={() => (attachedPreviewDialog.value = true)}
+                        >
+                          Переглянути
+                        </v-btn>
+                        <v-btn
+                          size="small"
+                          variant="outlined"
+                          prepend-icon="mdi-download"
+                          tag="a"
+                          href={`/api/invoices/${id}/attachment`}
+                        >
+                          Завантажити
+                        </v-btn>
+                        {isPrivileged.value && (
+                          <>
+                            <v-btn
+                              size="small"
+                              variant="text"
+                              prepend-icon="mdi-refresh"
+                              loading={attaching.value}
+                              onClick={openAttachPicker}
+                            >
+                              Замінити
+                            </v-btn>
+                            <v-btn
+                              size="small"
+                              variant="text"
+                              color="error"
+                              prepend-icon="mdi-delete"
+                              loading={removingAttachment.value}
+                              onClick={removeAttachment}
+                            >
+                              Прибрати
+                            </v-btn>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div class="text-body-2 text-medium-emphasis mb-3">
+                        PDF не прикріплено
+                      </div>
+                      <v-btn
+                        block
+                        color="primary"
+                        variant="elevated"
+                        prepend-icon="mdi-upload"
+                        loading={attaching.value}
+                        onClick={openAttachPicker}
+                      >
+                        Прикріпити PDF
+                      </v-btn>
+                    </div>
+                  )}
+                </v-card-text>
+              </v-card>
             </v-col>
 
             <v-col cols={12} md={8}>
@@ -162,6 +302,38 @@ export default defineComponent({
                 <iframe
                   title="Перегляд накладної PDF"
                   src={`/api/invoices/${id}/pdf?inline=1`}
+                  class="pdf-preview-dialog__iframe"
+                />
+              ) : null}
+            </v-card-text>
+          </v-card>
+        </v-dialog>
+
+        <v-dialog v-model={attachedPreviewDialog.value} max-width={960} scrollable>
+          <v-card>
+            <v-card-title class="d-flex align-center flex-wrap gap-2">
+              <span>Оригінал накладної</span>
+              <v-chip size="small" variant="tonal">
+                {invoice.value?.pdfFilename}
+              </v-chip>
+              <v-spacer />
+              <v-btn
+                color="primary"
+                variant="elevated"
+                prepend-icon="mdi-download"
+                tag="a"
+                href={`/api/invoices/${id}/attachment`}
+              >
+                Завантажити
+              </v-btn>
+              <v-btn variant="text" icon="mdi-close" aria-label="Закрити" onClick={() => (attachedPreviewDialog.value = false)} />
+            </v-card-title>
+            <v-divider />
+            <v-card-text class="pa-0 pdf-preview-dialog__body">
+              {attachedPreviewDialog.value ? (
+                <iframe
+                  title="Оригінал PDF"
+                  src={`/api/invoices/${id}/attachment?inline=1`}
                   class="pdf-preview-dialog__iframe"
                 />
               ) : null}
