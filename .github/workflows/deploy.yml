@@ -10,11 +10,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VPS
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Nuxt
+        run: npm run build:prod
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Copy .output to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: '.output'
+          target: '/var/www/crm/crm-electrical'
+          rm: true
+
+      - name: Migrate and restart
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            /var/www/crm/deploy-crm.sh
+            cd /var/www/crm/crm-electrical
+            npx prisma migrate deploy
+            pm2 restart crm-electrical || pm2 start .output/server/index.mjs --name crm-electrical -- --port 3000
+            pm2 save
