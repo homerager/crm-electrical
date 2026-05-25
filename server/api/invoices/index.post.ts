@@ -1,5 +1,6 @@
 
 import type { InvoiceType } from '@prisma/client'
+import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
 
 interface InvoiceItemInput {
   productId: string
@@ -75,6 +76,8 @@ export default defineEventHandler(async (event) => {
             data: { productId: item.productId, warehouseId, quantity: delta },
           })
         }
+
+        await checkLowStockAfterChange(tx, warehouseId, item.productId)
       } else if (objectId) {
         const existing = await tx.objectStock.findUnique({
           where: { objectId_productId: { objectId, productId: item.productId } },

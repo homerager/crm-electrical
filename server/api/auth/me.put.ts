@@ -3,15 +3,24 @@ export default defineEventHandler(async (event) => {
   if (!auth) throw createError({ statusCode: 401 })
 
   const body = await readBody(event)
-  const { emailNotifications } = body
+  const { emailNotifications, lowStockNotifications } = body
 
-  if (typeof emailNotifications !== 'boolean') {
+  if (emailNotifications === undefined && lowStockNotifications === undefined) {
+    throw createError({ statusCode: 400, statusMessage: 'Nothing to update' })
+  }
+  if (emailNotifications !== undefined && typeof emailNotifications !== 'boolean') {
     throw createError({ statusCode: 400, statusMessage: 'emailNotifications must be a boolean' })
+  }
+  if (lowStockNotifications !== undefined && typeof lowStockNotifications !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'lowStockNotifications must be a boolean' })
   }
 
   const user = await prisma.user.update({
     where: { id: auth.userId },
-    data: { emailNotifications },
+    data: {
+      ...(typeof emailNotifications === 'boolean' && { emailNotifications }),
+      ...(typeof lowStockNotifications === 'boolean' && { lowStockNotifications }),
+    },
     select: {
       id: true,
       name: true,
@@ -19,6 +28,7 @@ export default defineEventHandler(async (event) => {
       role: true,
       isActive: true,
       emailNotifications: true,
+      lowStockNotifications: true,
       jobTitle: { select: { id: true, name: true } },
     },
   })

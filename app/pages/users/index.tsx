@@ -105,6 +105,7 @@ export default defineComponent({
       role: 'STOREKEEPER',
       isActive: true,
       emailNotifications: true,
+      lowStockNotifications: false,
       phone: '',
       jobTitleId: null as string | null,
       hourlyRate: '',
@@ -141,6 +142,7 @@ export default defineComponent({
         role: item.role,
         isActive: item.isActive,
         emailNotifications: item.emailNotifications ?? true,
+        lowStockNotifications: item.lowStockNotifications ?? false,
         phone: item.phone ?? '',
         jobTitleId: item.jobTitleId ?? null,
         hourlyRate: item.hourlyRate != null && item.hourlyRate !== '' ? String(item.hourlyRate) : '',
@@ -197,6 +199,7 @@ export default defineComponent({
             role: editForm.role,
             isActive: editForm.isActive,
             emailNotifications: editForm.emailNotifications,
+            lowStockNotifications: editForm.lowStockNotifications,
             phone: editForm.phone,
             jobTitleId: editForm.jobTitleId || null,
             hourlyRate: editForm.hourlyRate.trim() === '' ? null : editForm.hourlyRate.trim(),
@@ -580,7 +583,7 @@ export default defineComponent({
                   Telegram підключено
                 </v-chip>
               )}
-              <div class="d-flex gap-4">
+              <div class="d-flex flex-column gap-1 flex-wrap">
                 <v-switch
                   v-model={editForm.isActive}
                   label={editForm.isActive ? 'Активний' : 'Деактивований'}
@@ -593,6 +596,13 @@ export default defineComponent({
                   color="primary"
                   hide-details
                   prepend-icon={editForm.emailNotifications ? 'mdi-email-outline' : 'mdi-email-off-outline'}
+                />
+                <v-switch
+                  v-model={editForm.lowStockNotifications}
+                  label="Сповіщення про мін. залишки"
+                  color="warning"
+                  hide-details
+                  prepend-icon={editForm.lowStockNotifications ? 'mdi-bell-alert-outline' : 'mdi-bell-off-outline'}
                 />
               </div>
 

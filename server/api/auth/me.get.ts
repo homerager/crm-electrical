@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
       role: true,
       isActive: true,
       emailNotifications: true,
+      lowStockNotifications: true,
       jobTitle: { select: { id: true, name: true } },
     },
   })

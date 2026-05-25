@@ -1,5 +1,6 @@
 import { isElevatedRole } from '../../utils/authz'
 import { removeInvoicePdfFile } from '../../utils/invoiceFile'
+import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -30,6 +31,7 @@ export default defineEventHandler(async (event) => {
             where: { productId_warehouseId: { productId: item.productId, warehouseId: invoice.warehouseId } },
             data: { quantity: Math.max(0, newQty) },
           })
+          await checkLowStockAfterChange(tx, invoice.warehouseId, item.productId)
         }
       } else if (invoice.objectId) {
         const stock = await tx.objectStock.findUnique({

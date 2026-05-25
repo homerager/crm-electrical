@@ -8,6 +8,7 @@ export default defineComponent({
 
     const route = useRoute()
     const id = route.params.id as string
+    const toast = useToast()
 
     const { data, pending, refresh: refreshWarehouse } = useFetch(`/api/warehouses/${id}`)
     const warehouse = computed(() => (data.value as any)?.warehouse)
@@ -38,10 +39,55 @@ export default defineComponent({
       { title: 'Артикул', key: 'product.sku' },
       { title: 'Кількість', key: 'quantity', align: 'end' as const },
       { title: 'Одиниця', key: 'product.unit', align: 'end' as const },
+      { title: 'Мін. залишок', key: 'minStock', align: 'end' as const, width: 130 },
       { title: 'Постачальники', key: 'supplyHistory', sortable: false },
       { title: 'Накладні', key: 'invoices', sortable: false },
-      { title: '', key: 'actions', sortable: false, align: 'end' as const, width: 64 },
+      { title: '', key: 'actions', sortable: false, align: 'end' as const, width: 96 },
     ]
+
+    // ── Мінімальний залишок ─────────────────────────────────────
+    const minStockDialog = ref(false)
+    const minStockSaving = ref(false)
+    const minStockError = ref('')
+    const minStockTarget = ref<any>(null)
+    const minStockValue = ref<string>('')
+
+    function openMinStockEditor(item: any) {
+      minStockTarget.value = item
+      minStockValue.value = item.minStock != null ? String(Number(item.minStock)) : ''
+      minStockError.value = ''
+      minStockDialog.value = true
+    }
+
+    async function saveMinStock() {
+      if (!minStockTarget.value) return
+      minStockSaving.value = true
+      minStockError.value = ''
+      try {
+        const raw = minStockValue.value.trim().replace(',', '.')
+        const parsed = raw === '' ? null : Number(raw)
+        if (parsed != null && (!Number.isFinite(parsed) || parsed < 0)) {
+          minStockError.value = 'Введіть невідʼємне число або залиште поле порожнім'
+          minStockSaving.value = false
+          return
+        }
+        await $fetch(`/api/warehouses/${id}/min-stock`, {
+          method: 'PUT',
+          body: { productId: minStockTarget.value.productId, minStock: parsed },
+        })
+        minStockDialog.value = false
+        await refreshWarehouse()
+        toast.success(parsed == null ? 'Мінімум знято' : 'Мінімум збережено')
+      } catch (e: any) {
+        minStockError.value = e?.data?.statusMessage || 'Помилка збереження'
+      } finally {
+        minStockSaving.value = false
+      }
+    }
+
+    function isBelowMin(item: any) {
+      return item.minStock != null && Number(item.quantity) < Number(item.minStock)
+    }
 
     const movHeaders = [
       { title: '', key: 'expand', sortable: false, width: 48 },
@@ -133,9 +179,27 @@ export default defineComponent({
             >
               {{
                 'item.quantity': ({ item }: any) => (
-                  <span class={Number(item.quantity) < 5 ? 'text-error font-weight-bold' : ''}>
+                  <span class={isBelowMin(item) ? 'text-error font-weight-bold' : ''}>
                     {Number(item.quantity).toLocaleString('uk-UA')}
+                    {isBelowMin(item) && (
+                      <v-tooltip text="Кількість нижче мінімального залишку">
+                        {{
+                          activator: ({ props }: any) => (
+                            <v-icon {...props} size="x-small" icon="mdi-alert" color="error" class="ml-1" />
+                          ),
+                        }}
+                      </v-tooltip>
+                    )}
                   </span>
+                ),
+                'item.minStock': ({ item }: any) => (
+                  item.minStock != null
+                    ? (
+                      <span class={isBelowMin(item) ? 'text-error font-weight-medium' : ''}>
+                        {Number(item.minStock).toLocaleString('uk-UA')}
+                      </span>
+                    )
+                    : <span class="text-medium-emphasis">—</span>
                 ),
                 'item.supplyHistory': ({ item }: any) => {
                   const contractors = [
@@ -207,6 +271,20 @@ export default defineComponent({
                 },
                 'item.actions': ({ item }: any) => (
                   <div class="d-flex justify-end">
+                    <v-tooltip text="Задати мінімальний залишок" location="start">
+                      {{
+                        activator: ({ props }: any) => (
+                          <v-btn
+                            {...props}
+                            icon={item.minStock != null ? 'mdi-bell-ring-outline' : 'mdi-bell-outline'}
+                            variant="text"
+                            size="small"
+                            color={item.minStock != null ? 'warning' : undefined}
+                            onClick={() => openMinStockEditor(item)}
+                          />
+                        ),
+                      }}
+                    </v-tooltip>
                     <v-tooltip text="Перемістити цей товар" location="start">
                       {{
                         activator: ({ props }: any) => (
@@ -216,6 +294,7 @@ export default defineComponent({
                             variant="text"
                             size="small"
                             color="primary"
+                            disabled={Number(item.quantity) <= 0}
                             onClick={() =>
                               openTransfer({ productId: item.productId, qty: Number(item.quantity) })
                             }
@@ -438,6 +517,56 @@ export default defineComponent({
             <AuditLogPanel entityType="Warehouse" entityId={id} />
           </v-card>
         )}
+
+        <v-dialog v-model={minStockDialog.value} max-width={460}>
+          <v-card>
+            <v-card-title class="pa-4 d-flex align-center" style="gap:8px">
+              <v-icon color="warning" icon="mdi-bell-ring-outline" />
+              Мінімальний залишок
+            </v-card-title>
+            <v-card-text class="pa-4 pt-0">
+              <div class="text-body-2 text-medium-emphasis mb-3">
+                Товар: <span class="font-weight-medium">{minStockTarget.value?.product?.name}</span>
+                {minStockTarget.value?.product?.sku ? ` (${minStockTarget.value.product.sku})` : ''}
+              </div>
+              <div class="text-body-2 text-medium-emphasis mb-4">
+                Поточний залишок:{' '}
+                <span class="font-weight-medium">
+                  {Number(minStockTarget.value?.quantity ?? 0).toLocaleString('uk-UA')}{' '}
+                  {minStockTarget.value?.product?.unit}
+                </span>
+              </div>
+              {minStockError.value && (
+                <v-alert type="error" variant="tonal" density="compact" class="mb-3">
+                  {minStockError.value}
+                </v-alert>
+              )}
+              <v-text-field
+                v-model={minStockValue.value}
+                label="Мінімальний залишок"
+                type="text"
+                inputmode="decimal"
+                placeholder="напр. 10"
+                prepend-inner-icon="mdi-alert-decagram-outline"
+                hint="Залиште порожнім, щоб зняти контроль мінімуму"
+                persistent-hint
+                onKeydown={(e: KeyboardEvent) => e.key === 'Enter' && saveMinStock()}
+              />
+              <v-alert type="info" variant="tonal" density="compact" class="mt-3" icon="mdi-information-outline">
+                Коли кількість опуститься нижче мінімуму — підписані користувачі отримають in-app та Telegram сповіщення.
+              </v-alert>
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              <v-btn variant="outlined" disabled={minStockSaving.value} onClick={() => (minStockDialog.value = false)}>
+                Скасувати
+              </v-btn>
+              <v-btn color="primary" variant="elevated" loading={minStockSaving.value} onClick={saveMinStock}>
+                Зберегти
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
         <v-dialog
           modelValue={transferOpen.value}

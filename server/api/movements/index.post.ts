@@ -1,5 +1,6 @@
 import type { MovementType, Prisma } from '@prisma/client'
 import { consumeReservationForShipment, freeQtyOnWarehouse } from '../../utils/warehouseReservations'
+import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
 
 interface MovementItemInput {
   productId: string
@@ -130,8 +131,11 @@ export default defineEventHandler(async (event) => {
           data: { quantity: physical - item.quantity },
         })
 
+        await checkLowStockAfterChange(tx, fromWarehouseId, item.productId)
+
         if (type === 'WAREHOUSE_TO_WAREHOUSE' && toWarehouseId) {
           await addWarehouseStock(tx, toWarehouseId, item.productId, item.quantity)
+          await checkLowStockAfterChange(tx, toWarehouseId, item.productId)
         }
 
         if (type === 'WAREHOUSE_TO_OBJECT' && objectId) {
@@ -211,6 +215,7 @@ export default defineEventHandler(async (event) => {
       for (const item of normalizedItems) {
         await removeFromObjectStock(tx, objectId, item.productId, item.quantity)
         await addWarehouseStock(tx, toWarehouseId, item.productId, item.quantity)
+        await checkLowStockAfterChange(tx, toWarehouseId, item.productId)
       }
 
       return tx.movement.create({

@@ -8,7 +8,12 @@ export default defineEventHandler(async (event) => {
     include: {
       stock: {
         include: { product: true },
-        where: { quantity: { gt: 0 } },
+        where: {
+          OR: [
+            { quantity: { gt: 0 } },
+            { minStock: { not: null } },
+          ],
+        },
         orderBy: { product: { name: 'asc' } },
       },
     },

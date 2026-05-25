@@ -84,6 +84,8 @@ model User {
   phone          String?
   telegramChatId     String?
   emailNotifications Boolean   @default(true)
+  /// Особисте підписання на сповіщення про досягнення мінімального залишку на складах
+  lowStockNotifications Boolean @default(false)
   jobTitleId         String?
   jobTitle       JobTitle? @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
   /// Погодинна ставка (грн/год) для зарплатного звіту
@@ -285,6 +287,10 @@ model WarehouseStock {
   productId   String
   warehouseId String
   quantity    Decimal  @default(0) @db.Decimal(12, 3)
+  /// Мінімальний залишок. Якщо null — не контролюється. Коли quantity опускається нижче — надсилається сповіщення підписаним користувачам.
+  minStock    Decimal? @db.Decimal(12, 3)
+  /// Час останнього сповіщення про досягнення мінімуму. Використовується для дедуплікації (повторно не шлемо, поки не вийдемо з low-state).
+  lowStockNotifiedAt DateTime?
   updatedAt   DateTime @updatedAt
 
   product   Product   @relation(fields: [productId], references: [id])

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { role, isActive, name, phone, jobTitleId, hourlyRate, emailNotifications } = body
+  const { role, isActive, name, phone, jobTitleId, hourlyRate, emailNotifications, lowStockNotifications } = body
 
   let resolvedHourlyRate: number | null | undefined
   if (hourlyRate !== undefined) {
@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
       ...(resolvedJobTitleId !== undefined && { jobTitleId: resolvedJobTitleId }),
       ...(resolvedHourlyRate !== undefined && { hourlyRate: resolvedHourlyRate }),
       ...(typeof emailNotifications === 'boolean' && { emailNotifications }),
+      ...(typeof lowStockNotifications === 'boolean' && { lowStockNotifications }),
     },
     select: {
       id: true,
@@ -62,6 +63,7 @@ export default defineEventHandler(async (event) => {
       phone: true,
       telegramChatId: true,
       emailNotifications: true,
+      lowStockNotifications: true,
       jobTitleId: true,
       jobTitle: { select: { id: true, name: true } },
       hourlyRate: true,
