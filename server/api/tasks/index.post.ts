@@ -23,11 +23,20 @@ export default defineEventHandler(async (event) => {
     if (parent.parentId) throw createError({ statusCode: 400, statusMessage: 'Не можна створити підзавдання до підзавдання' })
   }
 
-  if (projectId && !isElevatedRole(auth.role)) {
-    const member = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId, userId: auth.userId } },
+  if (projectId) {
+    const proj = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { archivedAt: true },
     })
-    if (!member) throw createError({ statusCode: 403, message: 'Ви не є учасником цього проєкту' })
+    if (proj?.archivedAt) {
+      throw createError({ statusCode: 409, statusMessage: 'Проєкт в архіві — створення завдань заборонено' })
+    }
+    if (!isElevatedRole(auth.role)) {
+      const member = await prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId, userId: auth.userId } },
+      })
+      if (!member) throw createError({ statusCode: 403, message: 'Ви не є учасником цього проєкту' })
+    }
   }
 
   let resolvedObjectId = objectId || null

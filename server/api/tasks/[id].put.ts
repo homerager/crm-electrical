@@ -18,9 +18,16 @@ export default defineEventHandler(async (event) => {
 
   const task = await prisma.task.findUnique({
     where: { id },
-    include: { assignee: { select: { id: true, name: true, telegramChatId: true } } },
+    include: {
+      assignee: { select: { id: true, name: true, telegramChatId: true } },
+      project: { select: { archivedAt: true } },
+    },
   })
   if (!task) throw createError({ statusCode: 404, statusMessage: 'Завдання не знайдено' })
+
+  if (task.project?.archivedAt) {
+    throw createError({ statusCode: 409, statusMessage: 'Проєкт в архіві — редагування заборонено' })
+  }
 
   const { title, description, status, priority, assignedToId, objectId, dueDate, estimatedHours, tagIds } = body
 

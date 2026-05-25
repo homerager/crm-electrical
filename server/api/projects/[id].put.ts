@@ -21,6 +21,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Тільки власник або адмін може редагувати проєкт' })
   }
 
+  if (project.archivedAt) {
+    throw createError({ statusCode: 409, message: 'Проєкт в архіві — спочатку розархівуйте' })
+  }
+
   const data: {
     name: string
     description: string | null

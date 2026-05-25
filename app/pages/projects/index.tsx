@@ -15,11 +15,15 @@ export default defineComponent({
     const dialog = ref(false)
     const editDialog = ref(false)
     const deleteDialog = ref(false)
+    const archiveDialog = ref(false)
     const saving = ref(false)
     const deleting = ref(false)
+    const archiving = ref(false)
     const error = ref('')
     const editTarget = ref<any>(null)
     const deleteTarget = ref<any>(null)
+    const archiveTarget = ref<any>(null)
+    const viewArchive = ref(false)
 
     const form = reactive({
       name: '',
@@ -30,7 +34,9 @@ export default defineComponent({
       objectIds: [] as string[],
     })
 
-    const { data: projectsData, refresh, pending: projectsPending } = useFetch('/api/projects')
+    const { data: projectsData, refresh, pending: projectsPending } = useFetch('/api/projects', {
+      query: computed(() => ({ archived: viewArchive.value ? 'only' : 'false' })),
+    } as Parameters<typeof useFetch>[1])
     const projects = computed(() => (projectsData.value as any[]) ?? [])
     const projectsInitialLoading = computed(
       () => projectsPending.value && projectsData.value == null,
@@ -74,6 +80,31 @@ export default defineComponent({
     function openDelete(project: any) {
       deleteTarget.value = project
       deleteDialog.value = true
+    }
+
+    function openArchive(project: any) {
+      archiveTarget.value = project
+      archiveDialog.value = true
+    }
+
+    async function confirmArchive() {
+      if (!archiveTarget.value) return
+      archiving.value = true
+      const target = archiveTarget.value
+      const shouldArchive = !target.archivedAt
+      try {
+        await $fetch(`/api/projects/${target.id}/archive`, {
+          method: 'POST',
+          body: { archived: shouldArchive },
+        })
+        archiveDialog.value = false
+        await refresh()
+        toast.success(shouldArchive ? 'Проєкт переміщено в архів' : 'Проєкт відновлено з архіву')
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || e?.data?.message || 'Помилка')
+      } finally {
+        archiving.value = false
+      }
     }
 
     async function saveCreate() {
@@ -264,7 +295,18 @@ export default defineComponent({
             <div class="text-caption text-medium-emphasis">Управління проєктами та доступом</div>
           </div>
           <v-spacer />
-          {isPrivileged.value && (
+          <v-btn-toggle
+            v-model={viewArchive.value}
+            mandatory
+            density="compact"
+            variant="outlined"
+            divided
+            class="mr-2 gap-2"
+          >
+            <v-btn value={false} size="small" prepend-icon="mdi-folder-outline">Активні</v-btn>
+            <v-btn value={true} size="small" prepend-icon="mdi-archive-outline">Архів</v-btn>
+          </v-btn-toggle>
+          {isPrivileged.value && !viewArchive.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Новий проєкт
             </v-btn>
@@ -289,10 +331,18 @@ export default defineComponent({
           <>
             {projects.value.length === 0 && (
               <v-card class="text-center pa-12" variant="outlined">
-                <v-icon size="64" color="medium-emphasis" class="mb-4">mdi-folder-off-outline</v-icon>
-                <div class="text-h6 text-medium-emphasis">Немає проєктів</div>
-                <div class="text-body-2 text-medium-emphasis mt-2">Створіть перший проєкт для організації завдань</div>
-                {isPrivileged.value && (
+                <v-icon size="64" color="medium-emphasis" class="mb-4">
+                  {viewArchive.value ? 'mdi-archive-outline' : 'mdi-folder-off-outline'}
+                </v-icon>
+                <div class="text-h6 text-medium-emphasis">
+                  {viewArchive.value ? 'Архів порожній' : 'Немає проєктів'}
+                </div>
+                <div class="text-body-2 text-medium-emphasis mt-2">
+                  {viewArchive.value
+                    ? 'Тут зʼявляться проєкти, які ви перенесете в архів'
+                    : 'Створіть перший проєкт для організації завдань'}
+                </div>
+                {isPrivileged.value && !viewArchive.value && (
                   <v-btn color="primary" class="mt-4" prepend-icon="mdi-plus" onClick={openCreate}>
                     Створити проєкт
                   </v-btn>
@@ -350,19 +400,37 @@ export default defineComponent({
                       </div>
                     </v-card-text>
                     <v-card-actions onClick={(e: MouseEvent) => e.stopPropagation()}>
+                      {project.archivedAt && (
+                        <v-chip size="x-small" color="grey" variant="tonal" prepend-icon="mdi-archive-outline">
+                          В архіві
+                        </v-chip>
+                      )}
                       <v-spacer />
-                      <v-btn
-                        size="small"
-                        variant="text"
-                        icon="mdi-pencil"
-                        onClick={() => openEdit(project)}
-                      />
+                      {!project.archivedAt && (
+                        <v-btn
+                          size="small"
+                          variant="text"
+                          icon="mdi-pencil"
+                          title="Редагувати"
+                          onClick={() => openEdit(project)}
+                        />
+                      )}
+                      {isPrivileged.value && (
+                        <v-btn
+                          size="small"
+                          variant="text"
+                          icon={project.archivedAt ? 'mdi-archive-arrow-up-outline' : 'mdi-archive-arrow-down-outline'}
+                          title={project.archivedAt ? 'Відновити з архіву' : 'В архів'}
+                          onClick={() => openArchive(project)}
+                        />
+                      )}
                       {isPrivileged.value && (
                         <v-btn
                           size="small"
                           variant="text"
                           color="error"
                           icon="mdi-delete"
+                          title="Видалити"
                           onClick={() => openDelete(project)}
                         />
                       )}
@@ -413,8 +481,40 @@ export default defineComponent({
             </v-card-text>
             <v-card-actions class="pa-4">
               <v-spacer />
-              <v-btn variant="text" onClick={() => { deleteDialog.value = false }}>Скасувати</v-btn>
-              <v-btn color="error" loading={deleting.value} onClick={confirmDelete}>Видалити</v-btn>
+              <v-btn variant="outlined" onClick={() => { deleteDialog.value = false }}>Скасувати</v-btn>
+              <v-btn color="error" variant="elevated" loading={deleting.value} onClick={confirmDelete}>Видалити</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        {/* Archive dialog */}
+        <v-dialog v-model={archiveDialog.value} max-width={420}>
+          <v-card>
+            <v-card-title class="pa-4">
+              {archiveTarget.value?.archivedAt ? 'Відновити з архіву?' : 'Перенести в архів?'}
+            </v-card-title>
+            <v-card-text>
+              {archiveTarget.value?.archivedAt ? (
+                <>
+                  Проєкт "<strong>{archiveTarget.value?.name}</strong>" повернеться до списку активних. Редагування та створення завдань знову стане доступним.
+                </>
+              ) : (
+                <>
+                  Проєкт "<strong>{archiveTarget.value?.name}</strong>" буде приховано зі списку. Дані, завдання та обʼєкти збережуться, але редагування та створення нових завдань буде заблоковано до відновлення.
+                </>
+              )}
+            </v-card-text>
+            <v-card-actions class="pa-4">
+              <v-spacer />
+              <v-btn variant="outlined" onClick={() => { archiveDialog.value = false }}>Скасувати</v-btn>
+              <v-btn
+                color={archiveTarget.value?.archivedAt ? 'primary' : 'warning'}
+                variant="elevated" 
+                loading={archiving.value}
+                onClick={confirmArchive}
+              >
+                {archiveTarget.value?.archivedAt ? 'Відновити' : 'В архів'}
+              </v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>

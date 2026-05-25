@@ -535,6 +535,8 @@ model Project {
   createdById      String
   /// Типовий будівельний обʼєкт для нових завдань у цьому проєкті
   defaultObjectId  String?
+  /// Дата архівування. Якщо не null — проєкт в архіві (тільки для перегляду)
+  archivedAt       DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

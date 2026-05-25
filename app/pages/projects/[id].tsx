@@ -225,6 +225,11 @@ export default defineComponent({
                   style={{ width: '16px', height: '16px', borderRadius: '4px', background: project.value.color, flexShrink: 0 }}
                 />
                 <h1 class="text-h5 font-weight-bold">{project.value.name}</h1>
+                {project.value.archivedAt && (
+                  <v-chip size="small" color="grey" variant="tonal" prepend-icon="mdi-archive-outline">
+                    В архіві
+                  </v-chip>
+                )}
               </div>
               {project.value.description && (
                 <div class="text-body-2 text-medium-emphasis mt-1">{project.value.description}</div>
@@ -282,12 +287,24 @@ export default defineComponent({
                 title="Діаграма Ганта"
               />
             </div>
-            {!isEmployee.value && (
+            {!isEmployee.value && !project.value.archivedAt && (
               <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
                 Нове завдання
               </v-btn>
             )}
           </div>
+
+          {project.value.archivedAt && (
+            <v-alert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+              icon="mdi-archive-outline"
+            >
+              Проєкт в архіві. Створення та редагування завдань тимчасово недоступні. Поверніть проєкт зі сторінки «Проєкти», щоб продовжити роботу.
+            </v-alert>
+          )}
 
           {/* Project objects */}
           {projectObjects.value.length > 0 && (

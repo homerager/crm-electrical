@@ -22,6 +22,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Доступ заборонено' })
   }
 
+  if (project.archivedAt) {
+    throw createError({ statusCode: 409, message: 'Проєкт в архіві — спочатку розархівуйте' })
+  }
+
   const target = project.members.find((m) => m.userId === targetUserId)
   if (!target) {
     throw createError({ statusCode: 404, message: 'Учасника не знайдено' })
