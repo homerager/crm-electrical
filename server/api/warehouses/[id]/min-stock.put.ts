@@ -45,11 +45,13 @@ export default defineEventHandler(async (event) => {
         data: { productId, warehouseId, quantity: 0, minStock: parsed },
       })
     } else {
+      // При будь-якому оновленні мінімуму скидаємо дедуплікацію — щоб новий поріг переоцінився чесно
+      // і user, що зайшов у діалог, міг ретригернути сповіщення.
       await tx.warehouseStock.update({
         where: { productId_warehouseId: { productId, warehouseId } },
         data: {
           minStock: parsed,
-          ...(parsed == null && { lowStockNotifiedAt: null }),
+          lowStockNotifiedAt: null,
         },
       })
     }
