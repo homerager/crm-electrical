@@ -170,6 +170,23 @@ export default defineComponent({
               prepend-inner-icon="mdi-folder-outline"
             />
           )}
+          <TableExportBtn
+            class="mr-2"
+            filename="Обʼєкти"
+            rows={objects.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Проєкт', key: 'project.name' },
+              { title: 'Клієнт', key: 'client.name' },
+              { title: 'Адреса', key: 'address' },
+              { title: 'Бюджет, ₴', key: 'budget', format: (v) => (v == null ? '' : Number(v)) },
+              { title: 'Націнка, %', key: 'markupPercent', format: (v) => (v == null ? '' : Number(v)) },
+              { title: 'ПДВ, %', key: 'clientVatPercent', format: (v) => (v == null ? '' : Number(v)) },
+              { title: 'Статус', key: 'status', format: (v) => STATUS_LABELS[v as string] || v },
+              { title: 'Опис', key: 'description' },
+              { title: 'Створено', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати обʼєкт

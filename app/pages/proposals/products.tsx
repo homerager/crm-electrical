@@ -186,6 +186,22 @@ export default defineComponent({
           <v-btn variant="outlined" to="/proposals" prepend-icon="mdi-arrow-left" class="mr-2">
             До списку КП
           </v-btn>
+          <TableExportBtn
+            class="mr-2"
+            filename="Товари для КП"
+            rows={filtered.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Артикул', key: 'sku' },
+              { title: 'Одиниця', key: 'unit' },
+              { title: 'Група', key: 'groupName' },
+              { title: 'Ціна без ПДВ', key: 'priceExVat', format: (v) => Number(v ?? 0) },
+              { title: 'ПДВ, %', key: 'vatPercent', format: (v) => Number(v ?? 0) },
+              { title: 'Опис', key: 'description' },
+              { title: 'Примітки', key: 'notes' },
+              { title: 'Активний', key: 'isActive', format: (v) => (v ? 'Так' : 'Ні') },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати товар

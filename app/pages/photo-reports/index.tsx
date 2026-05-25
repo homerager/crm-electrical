@@ -122,6 +122,19 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Фото-звіти з об'єктів</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Фото-звіти"
+            rows={filteredReports.value}
+            columns={[
+              { title: 'Назва', key: 'title' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Фото', key: '_count.photos' },
+              { title: 'Автор', key: 'createdBy.name' },
+              { title: 'Дата', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Опис', key: 'description' },
+            ]}
+          />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
             Новий звіт
           </v-btn>

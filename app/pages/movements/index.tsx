@@ -63,6 +63,19 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Переміщення</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Переміщення"
+            rows={movements.value}
+            columns={[
+              { title: 'Тип', key: 'type', format: (v) => movementChip(v).label },
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Звідки', key: 'fromWarehouse.name' },
+              { title: 'Куди', key: 'type', format: (_v, row) => destinationLabel(row) },
+              { title: 'Позицій', key: 'items', format: (v) => (Array.isArray(v) ? v.length : 0) },
+              { title: 'Автор', key: 'createdBy.name' },
+            ]}
+          />
           <v-btn color="primary" prepend-icon="mdi-plus" to="/movements/create">
             Нове переміщення
           </v-btn>

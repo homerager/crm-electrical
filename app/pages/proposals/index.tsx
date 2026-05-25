@@ -108,6 +108,20 @@ export default defineComponent({
           >
             Товари КП
           </v-btn>
+          <TableExportBtn
+            class="mr-2"
+            filename="Комерційні пропозиції"
+            rows={filtered.value}
+            columns={[
+              { title: 'Назва', key: 'title' },
+              { title: 'Підзаголовок', key: 'subtitle' },
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Позицій', key: 'items', format: (v) => (Array.isArray(v) ? v.length : 0) },
+              { title: 'Сума без ПДВ', key: 'totalExVat', format: (v) => Number(v ?? 0) },
+              { title: 'Сума з ПДВ', key: 'totalWithVat', format: (v) => Number(v ?? 0) },
+              { title: 'Реквізити', key: 'requisite.name' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" to="/proposals/new">
               Нова КП

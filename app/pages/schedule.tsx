@@ -267,6 +267,19 @@ export default defineComponent({
             {isEmployee.value ? 'Мій розклад' : 'Розклад бригад'}
           </div>
           <v-spacer />
+          <TableExportBtn
+            filename="Розклад"
+            rows={schedules.value}
+            columns={[
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Користувач', key: 'user.name' },
+              { title: 'Тип', key: 'type', format: (v) => TYPE_LABELS[v as string] || v },
+              { title: 'Зміна', key: 'shift', format: (v) => SHIFT_LABELS[v as string] || v || '' },
+              { title: 'Годин', key: 'hours' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Нотатки', key: 'notes' },
+            ]}
+          />
           {isPrivileged.value && (
             <>
               <v-btn

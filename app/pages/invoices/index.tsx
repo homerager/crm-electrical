@@ -57,6 +57,21 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Накладні</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Накладні"
+            rows={invoices.value}
+            columns={[
+              { title: '№', key: 'number' },
+              { title: 'Тип', key: 'type', format: (v) => (v === 'INCOMING' ? 'Прихід' : v === 'OUTGOING' ? 'Видаток' : v) },
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Склад', key: 'warehouse.name' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Контрагент', key: 'contractor.name' },
+              { title: 'Позицій', key: 'items', format: (v) => (Array.isArray(v) ? v.length : 0) },
+              { title: 'Автор', key: 'createdBy.name' },
+            ]}
+          />
           <v-btn color="primary" prepend-icon="mdi-plus" to="/invoices/create">
             Нова накладна
           </v-btn>

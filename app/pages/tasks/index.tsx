@@ -267,6 +267,22 @@ export default defineComponent({
               Репорти
             </v-btn>
           )}
+          <TableExportBtn
+            filename="Завдання"
+            rows={tasks.value}
+            columns={[
+              { title: 'Назва', key: 'title' },
+              { title: 'Статус', key: 'status', format: (v) => statusMeta(v).label },
+              { title: 'Пріоритет', key: 'priority', format: (v) => priorityMeta(v).label },
+              { title: 'Виконавець', key: 'assignee.name' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Дедлайн', key: 'dueDate', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Год.', key: 'totalHours', format: (v) => (v ? Number(v) : 0) },
+              { title: 'Підзавдання', key: '_count.subTasks' },
+              { title: 'Теги', key: 'tags', format: (v) => (Array.isArray(v) ? v.map((t: any) => t.name).join(', ') : '') },
+              { title: 'Опис', key: 'description' },
+            ]}
+          />
           <div class="d-flex align-center" style="gap:8px">
             <v-btn
               variant={viewMode.value === 'kanban' ? 'tonal' : 'outlined'}

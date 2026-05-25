@@ -199,6 +199,19 @@ export default defineComponent({
           <v-icon icon="mdi-file-document-multiple-outline" size="28" class="mr-2" />
           <div class="text-h5 font-weight-bold">Документи</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Документи"
+            rows={filtered.value}
+            columns={[
+              { title: 'Тип', key: 'type', format: (v) => typeMeta(v)?.title || v },
+              { title: 'Номер', key: 'number' },
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: "Об'єкт", key: 'objectName' },
+              { title: 'Замовник', key: 'clientName' },
+              { title: 'Сума', key: 'total', format: (v) => Number(v ?? 0) },
+            ]}
+          />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
             Створити документ
           </v-btn>

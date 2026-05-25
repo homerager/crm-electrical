@@ -88,6 +88,17 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Склади</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Склади"
+            rows={warehouses.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Адреса', key: 'address' },
+              { title: 'Опис', key: 'description' },
+              { title: 'Статус', key: 'isActive', format: (v) => (v ? 'Активний' : 'Неактивний') },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати склад

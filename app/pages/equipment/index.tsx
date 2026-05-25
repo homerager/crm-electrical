@@ -168,6 +168,21 @@ export default defineComponent({
           <v-btn variant="outlined" prepend-icon="mdi-printer" class="mr-2" to="/equipment/print">
             Друк QR
           </v-btn>
+          <TableExportBtn
+            class="mr-2"
+            filename="Обладнання"
+            rows={equipment.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Модель', key: 'model' },
+              { title: 'Серійний №', key: 'serialNumber' },
+              { title: 'Штрихкод', key: 'barcode' },
+              { title: 'Статус', key: 'status', format: (v) => STATUS_LABELS[v as string] || v },
+              { title: 'Склад', key: 'currentWarehouse.name' },
+              { title: "Об'єкт", key: 'currentObject.name' },
+              { title: 'Відповідальний', key: 'responsibleUser.name' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати

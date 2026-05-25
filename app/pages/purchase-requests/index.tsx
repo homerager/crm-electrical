@@ -294,6 +294,22 @@ export default defineComponent({
           <v-btn variant="tonal" color="secondary" prepend-icon="mdi-auto-fix" class="mr-2" onClick={openGenerate}>
             Сформувати з обʼєкта
           </v-btn>
+          <TableExportBtn
+            class="mr-2"
+            filename="Заявки на закупівлю"
+            rows={purchaseRequests.value}
+            columns={[
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Контрагент', key: 'contractor.name' },
+              { title: 'Статус', key: 'status', format: (v) => STATUS_LABELS[v as string] || v },
+              { title: 'Позицій', key: 'items', format: (v) => (Array.isArray(v) ? v.length : 0) },
+              { title: 'Сума, ₴', key: 'items', format: (_v, row) => requestTotal(row) },
+              { title: 'Накладна', key: 'invoice.number' },
+              { title: 'Автор', key: 'createdBy.name' },
+              { title: 'Дата', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Примітки', key: 'notes' },
+            ]}
+          />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
             Нова заявка
           </v-btn>

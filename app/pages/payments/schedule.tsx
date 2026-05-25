@@ -183,6 +183,19 @@ export default defineComponent({
           <v-btn variant="text" icon="mdi-arrow-left" to="/payments" />
           <div class="text-h5 font-weight-bold">Графік платежів</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Графік платежів"
+            rows={schedules.value}
+            columns={[
+              { title: 'Дата платежу', key: 'dueDate', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Сума', key: 'amount', format: (v) => Number(v ?? 0) },
+              { title: 'Статус', key: 'status', format: (v) => scheduleStatusMeta(v).label },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Клієнт', key: 'client.name' },
+              { title: 'Опис', key: 'description' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати платіж

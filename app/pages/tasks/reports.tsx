@@ -72,6 +72,19 @@ export default defineComponent({
               Зарплатний звіт
             </v-btn>
           )}
+          <TableExportBtn
+            filename="Записи часу"
+            rows={report.value?.recentTimeLogs ?? []}
+            columns={[
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Виконавець', key: 'user.name' },
+              { title: 'Записав', key: 'createdBy.name' },
+              { title: 'Завдання', key: 'task.title' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Опис', key: 'description' },
+              { title: 'Годин', key: 'hours' },
+            ]}
+          />
         </div>
 
         {/* Date filter */}

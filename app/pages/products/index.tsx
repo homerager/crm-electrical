@@ -325,6 +325,19 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Товари</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Товари"
+            rows={products.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Артикул', key: 'sku' },
+              { title: 'Одиниця', key: 'unit' },
+              { title: 'Група', key: 'group.name' },
+              { title: 'Опис', key: 'description' },
+              { title: 'На складах', key: 'stock', format: (_v, row) => totalStock(row) },
+            ]}
+          />
           {isPrivileged.value && (
             <>
               <v-btn color="secondary" variant="outlined" prepend-icon="mdi-upload" onClick={openImport} class="mr-2">

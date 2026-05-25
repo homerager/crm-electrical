@@ -134,6 +134,28 @@ export default defineComponent({
           <v-spacer />
           {warehouse.value && (
             <>
+              <TableExportBtn
+                filename={`Склад_${warehouse.value.name}`}
+                rows={tab.value === 'movements' ? movements.value : (warehouse.value.stock ?? [])}
+                columns={tab.value === 'movements'
+                  ? [
+                      { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+                      { title: 'Тип', key: 'type' },
+                      { title: 'Звідки', key: 'fromWarehouse.name' },
+                      { title: 'Куди (склад)', key: 'toWarehouse.name' },
+                      { title: "Куди (об'єкт)", key: 'object.name' },
+                      { title: 'Позицій', key: 'items', format: (v) => (Array.isArray(v) ? v.length : 0) },
+                      { title: 'Автор', key: 'createdBy.name' },
+                    ]
+                  : [
+                      { title: 'Товар', key: 'product.name' },
+                      { title: 'Артикул', key: 'product.sku' },
+                      { title: 'Кількість', key: 'quantity', format: (v) => Number(v ?? 0) },
+                      { title: 'Одиниця', key: 'product.unit' },
+                      { title: 'Мін. залишок', key: 'minStock', format: (v) => (v == null ? '' : Number(v)) },
+                    ]
+                }
+              />
               <v-btn
                 color="primary"
                 variant="flat"

@@ -89,6 +89,20 @@ export default defineComponent({
           <v-btn icon="mdi-arrow-left" variant="text" to="/equipment" />
           <div class="text-h5 font-weight-bold ml-2">Інвентаризація</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Інвентаризація"
+            rows={sessions.value}
+            columns={[
+              { title: 'Склад', key: 'warehouse.name' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Статус', key: 'status' },
+              { title: 'Розпочав', key: 'startedBy.name' },
+              { title: 'Початок', key: 'startedAt', format: (v) => (v ? new Date(v).toLocaleString('uk-UA') : '') },
+              { title: 'Завершено', key: 'completedAt', format: (v) => (v ? new Date(v).toLocaleString('uk-UA') : '') },
+              { title: 'Позицій', key: '_count.items' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Нова сесія

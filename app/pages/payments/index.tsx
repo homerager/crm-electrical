@@ -212,6 +212,21 @@ export default defineComponent({
           <v-btn variant="outlined" size="small" prepend-icon="mdi-calendar-clock" to="/payments/schedule">
             Графік платежів
           </v-btn>
+          <TableExportBtn
+            filename="Оплати"
+            rows={payments.value}
+            columns={[
+              { title: 'Дата', key: 'date', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+              { title: 'Тип', key: 'direction', format: (v) => directionMeta(v).label },
+              { title: 'Сума', key: 'amount', format: (v) => Number(v ?? 0) },
+              { title: 'Статус', key: 'status', format: (v) => statusMeta(v).label },
+              { title: 'Метод', key: 'method', format: (v) => methodLabel(v) },
+              { title: 'Клієнт', key: 'client.name' },
+              { title: 'Контрагент', key: 'contractor.name' },
+              { title: "Об'єкт", key: 'object.name' },
+              { title: 'Опис', key: 'description' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Нова оплата

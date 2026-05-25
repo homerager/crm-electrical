@@ -247,6 +247,21 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Користувачі</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Користувачі"
+            rows={users.value}
+            columns={[
+              { title: "Ім'я", key: 'name' },
+              { title: 'Email', key: 'email' },
+              { title: 'Телефон', key: 'phone' },
+              { title: 'Роль', key: 'role' },
+              { title: 'Посада', key: 'jobTitle.name' },
+              { title: 'Ставка/год', key: 'hourlyRate', format: (v) => (v == null ? '' : Number(v)) },
+              { title: 'Статус', key: 'isActive', format: (v) => (v ? 'Активний' : 'Неактивний') },
+              { title: 'Реєстрація', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
+            ]}
+          />
           <v-btn
             color="primary"
             prepend-icon="mdi-account-plus"

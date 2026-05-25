@@ -114,6 +114,23 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Клієнти</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Клієнти"
+            rows={clients.value}
+            columns={[
+              { title: 'Назва / ПІБ', key: 'name' },
+              { title: 'Контактна особа', key: 'contactPerson' },
+              { title: 'Телефон', key: 'phone' },
+              { title: 'Email', key: 'email' },
+              { title: 'Адреса', key: 'address' },
+              { title: 'ЄДРПОУ/ІПН', key: 'taxCode' },
+              { title: 'IBAN', key: 'iban' },
+              { title: 'Банк', key: 'bankName' },
+              { title: 'МФО', key: 'bankMfo' },
+              { title: 'Примітки', key: 'notes' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати клієнта

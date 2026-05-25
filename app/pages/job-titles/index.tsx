@@ -100,6 +100,16 @@ export default defineComponent({
             <div class="text-caption text-medium-emphasis">Довідник посад для користувачів CRM</div>
           </div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Посади"
+            rows={jobTitles.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Порядок', key: 'sortOrder' },
+              { title: 'Співробітників', key: '_count.users' },
+            ]}
+          />
           <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
             Додати посаду
           </v-btn>

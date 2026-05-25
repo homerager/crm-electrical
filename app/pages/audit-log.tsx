@@ -195,6 +195,18 @@ export default defineComponent({
             style="max-width: 220px"
             clearable
           />
+          <TableExportBtn
+            filename="Журнал змін"
+            rows={items.value}
+            columns={[
+              { title: 'Час', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleString('uk-UA') : '') },
+              { title: 'Користувач', key: 'userName' },
+              { title: 'Дія', key: 'action' },
+              { title: 'Тип', key: 'entityType', format: (v) => ENTITY_TYPE_LABELS[v as string] ?? v },
+              { title: 'ID', key: 'entityId' },
+              { title: 'Зміни', key: 'changes', format: (v) => (v ? JSON.stringify(v) : '') },
+            ]}
+          />
         </div>
 
         <v-card>

@@ -88,6 +88,16 @@ export default defineComponent({
         <div class="page-toolbar">
           <div class="text-h5 font-weight-bold">Групи товарів</div>
           <v-spacer />
+          <TableExportBtn
+            class="mr-2"
+            filename="Групи товарів"
+            rows={groups.value}
+            columns={[
+              { title: 'Назва', key: 'name' },
+              { title: 'Опис', key: 'description' },
+              { title: 'Товарів', key: '_count.products' },
+            ]}
+          />
           {isPrivileged.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
               Додати групу
