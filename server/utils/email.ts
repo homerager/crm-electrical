@@ -280,3 +280,44 @@ export function buildTaskReassignedEmail(task: {
 
   return { subject, html: emailLayout(subject, bodyHtml) }
 }
+
+export function buildPaymentReminderEmail(schedule: {
+  amount: number
+  dueDate: Date | string
+  objectName?: string | null
+  clientName?: string | null
+  description?: string | null
+  isOverdue: boolean
+}, appUrl: string): { subject: string; html: string } {
+  const amountStr = schedule.amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 }) + ' ₴'
+  const dueDateStr = new Date(schedule.dueDate).toLocaleDateString('uk-UA')
+  const prefix = schedule.isOverdue ? '🔴 Прострочений платіж' : '🟡 Наближається платіж'
+  const subject = `${prefix}: ${amountStr}`
+  const scheduleUrl = `${appUrl.replace(/\/$/, '')}/payments/schedule`
+
+  const headerColor = schedule.isOverdue ? '#c62828' : '#f57f17'
+  const statusText = schedule.isOverdue
+    ? `Платіж прострочено! Дата оплати була <strong>${dueDateStr}</strong>.`
+    : `Дата оплати: <strong>${dueDateStr}</strong> (сьогодні або завтра).`
+
+  const bodyHtml = `
+    <h2 style="margin:0 0 8px;color:${headerColor};font-size:18px;">${prefix}</h2>
+    <h3 style="margin:0 0 24px;color:#212121;font-size:22px;font-weight:700;">${amountStr}</h3>
+
+    <p style="margin:0 0 16px;color:#424242;font-size:15px;line-height:1.6;">
+      ${statusText}
+    </p>
+
+    <table cellpadding="0" cellspacing="0" style="width:100%;">
+      ${taskMetaRow('Сума', `<span style="color:${headerColor};font-weight:600;">${amountStr}</span>`)}
+      ${taskMetaRow('Дата', dueDateStr)}
+      ${schedule.objectName ? taskMetaRow('Обʼєкт', schedule.objectName) : ''}
+      ${schedule.clientName ? taskMetaRow('Клієнт', schedule.clientName) : ''}
+      ${schedule.description ? taskMetaRow('Опис', schedule.description) : ''}
+    </table>
+
+    ${ctaButton('Переглянути графік платежів', scheduleUrl)}
+  `
+
+  return { subject, html: emailLayout(subject, bodyHtml) }
+}

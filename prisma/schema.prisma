@@ -770,10 +770,12 @@ model PaymentSchedule {
   amount      Decimal               @db.Decimal(14, 2)
   dueDate     DateTime
   status      PaymentScheduleStatus @default(EXPECTED)
-  description String?
-  createdById String
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
+  description    String?
+  createdById    String
+  /// Остання дата відправки нагадування (для дедуплікації — макс. раз на добу)
+  lastNotifiedAt DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
   object    ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
   client    Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
