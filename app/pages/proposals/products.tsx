@@ -126,6 +126,155 @@ export default defineComponent({
       }
     }
 
+    /* ── Bulk import ── */
+    const importDialog = ref(false)
+    const importFile = ref<File | null>(null)
+    const importParsing = ref(false)
+    const importLoading = ref(false)
+    const importError = ref('')
+    const importRows = ref<Array<{ name: string; sku: string; unit: string; description: string; groupName: string; priceExVat: string; vatPercent: string; notes: string }>>([])
+    const importFileIssues = ref<string[]>([])
+    const importResult = ref<{ created: number; totalRows: number; errors: { row: number; message: string }[] } | null>(null)
+
+    const IMPORT_HEADER_ALIASES: Record<string, string[]> = {
+      name: ['name', 'назва', 'найменування', 'товар', 'продукт'],
+      sku: ['sku', 'артикул', 'код'],
+      unit: ['unit', 'одиниця', 'од.', 'од. виміру', 'одиниця виміру', 'од'],
+      description: ['description', 'опис'],
+      groupName: ['group', 'група', 'категорія', 'group name'],
+      priceExVat: ['price', 'ціна', 'ціна без пдв', 'priceexvat', 'price ex vat'],
+      vatPercent: ['vat', 'пдв', 'пдв %', 'vatpercent', 'vat percent', 'пдв,%'],
+      notes: ['notes', 'примітки', 'коментар'],
+    }
+
+    function detectImportHeader(header: string): string | null {
+      const norm = header.toString().trim().toLowerCase()
+      for (const [key, aliases] of Object.entries(IMPORT_HEADER_ALIASES)) {
+        if (aliases.some((a) => a.toLowerCase() === norm)) return key
+      }
+      return null
+    }
+
+    function openImport() {
+      importFile.value = null
+      importRows.value = []
+      importFileIssues.value = []
+      importResult.value = null
+      importError.value = ''
+      importDialog.value = true
+    }
+
+    async function onImportFileChange(value: File | File[] | null) {
+      const file = Array.isArray(value) ? value[0] : value
+      importFile.value = file || null
+      importRows.value = []
+      importFileIssues.value = []
+      importResult.value = null
+      importError.value = ''
+      if (!file) return
+
+      importParsing.value = true
+      try {
+        const XLSX: any = await import('xlsx')
+        const buffer = await file.arrayBuffer()
+        const wb = XLSX.read(buffer, { type: 'array' })
+        const firstSheetName = wb.SheetNames[0]
+        if (!firstSheetName) throw new Error('Файл не містить аркушів')
+        const sheet = wb.Sheets[firstSheetName]
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false })
+        if (!rows.length) throw new Error('Файл порожній')
+
+        const headerRow = (rows[0] as any[]).map((h: any) => (h == null ? '' : String(h)))
+        const headerMap: Record<number, string> = {}
+        headerRow.forEach((h: string, i: number) => {
+          const key = detectImportHeader(h)
+          if (key) headerMap[i] = key
+        })
+        const hasName = Object.values(headerMap).includes('name')
+        if (!hasName) {
+          throw new Error('Не знайдено колонку з назвою. Очікувані варіанти: name, назва, найменування')
+        }
+
+        const parsed: typeof importRows.value = []
+        const issues: string[] = []
+
+        for (let r = 1; r < rows.length; r++) {
+          const cells = rows[r] as any[]
+          if (!cells || cells.every((c) => !String(c ?? '').trim())) continue
+          const row: any = { name: '', sku: '', unit: '', description: '', groupName: '', priceExVat: '', vatPercent: '', notes: '' }
+          for (const [iStr, key] of Object.entries(headerMap)) {
+            const i = Number(iStr)
+            row[key] = String(cells[i] ?? '').trim()
+          }
+          const rowNum = r + 1
+          if (!row.name) {
+            issues.push(`Рядок ${rowNum}: порожня назва — пропущено`)
+            continue
+          }
+          parsed.push(row)
+        }
+
+        importRows.value = parsed
+        importFileIssues.value = issues
+        if (!parsed.length) {
+          importError.value = 'Не знайдено жодного валідного рядка для імпорту'
+        }
+      } catch (e: any) {
+        importError.value = e?.message || 'Не вдалось прочитати файл'
+      } finally {
+        importParsing.value = false
+      }
+    }
+
+    async function runImport() {
+      if (!importRows.value.length) return
+      importLoading.value = true
+      importError.value = ''
+      try {
+        const res = await $fetch<{ created: number; totalRows: number; errors: { row: number; message: string }[] }>(
+          '/api/proposal-products/bulk-import',
+          { method: 'POST', body: { items: importRows.value } },
+        )
+        importResult.value = res
+        if (res.created > 0) {
+          toast.success(`Імпортовано ${res.created} ${res.created === 1 ? 'товар' : 'товарів'}`)
+          await refresh()
+        }
+        if (res.created === 0 && res.errors.length) {
+          toast.error('Жодного товару не імпортовано')
+        }
+      } catch (e: any) {
+        importError.value = e?.data?.statusMessage || 'Помилка імпорту'
+        toast.error(importError.value)
+      } finally {
+        importLoading.value = false
+      }
+    }
+
+    function downloadImportTemplate() {
+      const csv = [
+        ['name', 'sku', 'unit', 'group', 'price', 'vat', 'description', 'notes'].join(','),
+        ['Монтаж розетки', 'SRV-001', 'шт', 'Послуги', '150.00', '20', 'Установка побутової розетки', ''].join(','),
+        ['Кабель ВВГ 3x2.5', 'CAB-001', 'м', 'Кабельна продукція', '85.50', '20', '', ''].join(','),
+      ].join('\n')
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'proposal-products-template.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+
+    const importPreviewHeaders = [
+      { title: 'Назва', key: 'name' },
+      { title: 'Артикул', key: 'sku' },
+      { title: 'Од.', key: 'unit', width: 70 },
+      { title: 'Група', key: 'groupName' },
+      { title: 'Ціна', key: 'priceExVat', align: 'end' as const },
+      { title: 'ПДВ', key: 'vatPercent', align: 'end' as const },
+    ]
+
     /* ── Delete ── */
     const deleteDialog = ref(false)
     const deleteItem = ref<any>(null)
@@ -203,9 +352,14 @@ export default defineComponent({
             ]}
           />
           {isPrivileged.value && (
-            <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
-              Додати товар
-            </v-btn>
+            <>
+              <v-btn color="secondary" variant="outlined" prepend-icon="mdi-upload" onClick={openImport} class="mr-2">
+                Імпорт з Excel/CSV
+              </v-btn>
+              <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
+                Додати товар
+              </v-btn>
+            </>
           )}
         </div>
 
@@ -384,6 +538,104 @@ export default defineComponent({
               >
                 {editItem.value ? 'Зберегти' : 'Створити'}
               </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        {/* Bulk import dialog */}
+        <v-dialog v-model={importDialog.value} max-width={900} persistent={importLoading.value} scrollable>
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2">mdi-file-upload</v-icon>
+              Масовий імпорт товарів для КП
+            </v-card-title>
+            <v-card-text style="max-height: 70vh;">
+              {!importResult.value && (
+                <>
+                  <v-alert type="info" variant="tonal" class="mb-3" density="compact">
+                    Очікувані колонки (перший рядок — заголовки): <strong>name</strong> (або назва), <strong>sku</strong>, <strong>unit</strong>, <strong>group</strong>, <strong>price</strong> (ціна без ПДВ), <strong>vat</strong> (ПДВ %), <strong>description</strong>, <strong>notes</strong>. Обов'язкова лише <strong>name</strong>. Якщо ПДВ не вказано — 20%, одиниця — шт.
+                  </v-alert>
+                  <div class="d-flex align-center mb-3">
+                    <v-btn variant="text" size="small" prepend-icon="mdi-download" onClick={downloadImportTemplate}>
+                      Завантажити шаблон CSV
+                    </v-btn>
+                  </div>
+                  <v-file-input
+                    label="Файл Excel або CSV"
+                    accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    prepend-icon="mdi-paperclip"
+                    show-size
+                    modelValue={importFile.value}
+                    onUpdate:modelValue={onImportFileChange}
+                    loading={importParsing.value}
+                    disabled={importLoading.value}
+                    hide-details
+                    class="mb-3"
+                  />
+                  {importError.value && <v-alert type="error" variant="tonal" class="mb-3">{importError.value}</v-alert>}
+                  {importFileIssues.value.length > 0 && (
+                    <v-alert type="warning" variant="tonal" class="mb-3" density="compact">
+                      <div class="font-weight-medium mb-1">Попередження ({importFileIssues.value.length}):</div>
+                      <div style="max-height: 120px; overflow-y: auto;">
+                        {importFileIssues.value.map((msg, i) => (
+                          <div key={i} class="text-caption">• {msg}</div>
+                        ))}
+                      </div>
+                    </v-alert>
+                  )}
+                  {importRows.value.length > 0 && (
+                    <>
+                      <div class="text-subtitle-2 mb-2">
+                        До імпорту: <strong>{importRows.value.length}</strong> {importRows.value.length === 1 ? 'товар' : 'товарів'}
+                      </div>
+                      <v-data-table
+                        headers={importPreviewHeaders}
+                        items={importRows.value}
+                        density="compact"
+                        items-per-page={10}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+              {importResult.value && (
+                <>
+                  <v-alert
+                    type={importResult.value.created > 0 ? 'success' : 'warning'}
+                    variant="tonal"
+                    class="mb-3"
+                  >
+                    Імпортовано <strong>{importResult.value.created}</strong> з {importResult.value.totalRows} рядків
+                  </v-alert>
+                  {importResult.value.errors.length > 0 && (
+                    <v-alert type="error" variant="tonal" density="compact">
+                      <div class="font-weight-medium mb-1">Помилки ({importResult.value.errors.length}):</div>
+                      <div style="max-height: 300px; overflow-y: auto;">
+                        {importResult.value.errors.map((e, i) => (
+                          <div key={i} class="text-caption">• Рядок {e.row}: {e.message}</div>
+                        ))}
+                      </div>
+                    </v-alert>
+                  )}
+                </>
+              )}
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              <v-btn variant="outlined" disabled={importLoading.value} onClick={() => (importDialog.value = false)}>
+                {importResult.value ? 'Закрити' : 'Скасувати'}
+              </v-btn>
+              {!importResult.value && (
+                <v-btn
+                  color="primary"
+                  variant="elevated"
+                  loading={importLoading.value}
+                  disabled={!importRows.value.length || importParsing.value}
+                  onClick={runImport}
+                >
+                  Імпортувати {importRows.value.length > 0 ? `(${importRows.value.length})` : ''}
+                </v-btn>
+              )}
             </v-card-actions>
           </v-card>
         </v-dialog>
