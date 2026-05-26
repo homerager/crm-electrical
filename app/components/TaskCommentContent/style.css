@@ -23,3 +23,11 @@
   padding-left: 0.8em;
   color: rgba(255, 255, 255, 0.75);
 }
+.task-comment-html .mention {
+  background-color: rgba(var(--v-theme-primary), 0.15);
+  color: rgb(var(--v-theme-primary));
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}

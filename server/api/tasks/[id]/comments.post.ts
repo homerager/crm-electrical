@@ -1,9 +1,10 @@
-import { isEmptyCommentContent, sanitizeCommentHtml } from '../../../utils/commentHtml'
+import { isEmptyCommentContent, sanitizeCommentHtml, extractMentionIds } from '../../../utils/commentHtml'
 import {
   MAX_TASK_FILE_SIZE,
   createTaskAttachmentForComment,
 } from '../../../utils/taskAttachmentFile'
 import { sendEmail, buildTaskCommentEmail } from '../../../utils/email'
+import { sendTelegramMessage } from '../../../utils/telegram'
 
 type BodyJson = { content: string; parentId?: string | null; attachmentIds?: string[] }
 
@@ -118,6 +119,12 @@ export default defineEventHandler(async (event) => {
   if (task.createdById && task.createdById !== auth.userId) recipients.add(task.createdById)
   if (task.assignedToId && task.assignedToId !== auth.userId) recipients.add(task.assignedToId)
 
+  // Add @mentioned users
+  const mentionedIds = extractMentionIds(content)
+  for (const id of mentionedIds) {
+    if (id !== auth.userId) recipients.add(id)
+  }
+
   if (recipients.size) {
     const commenter = await prisma.user.findUnique({
       where: { id: auth.userId },
@@ -125,20 +132,46 @@ export default defineEventHandler(async (event) => {
     })
     const commenterName = commenter?.name ?? 'Користувач'
 
-    createNotificationForMany([...recipients], {
-      title: `Коментар до завдання: ${task.title}`,
-      body: `${commenterName} залишив коментар`,
-      link: `/tasks/${taskId}`,
-    })
+    const mentionedSet = new Set(mentionedIds.filter((id) => id !== auth.userId))
+    const mentionOnlyIds = mentionedIds.filter(
+      (id) => id !== auth.userId && id !== task.createdById && id !== task.assignedToId,
+    )
+
+    // In-app: standard recipients get "залишив коментар", mentioned-only get "згадав вас"
+    const standardRecipients = [...recipients].filter((id) => !mentionOnlyIds.includes(id))
+    if (standardRecipients.length) {
+      createNotificationForMany(standardRecipients, {
+        title: `Коментар до завдання: ${task.title}`,
+        body: `${commenterName} залишив коментар`,
+        link: `/tasks/${taskId}`,
+      })
+    }
+    if (mentionOnlyIds.length) {
+      createNotificationForMany(mentionOnlyIds, {
+        title: `Вас згадали: ${task.title}`,
+        body: `${commenterName} згадав вас у коментарі`,
+        link: `/tasks/${taskId}`,
+      })
+    }
 
     const config = useRuntimeConfig()
     const { subject, html } = buildTaskCommentEmail(task, commenterName, config.appUrl)
-    const emailUsers = await prisma.user.findMany({
+    const notifyUsers = await prisma.user.findMany({
       where: { id: { in: [...recipients] } },
-      select: { email: true, emailNotifications: true },
+      select: { id: true, email: true, emailNotifications: true, telegramChatId: true },
     })
-    for (const u of emailUsers) {
+
+    const taskUrl = `${(config.appUrl || '').replace(/\/$/, '')}/tasks/${taskId}`
+
+    for (const u of notifyUsers) {
       if (u.email && u.emailNotifications) sendEmail(u.email, subject, html)
+
+      if (u.telegramChatId) {
+        const isMentioned = mentionedSet.has(u.id)
+        const tgPrefix = isMentioned ? '📢 Вас згадали в коментарі' : '💬 Новий коментар'
+        const tgMsg = `${tgPrefix}\n\nЗавдання: ${task.title}\n${commenterName} залишив коментар\n\n🔗 ${taskUrl}`
+        sendTelegramMessage(u.telegramChatId, tgMsg)
+      }
     }
   }
 

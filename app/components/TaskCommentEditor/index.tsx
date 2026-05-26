@@ -4,7 +4,9 @@ import { StarterKit } from '@tiptap/starter-kit'
 import { Link } from '@tiptap/extension-link'
 import { Placeholder } from '@tiptap/extension-placeholder'
 import { Underline } from '@tiptap/extension-underline'
+import { Mention } from '@tiptap/extension-mention'
 import type { Editor } from '@tiptap/core'
+import mentionSuggestion from './mentionSuggestion'
 import './style.css'
 
 export default defineComponent({
@@ -26,6 +28,10 @@ export default defineComponent({
         Link.configure({
           openOnClick: false,
           autolink: true,
+        }),
+        Mention.configure({
+          HTMLAttributes: { class: 'mention' },
+          suggestion: mentionSuggestion,
         }),
         Placeholder.configure({ placeholder: props.placeholder }),
       ],
