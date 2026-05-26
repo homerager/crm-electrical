@@ -74,6 +74,10 @@ jobs:
             fi
             cp /tmp/crm-env-backup /var/www/crm/crm-electrical/.env
             cd /var/www/crm/crm-electrical
+            mkdir -p /var/www/crm/shared/uploads
+            mkdir -p public
+            rm -rf public/uploads
+            ln -s /var/www/crm/shared/uploads public/uploads
             npm ci --omit=dev --ignore-scripts
             npx prisma migrate deploy
             set -a && source .env && set +a
