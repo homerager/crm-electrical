@@ -3,7 +3,10 @@ import Mailgun from 'mailgun.js'
 
 function getMailgunClient() {
   const config = useRuntimeConfig()
-  if (!config.mailgunApiKey || !config.mailgunDomain) return null
+  if (!config.mailgunApiKey || !config.mailgunDomain) {
+    return null
+  }
+  
   const mg = new Mailgun(FormData)
   return mg.client({
     username: 'api',
