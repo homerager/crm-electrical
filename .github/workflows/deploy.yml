@@ -27,6 +27,15 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 
+      - name: Backup .env on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cp /var/www/crm/crm-electrical/.env /tmp/crm-env-backup
+
       - name: Copy build artifacts to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -37,13 +46,14 @@ jobs:
           target: '/var/www/crm/crm-electrical'
           rm: true
 
-      - name: Migrate and restart
+      - name: Restore .env, migrate and restart
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            cp /tmp/crm-env-backup /var/www/crm/crm-electrical/.env
             cd /var/www/crm/crm-electrical
             npm ci --omit=dev --ignore-scripts
             npx prisma migrate deploy
