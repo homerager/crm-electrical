@@ -36,7 +36,7 @@ jobs:
           MAILGUN_URL: ${{ secrets.MAILGUN_URL }}
 
       - name: Backup .env on VPS
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -61,7 +61,7 @@ jobs:
           rm: true
 
       - name: Restore .env, migrate and restart
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
