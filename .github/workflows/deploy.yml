@@ -26,6 +26,14 @@ jobs:
         run: npm run build:prod
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          APP_URL: ${{ secrets.APP_URL }}
+          MAILGUN_API_KEY: ${{ secrets.MAILGUN_API_KEY }}
+          MAILGUN_DOMAIN: ${{ secrets.MAILGUN_DOMAIN }}
+          MAILGUN_FROM: ${{ secrets.MAILGUN_FROM }}
+          MAILGUN_URL: ${{ secrets.MAILGUN_URL }}
 
       - name: Backup .env on VPS
         uses: appleboy/ssh-action@v1.2.0
