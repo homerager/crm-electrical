@@ -9,9 +9,10 @@ export default defineComponent({
       title: 'Дашбоард',
     })
 
-    const { isEmployee } = useAuth()
+    const { isEmployee, isPrivileged, isAdmin } = useAuth()
     const vuetifyTheme = useTheme()
     const skipFull = () => isEmployee.value
+    const skipFinance = () => !isAdmin.value
 
     const mounted = ref(false)
     onMounted(() => { mounted.value = true })
@@ -25,6 +26,7 @@ export default defineComponent({
     const { data: movByMonth } = useFetch('/api/reports/dashboard/movements-by-month', { skip: skipFull })
     const { data: objExpenses } = useFetch('/api/reports/dashboard/object-expenses-by-week', { skip: skipFull })
     const { data: empWorkload } = useFetch('/api/reports/dashboard/employee-workload', { skip: skipFull })
+    const { data: finSummary } = useFetch('/api/reports/dashboard/finance-summary', { skip: skipFinance })
 
     const totalWarehouses = computed(() => (warehousesData.value as any)?.warehouses?.length ?? 0)
     const totalProducts = computed(() => (productsData.value as any)?.products?.length ?? 0)
@@ -170,6 +172,75 @@ export default defineComponent({
           { name: 'Закритих задач', data: d.doneTasks },
         ],
       }
+    })
+
+    const fin = computed(() => finSummary.value as any ?? null)
+
+    function uah(n: number) {
+      return n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₴'
+    }
+
+    const finCashFlowOpts = computed(() => {
+      const d = fin.value?.cashFlow
+      if (!d || !d.length) return null
+      return {
+        options: baseChartOpts({
+          chart: { type: 'area', background: 'transparent', toolbar: { show: false }, fontFamily: 'inherit' },
+          colors: ['#4CAF50', '#F44336'],
+          stroke: { curve: 'smooth', width: 2 },
+          fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: d.map((r: any) => r.month),
+            labels: { style: { colors: chartFg.value } },
+          },
+          yaxis: {
+            labels: {
+              style: { colors: chartFg.value },
+              formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+            },
+          },
+          tooltip: {
+            theme: isDark.value ? 'dark' : 'light',
+            y: { formatter: (v: number) => `${v.toLocaleString('uk-UA')} ₴` },
+          },
+        }),
+        series: [
+          { name: 'Надходження', data: d.map((r: any) => r.incoming) },
+          { name: 'Витрати', data: d.map((r: any) => r.outgoing) },
+        ],
+      }
+    })
+
+    const finStatCards = computed(() => {
+      if (!fin.value) return []
+      return [
+        {
+          title: 'Баланс',
+          value: uah(fin.value.balance),
+          icon: 'mdi-scale-balance',
+          color: fin.value.balance >= 0 ? 'success' : 'error',
+        },
+        {
+          title: 'Надходження (місяць)',
+          value: uah(fin.value.monthIncoming),
+          icon: 'mdi-arrow-down-bold-circle-outline',
+          color: 'success',
+        },
+        {
+          title: 'Витрати (місяць)',
+          value: uah(fin.value.monthOutgoing),
+          icon: 'mdi-arrow-up-bold-circle-outline',
+          color: 'error',
+        },
+        {
+          title: 'Прострочені',
+          value: fin.value.overdueCount,
+          icon: 'mdi-alert-circle-outline',
+          color: fin.value.overdueCount > 0 ? 'warning' : 'success',
+          badge: fin.value.overdueCount > 0 ? fin.value.overdueCount : null,
+        },
+      ]
     })
 
     function renderChart(
@@ -347,6 +418,125 @@ export default defineComponent({
                     </v-card>
                   </v-col>
                 </v-row>
+
+                {isAdmin.value && fin.value && (
+                  <>
+                    <v-divider class="my-6" />
+                    <div class="d-flex align-center mb-4">
+                      <v-icon class="mr-2" icon="mdi-finance" color="primary" />
+                      <span class="text-h6 font-weight-bold">Фінанси</span>
+                      <v-spacer />
+                      <v-btn variant="tonal" color="primary" size="small" to="/finance-dashboard" prepend-icon="mdi-arrow-right">
+                        Детальніше
+                      </v-btn>
+                    </div>
+
+                    <v-row class="mb-4">
+                      {finStatCards.value.map((card) => (
+                        <v-col key={card.title} cols={12} sm={6} md={3}>
+                          <v-card>
+                            <v-card-text class="text-center pa-4">
+                              <v-badge
+                                content={card.badge}
+                                color="error"
+                                floating
+                                dot={false}
+                                model-value={!!card.badge}
+                              >
+                                <v-icon size={40} color={card.color} icon={card.icon} class="mb-2" />
+                              </v-badge>
+                              <div class={`text-h6 font-weight-bold text-${card.color}`}>{card.value}</div>
+                              <div class="text-body-2 text-medium-emphasis">{card.title}</div>
+                            </v-card-text>
+                          </v-card>
+                        </v-col>
+                      ))}
+                    </v-row>
+
+                    {fin.value.overdueCount > 0 && (
+                      <v-alert type="warning" variant="tonal" class="mb-4" prominent>
+                        {{
+                          default: () => (
+                            <div class="d-flex align-center justify-space-between flex-wrap ga-2">
+                              <span>
+                                <strong>{fin.value.overdueCount}</strong> прострочених платежів на суму{' '}
+                                <strong>{uah(fin.value.overdueAmount)}</strong>
+                              </span>
+                              <v-btn variant="outlined" size="small" color="warning" to="/payments/schedule">
+                                Переглянути
+                              </v-btn>
+                            </div>
+                          ),
+                        }}
+                      </v-alert>
+                    )}
+
+                    <v-row class="mb-4">
+                      <v-col cols={12} md={7}>
+                        {renderChart(
+                          'Cash Flow (6 місяців)',
+                          'mdi-chart-areaspline',
+                          finCashFlowOpts.value,
+                          'area',
+                          280,
+                        )}
+                      </v-col>
+                      <v-col cols={12} md={5}>
+                        <v-card style="height: 100%">
+                          <v-card-title class="d-flex align-center">
+                            <v-icon class="mr-2" icon="mdi-calendar-clock" />
+                            Найближчі платежі
+                            <v-spacer />
+                            <v-btn variant="text" size="small" to="/payments/schedule">Всі</v-btn>
+                          </v-card-title>
+                          <v-list lines="two" density="compact">
+                            {(fin.value.upcomingPayments?.length ?? 0) === 0 && (
+                              <v-list-item title="Немає запланованих платежів" />
+                            )}
+                            {(fin.value.upcomingPayments ?? []).map((p: any) => (
+                              <v-list-item
+                                key={p.id}
+                                title={`${p.objectName} — ${p.clientName}`}
+                                subtitle={new Date(p.dueDate).toLocaleDateString('uk-UA')}
+                              >
+                                {{
+                                  append: () => (
+                                    <span class="text-body-2 font-weight-bold">{uah(p.amount)}</span>
+                                  ),
+                                }}
+                              </v-list-item>
+                            ))}
+                          </v-list>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+
+                    <v-row>
+                      <v-col cols={12} sm={6}>
+                        <v-card>
+                          <v-card-text class="pa-4">
+                            <div class="text-caption text-medium-emphasis">Дебіторська заборгованість</div>
+                            <div class={`text-h6 font-weight-bold ${fin.value.totalReceivables > 0 ? 'text-warning' : 'text-success'}`}>
+                              {uah(fin.value.totalReceivables)}
+                            </div>
+                            <div class="text-caption text-medium-emphasis">Нам винні клієнти</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                      <v-col cols={12} sm={6}>
+                        <v-card>
+                          <v-card-text class="pa-4">
+                            <div class="text-caption text-medium-emphasis">Кредиторська заборгованість</div>
+                            <div class={`text-h6 font-weight-bold ${fin.value.totalPayables > 0 ? 'text-error' : 'text-success'}`}>
+                              {uah(fin.value.totalPayables)}
+                            </div>
+                            <div class="text-caption text-medium-emphasis">Ми винні контрагентам</div>
+                          </v-card-text>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+                  </>
+                )}
               </>
             )}
       </div>

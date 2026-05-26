@@ -79,6 +79,7 @@ export default defineComponent({
         icon: 'mdi-cash-multiple',
         value: 'finance',
         children: [
+          ...(isAdmin.value ? [{ title: 'Фін. дашборд', icon: 'mdi-finance', to: '/finance-dashboard' }] : []),
           { title: 'Оплати', icon: 'mdi-bank-transfer', to: '/payments' },
           { title: 'Графік платежів', icon: 'mdi-calendar-clock', to: '/payments/schedule' },
         ],
