@@ -27,13 +27,13 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 
-      - name: Copy .output to VPS
+      - name: Copy build artifacts to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: '.output'
+          source: '.output,prisma,package.json,package-lock.json'
           target: '/var/www/crm/crm-electrical'
           rm: true
 
@@ -45,6 +45,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /var/www/crm/crm-electrical
+            npm ci --omit=dev --ignore-scripts
             npx prisma migrate deploy
             pm2 restart crm-electrical || pm2 start .output/server/index.mjs --name crm-electrical -- --port 3000
             pm2 save
