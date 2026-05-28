@@ -1,4 +1,4 @@
-import { getProductSupplyHistory } from '../../../utils/productSupplyHistory'
+import { getProductSupplyHistory, getWeightedAverageUnitPrices } from '../../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -16,23 +16,14 @@ export default defineEventHandler(async (event) => {
     orderBy: { date: 'desc' },
   })
 
-  const priceCache = new Map<string, number | null>()
-
-  async function latestInvoiceUnitPrice(
-    productId: string,
-    warehouseId: string,
-  ): Promise<number | null> {
-    const cacheKey = `${productId}:${warehouseId}`
-    if (priceCache.has(cacheKey)) return priceCache.get(cacheKey) ?? null
-    const line = await prisma.invoiceItem.findFirst({
-      where: { productId, invoice: { warehouseId } },
-      orderBy: { invoice: { date: 'desc' } },
-      select: { pricePerUnit: true },
-    })
-    const p = line != null ? Number(line.pricePerUnit) : null
-    priceCache.set(cacheKey, p)
-    return p
+  const pricePairs: { productId: string; warehouseId: string }[] = []
+  for (const movement of movements) {
+    if (!movement.fromWarehouseId) continue
+    for (const item of movement.items) {
+      pricePairs.push({ productId: item.productId, warehouseId: movement.fromWarehouseId })
+    }
   }
+  const priceMap = await getWeightedAverageUnitPrices(pricePairs)
 
   const productMap = new Map<
     string,
@@ -51,7 +42,7 @@ export default defineEventHandler(async (event) => {
     for (const item of movement.items) {
       const key = item.productId
       const qty = Number(item.quantity)
-      const price = await latestInvoiceUnitPrice(item.productId, warehouseId)
+      const price = priceMap.get(`${item.productId}:${warehouseId}`) ?? null
       const lineAmount = price != null ? qty * price : 0
 
       if (productMap.has(key)) {

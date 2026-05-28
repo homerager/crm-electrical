@@ -1,3 +1,5 @@
+import { getWeightedAverageUnitPrices } from '../../../utils/productSupplyHistory'
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
@@ -34,16 +36,12 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const priceMap = new Map<string, number>()
-  for (const pair of productWarehousePairs) {
-    const [productId, warehouseId] = pair.split(':')
-    const line = await prisma.invoiceItem.findFirst({
-      where: { productId, invoice: { warehouseId } },
-      orderBy: { invoice: { date: 'desc' } },
-      select: { pricePerUnit: true },
-    })
-    if (line) priceMap.set(pair, Number(line.pricePerUnit))
-  }
+  const priceMap = await getWeightedAverageUnitPrices(
+    [...productWarehousePairs].map((pair) => {
+      const [productId, warehouseId] = pair.split(':')
+      return { productId: productId!, warehouseId: warehouseId! }
+    }),
+  )
 
   function weekKey(date: Date): string {
     const d = new Date(date)

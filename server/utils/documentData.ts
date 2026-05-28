@@ -123,20 +123,14 @@ export async function gatherMaterials(objectId: string): Promise<DocMaterialRow[
     include: { items: { include: { product: true } }, fromWarehouse: true },
   })
 
-  const priceCache = new Map<string, number | null>()
-
-  async function latestInvoiceUnitPrice(productId: string, warehouseId: string): Promise<number | null> {
-    const key = `${productId}:${warehouseId}`
-    if (priceCache.has(key)) return priceCache.get(key) ?? null
-    const line = await prisma.invoiceItem.findFirst({
-      where: { productId, invoice: { warehouseId } },
-      orderBy: { invoice: { date: 'desc' } },
-      select: { pricePerUnit: true },
-    })
-    const p = line != null ? Number(line.pricePerUnit) : null
-    priceCache.set(key, p)
-    return p
+  const pricePairs: { productId: string; warehouseId: string }[] = []
+  for (const movement of movements) {
+    if (!movement.fromWarehouseId) continue
+    for (const item of movement.items) {
+      pricePairs.push({ productId: item.productId, warehouseId: movement.fromWarehouseId })
+    }
   }
+  const priceMap = await getWeightedAverageUnitPrices(pricePairs)
 
   const map = new Map<string, { name: string; sku: string | null; unit: string; qty: number; amount: number }>()
 
@@ -145,7 +139,7 @@ export async function gatherMaterials(objectId: string): Promise<DocMaterialRow[
     if (!whId) continue
     for (const item of movement.items) {
       const qty = Number(item.quantity)
-      const price = await latestInvoiceUnitPrice(item.productId, whId)
+      const price = priceMap.get(`${item.productId}:${whId}`) ?? null
       const existing = map.get(item.productId)
       if (existing) {
         existing.qty += qty

@@ -1,4 +1,5 @@
 import { isElevatedRole } from '../../utils/authz'
+import { getWeightedAverageUnitPrices } from '../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -24,17 +25,22 @@ export default defineEventHandler(async (event) => {
       select: { fromWarehouseId: true, items: { select: { productId: true, quantity: true } } },
     })
 
+    const pricePairs: { productId: string; warehouseId: string }[] = []
+    for (const mov of movements) {
+      if (!mov.fromWarehouseId) continue
+      for (const item of mov.items) {
+        pricePairs.push({ productId: item.productId, warehouseId: mov.fromWarehouseId })
+      }
+    }
+    const priceMap = await getWeightedAverageUnitPrices(pricePairs)
+
     let materialCost = 0
     for (const mov of movements) {
       if (!mov.fromWarehouseId) continue
       for (const item of mov.items) {
-        const invLine = await prisma.invoiceItem.findFirst({
-          where: { productId: item.productId, invoice: { warehouseId: mov.fromWarehouseId } },
-          orderBy: { invoice: { date: 'desc' } },
-          select: { pricePerUnit: true },
-        })
-        if (invLine) {
-          materialCost += Number(item.quantity) * Number(invLine.pricePerUnit)
+        const price = priceMap.get(`${item.productId}:${mov.fromWarehouseId}`) ?? null
+        if (price != null) {
+          materialCost += Number(item.quantity) * price
         }
       }
     }

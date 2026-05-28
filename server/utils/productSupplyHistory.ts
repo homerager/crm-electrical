@@ -58,6 +58,62 @@ export async function getProductSupplyHistory(
 }
 
 /**
+ * Зважена середня собівартість одиниці (weighted average cost) по всіх
+ * ВХІДНИХ (INCOMING) накладних для заданих пар продукт+склад.
+ *
+ * сер.ціна = Σ(кількість × ціна) / Σ(кількість)
+ *
+ * Це коректно враховує надходження одного товару від різних постачальників
+ * за різними цінами, на відміну від «ціни з останньої накладної».
+ *
+ * Повертає Map з ключем `${productId}:${warehouseId}` → ціна (null, якщо для
+ * цієї пари немає вхідних надходжень).
+ */
+export async function getWeightedAverageUnitPrices(
+  pairs: { productId: string; warehouseId: string }[],
+): Promise<Map<string, number | null>> {
+  const result = new Map<string, number | null>()
+  if (pairs.length === 0) return result
+
+  const productIds = [...new Set(pairs.map((p) => p.productId))]
+  const warehouseIds = [...new Set(pairs.map((p) => p.warehouseId))]
+
+  const items = await prisma.invoiceItem.findMany({
+    where: {
+      productId: { in: productIds },
+      invoice: { type: 'INCOMING', warehouseId: { in: warehouseIds } },
+    },
+    select: {
+      productId: true,
+      quantity: true,
+      pricePerUnit: true,
+      invoice: { select: { warehouseId: true } },
+    },
+  })
+
+  const acc = new Map<string, { qty: number; cost: number }>()
+  for (const item of items) {
+    const whId = item.invoice.warehouseId
+    if (!whId) continue
+    const key = `${item.productId}:${whId}`
+    const qty = Number(item.quantity)
+    const entry = acc.get(key) ?? { qty: 0, cost: 0 }
+    entry.qty += qty
+    entry.cost += qty * Number(item.pricePerUnit)
+    acc.set(key, entry)
+  }
+
+  for (const pair of pairs) {
+    const key = `${pair.productId}:${pair.warehouseId}`
+    if (result.has(key)) continue
+    const entry = acc.get(key)
+    result.set(key, entry && entry.qty > 0 ? entry.cost / entry.qty : null)
+  }
+
+  return result
+}
+
+/**
  * Attaches `supplyHistory` array to each item in a list, keyed by productId.
  */
 export function attachSupplyHistory<T extends { productId: string }>(
