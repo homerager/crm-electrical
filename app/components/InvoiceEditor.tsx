@@ -468,12 +468,8 @@ export default defineComponent({
             </v-card>
 
             <v-card>
-              <v-card-title class="d-flex align-center">
+              <v-card-title>
                 Позиції накладної
-                <v-spacer />
-                <v-btn size="small" color="primary" prepend-icon="mdi-plus" onClick={addItem}>
-                  Додати позицію
-                </v-btn>
               </v-card-title>
               <v-card-text>
                 {items.value.length === 0 && (
@@ -535,6 +531,11 @@ export default defineComponent({
                     </v-col>
                   </v-row>
                 ))}
+              </v-card-text>
+              <v-card-text class="pt-0">
+                <v-btn size="small" color="primary" prepend-icon="mdi-plus" onClick={addItem}>
+                  Додати позицію
+                </v-btn>
               </v-card-text>
             </v-card>
           </v-col>
