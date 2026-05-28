@@ -26,6 +26,25 @@ export default defineComponent({
     )
     const movements = computed(() => (movData.value as any)?.movements ?? [])
 
+    const stockSearch = ref('')
+
+    const filteredStock = computed(() => {
+      const all = (warehouse.value?.stock ?? []) as any[]
+      const q = stockSearch.value.trim().toLowerCase()
+      if (!q) return all
+      return all.filter((item) => {
+        const name = item.product?.name?.toLowerCase() ?? ''
+        const sku = item.product?.sku?.toLowerCase() ?? ''
+        if (name.includes(q) || sku.includes(q)) return true
+        const history = (item.supplyHistory ?? []) as any[]
+        return history.some((s) => {
+          const invoice = s.invoice?.number?.toLowerCase() ?? ''
+          const contractor = s.contractor?.name?.toLowerCase() ?? ''
+          return invoice.includes(q) || contractor.includes(q)
+        })
+      })
+    })
+
     const expandedRows = ref<string[]>([])
     
     function toggleExpand(movId: string) {
@@ -189,15 +208,28 @@ export default defineComponent({
 
         {tab.value === 'stock' && (
           <v-card>
-            <v-card-title class="d-flex align-center">
+            <v-card-title class="d-flex align-center flex-wrap ga-2">
               <v-icon class="mr-2" icon="mdi-package-variant-closed" />
               Залишки на складі
+              <v-spacer />
+              <v-text-field
+                v-model={stockSearch.value}
+                placeholder="Пошук: товар, артикул, накладна, постачальник"
+                prepend-inner-icon="mdi-magnify"
+                density="compact"
+                variant="outlined"
+                hide-details
+                clearable
+                single-line
+                style="max-width: 420px"
+              />
             </v-card-title>
             <v-data-table
               headers={stockHeaders}
-              items={warehouse.value?.stock ?? []}
+              items={filteredStock.value}
               loading={pending.value}
               hover
+              no-data-text={stockSearch.value ? 'Нічого не знайдено' : 'Немає даних'}
             >
               {{
                 'item.quantity': ({ item }: any) => (
