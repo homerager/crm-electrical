@@ -265,6 +265,19 @@ export default defineComponent({
       dialog.value = true
     }
 
+    function openDuplicate(item: any) {
+      editItem.value = null
+      Object.assign(form, {
+        name: `${item.name} (копія)`,
+        description: item.description || '',
+        sku: '',
+        unit: item.unit,
+        groupId: item.groupId || null,
+      })
+      error.value = ''
+      dialog.value = true
+    }
+
     function openDelete(item: any) {
       deleteItem.value = item
       deleteDialog.value = true
@@ -313,7 +326,7 @@ export default defineComponent({
       { title: 'На складах', key: 'stock', sortable: false },
       { title: 'Постачальники', key: 'supplyHistory', sortable: false },
       { title: 'Накладні', key: 'invoices', sortable: false },
-      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 100 },
+      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 140 },
     ]
 
     function totalStock(product: any) {
@@ -511,6 +524,7 @@ export default defineComponent({
                   {isPrivileged.value && (
                     <>
                       <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" onClick={() => openEdit(item)} />
+                      <v-btn icon="mdi-content-copy" variant="text" size="small" onClick={() => openDuplicate(item)} />
                       <v-btn icon="mdi-delete" variant="text" size="small" color="error" onClick={() => openDelete(item)} />
                     </>
                   )}

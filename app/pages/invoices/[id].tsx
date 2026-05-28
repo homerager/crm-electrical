@@ -76,20 +76,40 @@ export default defineComponent({
       }
     }
 
-    const itemHeaders = [
-      { title: 'Товар', key: 'product.name' },
-      { title: 'Артикул', key: 'product.sku', width: 120 },
-      { title: 'Кількість', key: 'quantity', align: 'end' as const, width: 120 },
-      { title: 'Ціна', key: 'pricePerUnit', align: 'end' as const, width: 120 },
-      { title: 'Сума', key: 'total', align: 'end' as const, width: 120 },
-    ]
+    const hasVat = computed(() =>
+      (invoice.value?.items ?? []).some((i: any) => Number(i.vatPercent) > 0),
+    )
 
-    const totalSum = computed(() =>
+    const itemHeaders = computed(() => {
+      const headers: any[] = [
+        { title: 'Товар', key: 'product.name' },
+        { title: 'Артикул', key: 'product.sku', width: 120 },
+        { title: 'Кількість', key: 'quantity', align: 'end' as const, width: 120 },
+        { title: hasVat.value ? 'Ціна без ПДВ' : 'Ціна', key: 'pricePerUnit', align: 'end' as const, width: 130 },
+      ]
+      if (hasVat.value) {
+        headers.push({ title: 'ПДВ', key: 'vatPercent', align: 'end' as const, width: 90 })
+      }
+      headers.push({ title: 'Сума', key: 'total', align: 'end' as const, width: 120 })
+      return headers
+    })
+
+    const baseTotal = computed(() =>
       (invoice.value?.items ?? []).reduce(
         (s: number, i: any) => s + Number(i.quantity) * Number(i.pricePerUnit),
         0,
       ),
     )
+
+    const vatTotal = computed(() =>
+      (invoice.value?.items ?? []).reduce(
+        (s: number, i: any) =>
+          s + (Number(i.quantity) * Number(i.pricePerUnit) * Number(i.vatPercent || 0)) / 100,
+        0,
+      ),
+    )
+
+    const grandTotal = computed(() => baseTotal.value + vatTotal.value)
 
     function formatFileSize(bytes: number) {
       if (bytes < 1024) return `${bytes} Б`
@@ -250,7 +270,7 @@ export default defineComponent({
             <v-col cols={12} md={8}>
               <v-card>
                 <v-card-title>Позиції</v-card-title>
-                <v-data-table headers={itemHeaders} items={invoice.value.items ?? []} hide-default-footer>
+                <v-data-table headers={itemHeaders.value} items={invoice.value.items ?? []} hide-default-footer>
                   {{
                     'item.product.sku': ({ item }: any) => (
                       <span>{item.product?.sku || '—'}</span>
@@ -261,15 +281,34 @@ export default defineComponent({
                     'item.pricePerUnit': ({ item }: any) => (
                       <span>₴{Number(item.pricePerUnit).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</span>
                     ),
+                    'item.vatPercent': ({ item }: any) => (
+                      <span>{Number(item.vatPercent || 0).toLocaleString('uk-UA')}%</span>
+                    ),
                     'item.total': ({ item }: any) => (
                       <strong>₴{(Number(item.quantity) * Number(item.pricePerUnit)).toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</strong>
                     ),
-                    'body.append': () => (
-                      <tr>
-                        <td colspan={4} class="text-right font-weight-bold pa-3">Всього:</td>
-                        <td class="text-right font-weight-bold pa-3">₴{totalSum.value.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</td>
-                      </tr>
-                    ),
+                    'body.append': () =>
+                      hasVat.value ? (
+                        <>
+                          <tr>
+                            <td colspan={5} class="text-right pa-3">Сума без ПДВ:</td>
+                            <td class="text-right pa-3">₴{baseTotal.value.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                          <tr>
+                            <td colspan={5} class="text-right pa-3">ПДВ:</td>
+                            <td class="text-right pa-3">₴{vatTotal.value.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                          <tr>
+                            <td colspan={5} class="text-right font-weight-bold pa-3">Всього з ПДВ:</td>
+                            <td class="text-right font-weight-bold pa-3">₴{grandTotal.value.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                        </>
+                      ) : (
+                        <tr>
+                          <td colspan={4} class="text-right font-weight-bold pa-3">Всього:</td>
+                          <td class="text-right font-weight-bold pa-3">₴{baseTotal.value.toLocaleString('uk-UA', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ),
                   }}
                 </v-data-table>
               </v-card>
