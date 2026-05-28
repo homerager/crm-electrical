@@ -54,7 +54,7 @@ export default defineComponent({
     }
 
     return () => (
-      <v-dialog v-model={open.value} max-width={480}>
+      <v-dialog v-model={open.value} max-width={580}>
         <v-card>
           <v-card-title class="pa-4 d-flex align-center" style="gap:8px">
             <v-icon color="primary">mdi-send-circle</v-icon>
@@ -140,7 +140,8 @@ export default defineComponent({
             </v-btn>
             <v-spacer />
             <v-btn
-              variant="text"
+              variant="flat"
+              color="primary"
               prepend-icon="mdi-refresh"
               loading={loading.value}
               onClick={load}

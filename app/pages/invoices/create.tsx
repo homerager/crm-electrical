@@ -61,7 +61,20 @@ export default defineComponent({
 
     const items = ref<InvoiceItemRow[]>([])
     const saving = ref(false)
+    const generatingNumber = ref(false)
     const error = ref('')
+
+    async function generateNumber() {
+      generatingNumber.value = true
+      try {
+        const result: any = await $fetch('/api/invoices/next-number', { query: { date: form.date } })
+        form.number = result.number
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Не вдалося згенерувати номер')
+      } finally {
+        generatingNumber.value = false
+      }
+    }
 
     const pdfFile = ref<ParsedPdfFile | null>(null)
     const pdfInput = ref<HTMLInputElement | null>(null)
@@ -315,7 +328,27 @@ export default defineComponent({
               <v-card-text>
                 <v-row>
                   <v-col cols={12} md={4}>
-                    <v-text-field v-model={form.number} label="Номер накладної *" />
+                    <v-text-field v-model={form.number} label="Номер накладної *">
+                      {{
+                        'append-inner': () => (
+                          <v-tooltip text="Згенерувати комерційний номер (КН-рік-№)" location="top">
+                            {{
+                              activator: ({ props }: any) => (
+                                <v-btn
+                                  {...props}
+                                  icon="mdi-auto-fix"
+                                  size="small"
+                                  variant="text"
+                                  density="comfortable"
+                                  loading={generatingNumber.value}
+                                  onClick={generateNumber}
+                                />
+                              ),
+                            }}
+                          </v-tooltip>
+                        ),
+                      }}
+                    </v-text-field>
                   </v-col>
                   <v-col cols={12} md={4}>
                     <v-select v-model={form.type} label="Тип *" items={typeOptions} item-title="title" item-value="value" />
