@@ -148,6 +148,17 @@ export default defineComponent({
             </v-btn>
           )}
           {isPrivileged.value && invoice.value && (
+            <v-btn
+              class="mr-2"
+              color="primary"
+              variant="outlined"
+              prepend-icon="mdi-pencil"
+              to={`/invoices/${id}/edit`}
+            >
+              Редагувати
+            </v-btn>
+          )}
+          {isPrivileged.value && invoice.value && (
             <v-btn color="error" variant="outlined" prepend-icon="mdi-delete" onClick={() => (deleteDialog.value = true)}>
               Видалити
             </v-btn>

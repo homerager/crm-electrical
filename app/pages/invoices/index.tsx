@@ -7,6 +7,8 @@ export default defineComponent({
       title: 'Накладні'
     })
 
+    const { isPrivileged } = useAuth()
+
     const filterType = ref<string | null>(null)
     const search = ref('')
     const filterContractorId = ref<string | null>(null)
@@ -49,7 +51,7 @@ export default defineComponent({
       { title: 'Контрагент', key: 'contractor.name' },
       { title: 'Позицій', key: 'items', sortable: false, width: 100 },
       { title: 'Автор', key: 'createdBy.name', width: 140 },
-      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 80 },
+      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 120 },
     ]
 
     return () => (
@@ -173,7 +175,12 @@ export default defineComponent({
                 <v-chip size="small" variant="outlined">{item.items?.length ?? 0}</v-chip>
               ),
               'item.actions': ({ item }: any) => (
-                <v-btn icon="mdi-eye" variant="text" size="small" to={`/invoices/${item.id}`} />
+                <>
+                  <v-btn icon="mdi-eye" variant="text" size="small" to={`/invoices/${item.id}`} />
+                  {isPrivileged.value && (
+                    <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" to={`/invoices/${item.id}/edit`} />
+                  )}
+                </>
               ),
             }}
           </v-data-table>
