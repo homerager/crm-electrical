@@ -5,6 +5,7 @@ import PwaOfflineBanner from '~/components/PwaOfflineBanner'
 import PwaInstallPrompt from '~/components/PwaInstallPrompt'
 import PwaUpdatePrompt from '~/components/PwaUpdatePrompt'
 import ChangePasswordDialog from '~/components/ChangePasswordDialog'
+import TelegramConnectDialog from '~/components/TelegramConnectDialog'
 import AppToast from '~/components/AppToast'
 
 export default defineComponent({
@@ -29,6 +30,7 @@ export default defineComponent({
 
     const notifMenuOpen = ref(false)
     const changePasswordOpen = ref(false)
+    const telegramDialogOpen = ref(false)
     const previousUnreadCount = ref<number | null>(null)
     let notificationAudioContext: AudioContext | null = null
 
@@ -384,9 +386,7 @@ export default defineComponent({
                             <v-list-item
                               prepend-icon="mdi-send"
                               title="Telegram бот"
-                              href="https://t.me/proelectric_crm_bot"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              onClick={() => (telegramDialogOpen.value = true)}
                               rounded="lg"
                               base-color="primary"
                             />
@@ -435,6 +435,7 @@ export default defineComponent({
 
         <PwaUpdatePrompt />
         <ChangePasswordDialog v-model={changePasswordOpen.value} />
+        <TelegramConnectDialog v-model={telegramDialogOpen.value} />
         <AppToast />
       </v-app>
     )

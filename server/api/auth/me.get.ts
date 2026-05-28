@@ -12,6 +12,8 @@ export default defineEventHandler(async (event) => {
       email: true,
       role: true,
       isActive: true,
+      phone: true,
+      telegramChatId: true,
       emailNotifications: true,
       lowStockNotifications: true,
       jobTitle: { select: { id: true, name: true } },
