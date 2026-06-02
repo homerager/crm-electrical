@@ -132,13 +132,39 @@ export default defineComponent({
       items.value.splice(index, 1)
     }
 
-    function onProductChange(index: number, productId: string) {
+    // Autofill a single row's estimated price/VAT from supplier price lists:
+    // prefers the contractor selected on the request, falls back to the best valid price.
+    async function autofillRowPrice(row: RequestItemRow) {
+      if (!row.productId) return
+      try {
+        const res = await $fetch<any>(`/api/products/${row.productId}/price-comparison`)
+        const valid = (res?.suppliers ?? []).filter((s: any) => s.isValid)
+        let chosen = null as any
+        if (form.contractorId) {
+          chosen = valid.find((s: any) => s.contractor?.id === form.contractorId) ?? null
+        }
+        if (!chosen) chosen = res?.best ?? null
+        if (chosen) {
+          row.estimatedPricePerUnit = Number(chosen.price) || 0
+          if (chosen.vatPercent != null) row.vatPercent = Number(chosen.vatPercent)
+        }
+      } catch {
+        // ignore — keep manual price entry
+      }
+    }
+
+    async function onProductChange(index: number, productId: string) {
       const row = items.value[index]
       if (!row) return
       row.productId = productId
-      if (!row.estimatedPricePerUnit) {
-        row.estimatedPricePerUnit = 0
-      }
+      await autofillRowPrice(row)
+    }
+
+    // When the request contractor changes, re-pull prices for rows that already
+    // have a product selected, so the offered prices match the chosen supplier.
+    async function onContractorChange(contractorId: string) {
+      form.contractorId = contractorId || ''
+      await Promise.all(items.value.filter((r) => r.productId).map((r) => autofillRowPrice(r)))
     }
 
     async function saveManual() {
@@ -401,13 +427,14 @@ export default defineComponent({
                 class="mb-3"
               />
               <v-autocomplete
-                v-model={form.contractorId}
+                modelValue={form.contractorId}
                 label="Контрагент"
                 items={contractors.value}
                 item-title="name"
                 item-value="id"
                 clearable
                 class="mb-3"
+                onUpdate:modelValue={(value: string) => onContractorChange(value)}
               />
               <v-textarea v-model={form.notes} label="Примітки" rows={2} class="mb-3" />
 
@@ -423,13 +450,13 @@ export default defineComponent({
                 <v-row key={index} align="center" class="mb-1">
                   <v-col cols={12} md={3}>
                     <v-autocomplete
-                      v-model={item.productId}
+                      modelValue={item.productId}
                       label="Товар *"
                       items={products.value}
                       item-title="name"
                       item-value="id"
                       hide-details
-                      onChange={(value: string) => onProductChange(index, value)}
+                      onUpdate:modelValue={(value: string) => onProductChange(index, value)}
                     />
                   </v-col>
                   <v-col cols={6} md={2}>

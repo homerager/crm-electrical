@@ -134,6 +134,7 @@ export default defineComponent({
           children: [
             { title: 'Контрагенти', icon: 'mdi-domain', to: '/contractors' },
             { title: 'Накладні', icon: 'mdi-file-document-multiple', to: '/invoices' },
+            { title: 'Прайс-листи постачальників', icon: 'mdi-tag-multiple-outline', to: '/supplier-prices' },
             { title: 'Заявки на закупівлю', icon: 'mdi-cart-arrow-down', to: '/purchase-requests' },
           ],
         },

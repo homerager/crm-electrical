@@ -78,6 +78,30 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
+    const compareDialog = ref(false)
+    const compareLoading = ref(false)
+    const compareProduct = ref<any>(null)
+    const compareData = ref<any>(null)
+
+    async function openCompare(item: any) {
+      compareProduct.value = item
+      compareData.value = null
+      compareDialog.value = true
+      compareLoading.value = true
+      try {
+        compareData.value = await $fetch(`/api/products/${item.id}/price-comparison`)
+      } catch (e: any) {
+        toast.error(e?.data?.statusMessage || 'Не вдалося завантажити порівняння цін')
+      } finally {
+        compareLoading.value = false
+      }
+    }
+
+    function fmtMoney(value: number, currency = 'UAH') {
+      const symbol = currency === 'UAH' ? '₴' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : ''
+      return `${symbol}${Number(value).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
+
     const importDialog = ref(false)
     const importFile = ref<File | null>(null)
     const importParsing = ref(false)
@@ -535,6 +559,7 @@ export default defineComponent({
               },
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
+                  <v-btn icon="mdi-tag-search-outline" variant="text" size="small" color="secondary" title="Порівняння цін постачальників" onClick={() => openCompare(item)} />
                   {isPrivileged.value && (
                     <>
                       <v-btn icon="mdi-pencil" variant="text" size="small" color="primary" onClick={() => openEdit(item)} />
@@ -720,6 +745,107 @@ export default defineComponent({
               <v-spacer />
               <v-btn variant="outlined" onClick={() => (deleteDialog.value = false)}>Скасувати</v-btn>
               <v-btn color="error" variant="elevated" onClick={confirmDelete}>Видалити</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <v-dialog v-model={compareDialog.value} max-width={760} scrollable>
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2">mdi-tag-search-outline</v-icon>
+              Порівняння цін: {compareProduct.value?.name}
+            </v-card-title>
+            <v-card-text style="max-height: 70vh;">
+              {compareLoading.value && (
+                <div class="d-flex justify-center py-6">
+                  <v-progress-circular indeterminate color="primary" />
+                </div>
+              )}
+              {!compareLoading.value && compareData.value && (
+                <>
+                  {compareData.value.best && (
+                    <v-alert type="success" variant="tonal" density="compact" class="mb-4">
+                      Найкраща активна ціна: <strong>{fmtMoney(compareData.value.best.price, compareData.value.best.currency)}</strong>
+                      {' '}від <strong>{compareData.value.best.contractor?.name ?? '—'}</strong>
+                    </v-alert>
+                  )}
+
+                  <div class="text-subtitle-2 font-weight-bold mb-2">Прайс-листи постачальників</div>
+                  {compareData.value.suppliers.length === 0 ? (
+                    <div class="text-medium-emphasis mb-4">Немає прайсів постачальників для цього товару. Додайте їх у розділі «Прайс-листи постачальників».</div>
+                  ) : (
+                    <v-table density="compact" class="mb-4">
+                      <thead>
+                        <tr>
+                          <th>Постачальник</th>
+                          <th class="text-right">Ціна без ПДВ</th>
+                          <th class="text-right">ПДВ</th>
+                          <th>Дія</th>
+                          <th>Статус</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {compareData.value.suppliers.map((s: any) => (
+                          <tr key={s.id}>
+                            <td>{s.contractor?.name ?? '—'}</td>
+                            <td class="text-right font-weight-medium">{fmtMoney(s.price, s.currency)}</td>
+                            <td class="text-right">{s.vatPercent}%</td>
+                            <td class="text-caption">
+                              {new Date(s.validFrom).toLocaleDateString('uk-UA')}
+                              {' — '}
+                              {s.validTo ? new Date(s.validTo).toLocaleDateString('uk-UA') : '∞'}
+                            </td>
+                            <td>
+                              {s.isValid
+                                ? <v-chip size="x-small" color="success" variant="tonal">Активна</v-chip>
+                                : <v-chip size="x-small" color="grey" variant="tonal">Неактивна</v-chip>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </v-table>
+                  )}
+
+                  <div class="text-subtitle-2 font-weight-bold mb-2">Останні фактичні ціни (вхідні накладні)</div>
+                  {compareData.value.lastInvoicePrices.length === 0 ? (
+                    <div class="text-medium-emphasis">Немає історії надходжень.</div>
+                  ) : (
+                    <v-table density="compact">
+                      <thead>
+                        <tr>
+                          <th>Накладна</th>
+                          <th>Постачальник</th>
+                          <th class="text-right">Ціна за од.</th>
+                          <th class="text-right">К-сть</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {compareData.value.lastInvoicePrices.map((p: any, i: number) => (
+                          <tr key={i}>
+                            <td>
+                              <NuxtLink to={`/invoices/${p.invoice.id}`}>
+                                № {p.invoice.number} ({new Date(p.invoice.date).toLocaleDateString('uk-UA')})
+                              </NuxtLink>
+                            </td>
+                            <td>{p.contractor?.name ?? '—'}</td>
+                            <td class="text-right font-weight-medium">{fmtMoney(p.price)}</td>
+                            <td class="text-right">{Number(p.quantity).toLocaleString('uk-UA')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </v-table>
+                  )}
+                </>
+              )}
+            </v-card-text>
+            <v-card-actions class="pa-4 pt-0">
+              <v-spacer />
+              {isPrivileged.value && (
+                <v-btn variant="text" color="primary" prepend-icon="mdi-tag-multiple-outline" to="/supplier-prices">
+                  Керувати прайсами
+                </v-btn>
+              )}
+              <v-btn variant="outlined" onClick={() => (compareDialog.value = false)}>Закрити</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>

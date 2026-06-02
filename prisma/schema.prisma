@@ -247,6 +247,7 @@ model Contractor {
   invoices         Invoice[]
   purchaseRequests PurchaseRequest[]
   payments         Payment[]
+  supplierPrices   SupplierPrice[]
 
   @@map("contractors")
 }
@@ -283,6 +284,7 @@ model Product {
   objectStock    ObjectStock[]
   purchaseRequestItems PurchaseRequestItem[]
   materialInventoryItems MaterialInventoryItem[]
+  supplierPrices SupplierPrice[]
 
   @@map("products")
 }
@@ -453,6 +455,39 @@ model PurchaseRequestItem {
   product         Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@map("purchase_request_items")
+}
+
+/// Прайс-лист постачальника: актуальна ціна конкретного товару від конкретного контрагента.
+/// Дозволяє порівнювати ціни постачальників та автозаповнювати орієнтовні ціни в заявках на закупівлю.
+model SupplierPrice {
+  id           String    @id @default(cuid())
+  contractorId String
+  productId    String
+  /// Ціна за одиницю без ПДВ
+  price        Decimal   @default(0) @db.Decimal(14, 2)
+  /// Валюта ціни (за замовчуванням гривня)
+  currency     String    @default("UAH")
+  /// Відсоток ПДВ для цієї ціни (0 = без ПДВ, 20 = ПДВ 20%)
+  vatPercent   Decimal   @default(0) @db.Decimal(5, 2)
+  /// Дата початку дії ціни
+  validFrom    DateTime  @default(now())
+  /// Дата завершення дії ціни (null — безстроково)
+  validTo      DateTime?
+  /// Чи активна ця ціна (неактивні не беруть участь у порівнянні/автозаповненні)
+  isActive     Boolean   @default(true)
+  note         String?
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([contractorId, productId, validFrom])
+  @@index([productId])
+  @@index([contractorId])
+  @@index([isActive])
+  @@map("supplier_prices")
 }
 
 model Task {
