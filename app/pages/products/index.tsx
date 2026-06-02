@@ -83,7 +83,7 @@ export default defineComponent({
     const importParsing = ref(false)
     const importLoading = ref(false)
     const importError = ref('')
-    const importRows = ref<Array<{ name: string; sku: string; unit: string; description: string; groupName: string }>>([])
+    const importRows = ref<Array<{ name: string; sku: string; barcode: string; unit: string; description: string; groupName: string }>>([])
     const importFileIssues = ref<string[]>([])
     const importResult = ref<{ created: number; totalRows: number; errors: { row: number; message: string }[] } | null>(null)
     const skipDuplicateSku = ref(true)
@@ -91,6 +91,7 @@ export default defineComponent({
     const HEADER_ALIASES: Record<string, string[]> = {
       name: ['name', 'назва', 'найменування', 'товар', 'продукт', 'name *', 'назва *'],
       sku: ['sku', 'артикул', 'код', 'код товару'],
+      barcode: ['barcode', 'штрих-код', 'штрихкод', 'штрих код', 'ean', 'ean-13', 'ean13'],
       unit: ['unit', 'одиниця', 'од.', 'од. виміру', 'одиниця виміру', 'units', 'од'],
       description: ['description', 'опис', 'примітка', 'коментар'],
       groupName: ['group', 'група', 'категорія', 'group name', 'категория'],
@@ -152,7 +153,7 @@ export default defineComponent({
         for (let r = 1; r < rows.length; r++) {
           const cells = rows[r] as any[]
           if (!cells || cells.every((c) => !String(c ?? '').trim())) continue
-          const row: any = { name: '', sku: '', unit: '', description: '', groupName: '' }
+          const row: any = { name: '', sku: '', barcode: '', unit: '', description: '', groupName: '' }
           for (const [iStr, key] of Object.entries(headerMap)) {
             const i = Number(iStr)
             row[key] = String(cells[i] ?? '').trim()
@@ -212,9 +213,9 @@ export default defineComponent({
 
     function downloadImportTemplate() {
       const csv = [
-        ['name', 'sku', 'unit', 'group', 'description'].join(','),
-        ['Кабель ВВГ 3x2.5', 'CAB-001', 'м', 'Кабельна продукція', 'Мідний кабель'].join(','),
-        ['Вимикач одноклавішний', 'SW-101', 'шт', 'Електрофурнітура', ''].join(','),
+        ['name', 'sku', 'barcode', 'unit', 'group', 'description'].join(','),
+        ['Кабель ВВГ 3x2.5', 'CAB-001', '4820000000001', 'м', 'Кабельна продукція', 'Мідний кабель'].join(','),
+        ['Вимикач одноклавішний', 'SW-101', '4820000000002', 'шт', 'Електрофурнітура', ''].join(','),
       ].join('\n')
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
@@ -228,12 +229,13 @@ export default defineComponent({
     const importPreviewHeaders = [
       { title: 'Назва', key: 'name' },
       { title: 'Артикул', key: 'sku' },
+      { title: 'Штрих-код', key: 'barcode' },
       { title: 'Од.', key: 'unit', width: 80 },
       { title: 'Група', key: 'groupName' },
       { title: 'Опис', key: 'description' },
     ]
 
-    const form = reactive({ name: '', description: '', sku: '', unit: 'шт', groupId: null as string | null })
+    const form = reactive({ name: '', description: '', sku: '', barcode: '', unit: 'шт', groupId: null as string | null })
 
     const unitOptions = ['шт', 'м', 'м²', 'м³', 'кг', 'т', 'л', 'уп', 'к-т', 'пог.м']
 
@@ -247,7 +249,7 @@ export default defineComponent({
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', description: '', sku: '', unit: 'шт', groupId: null })
+      Object.assign(form, { name: '', description: '', sku: '', barcode: '', unit: 'шт', groupId: null })
       error.value = ''
       dialog.value = true
     }
@@ -258,6 +260,7 @@ export default defineComponent({
         name: item.name,
         description: item.description || '',
         sku: item.sku || '',
+        barcode: item.barcode || '',
         unit: item.unit,
         groupId: item.groupId || null,
       })
@@ -271,6 +274,7 @@ export default defineComponent({
         name: `${item.name} (копія)`,
         description: item.description || '',
         sku: '',
+        barcode: '',
         unit: item.unit,
         groupId: item.groupId || null,
       })
@@ -320,6 +324,7 @@ export default defineComponent({
     const headers = [
       { title: 'Назва', key: 'name' },
       { title: 'Артикул', key: 'sku' },
+      { title: 'Штрих-код', key: 'barcode' },
       { title: 'Одиниця', key: 'unit', width: 100 },
       { title: 'Група', key: 'group', sortable: false },
       { title: 'Опис', key: 'description' },
@@ -345,12 +350,16 @@ export default defineComponent({
             columns={[
               { title: 'Назва', key: 'name' },
               { title: 'Артикул', key: 'sku' },
+              { title: 'Штрих-код', key: 'barcode' },
               { title: 'Одиниця', key: 'unit' },
               { title: 'Група', key: 'group.name' },
               { title: 'Опис', key: 'description' },
               { title: 'На складах', key: 'stock', format: (_v, row) => totalStock(row) },
             ]}
           />
+          <v-btn variant="outlined" prepend-icon="mdi-barcode" to="/products/print" class="mr-2">
+            Друк етикеток
+          </v-btn>
           {isPrivileged.value && (
             <>
               <v-btn color="secondary" variant="outlined" prepend-icon="mdi-upload" onClick={openImport} class="mr-2">
@@ -417,6 +426,11 @@ export default defineComponent({
             {{
               'item.sku': ({ item }: any) => (
                 <v-chip size="small" variant="outlined">{item.sku || '—'}</v-chip>
+              ),
+              'item.barcode': ({ item }: any) => (
+                item.barcode
+                  ? <v-chip size="small" variant="outlined" prepend-icon="mdi-barcode">{item.barcode}</v-chip>
+                  : <span class="text-medium-emphasis">—</span>
               ),
               'item.group': ({ item }: any) => (
                 item.group
@@ -559,6 +573,15 @@ export default defineComponent({
                   ),
                 }}
               </v-text-field>
+              <v-text-field
+                v-model={form.barcode}
+                label="Штрих-код"
+                placeholder="EAN-13, Code128 тощо"
+                prepend-inner-icon="mdi-barcode"
+                class="mb-3"
+                hint="Використовується для сканування під час інвентаризації"
+                persistent-hint
+              />
               <v-combobox v-model={form.unit} label="Одиниця виміру" items={unitOptions} class="mb-3" />
               <v-select
                 v-model={form.groupId}
@@ -592,7 +615,7 @@ export default defineComponent({
               {!importResult.value && (
                 <>
                   <v-alert type="info" variant="tonal" class="mb-3" density="compact">
-                    Очікувані колонки (перший рядок — заголовки): <strong>name</strong> (або назва), <strong>sku</strong>, <strong>unit</strong>, <strong>group</strong>, <strong>description</strong>. Обов'язкова лише <strong>name</strong>. Якщо група не існує — буде створена автоматично.
+                    Очікувані колонки (перший рядок — заголовки): <strong>name</strong> (або назва), <strong>sku</strong>, <strong>barcode</strong> (штрих-код), <strong>unit</strong>, <strong>group</strong>, <strong>description</strong>. Обов'язкова лише <strong>name</strong>. Якщо група не існує — буде створена автоматично.
                   </v-alert>
                   <div class="d-flex align-center mb-3">
                     <v-btn variant="text" size="small" prepend-icon="mdi-download" onClick={downloadImportTemplate}>

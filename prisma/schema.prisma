@@ -115,6 +115,7 @@ model User {
   equipmentMovements    EquipmentMovement[]
   equipmentStatusLogs   EquipmentStatusLog[]
   inventorySessions     InventorySession[]
+  materialInventorySessions MaterialInventorySession[]
   passwordResetTokens   PasswordResetToken[]
   documents             Document[]
 
@@ -155,6 +156,7 @@ model Warehouse {
   equipmentMovementsFrom     EquipmentMovement[] @relation("EqMovementFromWarehouse")
   equipmentMovementsTo       EquipmentMovement[] @relation("EqMovementToWarehouse")
   inventorySessions          InventorySession[]
+  materialInventorySessions  MaterialInventorySession[]
   timeLogs                   TimeLog[]
 
   @@map("warehouses")
@@ -266,6 +268,8 @@ model Product {
   name        String
   description String?
   sku         String?  @unique
+  /// Штрих-код товару (EAN-13, Code128 тощо) для сканування під час інвентаризації
+  barcode     String?  @unique
   unit        String   @default("шт")
   groupId     String?
   createdAt   DateTime @default(now())
@@ -278,6 +282,7 @@ model Product {
   movementItems  MovementItem[]
   objectStock    ObjectStock[]
   purchaseRequestItems PurchaseRequestItem[]
+  materialInventoryItems MaterialInventoryItem[]
 
   @@map("products")
 }
@@ -1011,6 +1016,42 @@ model InventorySessionItem {
 
   @@unique([sessionId, equipmentId])
   @@map("inventory_session_items")
+}
+
+/// Інвентаризація матеріалів (товарів) на складі за залишками WarehouseStock.
+/// На відміну від інвентаризації обладнання, тут рахується кількість (countedQty) кожного товару.
+model MaterialInventorySession {
+  id          String                 @id @default(cuid())
+  warehouseId String
+  status      InventorySessionStatus @default(IN_PROGRESS)
+  startedById String
+  startedAt   DateTime               @default(now())
+  completedAt DateTime?
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  startedBy User      @relation(fields: [startedById], references: [id])
+  items     MaterialInventoryItem[]
+
+  @@index([warehouseId])
+  @@index([status])
+  @@map("material_inventory_sessions")
+}
+
+model MaterialInventoryItem {
+  id          String    @id @default(cuid())
+  sessionId   String
+  productId   String
+  /// Очікувана кількість на момент старту сесії (знімок WarehouseStock.quantity)
+  expectedQty Decimal   @default(0) @db.Decimal(12, 3)
+  /// Фактично порахована кількість. null — товар ще не рахували
+  countedQty  Decimal?  @db.Decimal(12, 3)
+  scannedAt   DateTime?
+
+  session MaterialInventorySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  product Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, productId])
+  @@map("material_inventory_items")
 }
 
 // ---------------------------------------------------------------------------

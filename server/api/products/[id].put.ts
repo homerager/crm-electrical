@@ -8,13 +8,13 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { name, description, sku, unit, groupId } = body
+  const { name, description, sku, barcode, unit, groupId } = body
 
   const before = await prisma.product.findUnique({ where: { id } })
 
   const product = await prisma.product.update({
     where: { id },
-    data: { name, description, sku: sku || null, unit, groupId: groupId || null },
+    data: { name, description, sku: sku || null, barcode: barcode || null, unit, groupId: groupId || null },
     include: { group: true },
   })
 

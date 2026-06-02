@@ -112,6 +112,7 @@ export default defineComponent({
             { title: 'Товари', icon: 'mdi-package-variant-closed', to: '/products' },
             { title: 'Групи товарів', icon: 'mdi-tag-multiple', to: '/product-groups' },
             { title: 'Переміщення', icon: 'mdi-swap-horizontal', to: '/movements' },
+            { title: 'Інвентаризація', icon: 'mdi-clipboard-list-outline', to: '/inventory' },
           ],
         },
         {

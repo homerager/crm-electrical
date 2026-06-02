@@ -3,7 +3,10 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 export interface ScanResult {
   type: 'qr_url' | 'barcode'
   value: string
+  /** Розпізнаний ID обладнання (QR із /equipment/{id}) */
   equipmentId?: string
+  /** Розпізнаний ID товару (QR із /products/{id}) */
+  productId?: string
   format?: string
 }
 
@@ -34,6 +37,12 @@ export default defineComponent({
         const match = decodedText.match(/\/equipment\/([a-zA-Z0-9_-]+)/)
         if (match) {
           return { type: 'qr_url', value: decodedText, equipmentId: match[1] }
+        }
+      }
+      if (decodedText.includes('/products/')) {
+        const match = decodedText.match(/\/products\/([a-zA-Z0-9_-]+)/)
+        if (match) {
+          return { type: 'qr_url', value: decodedText, productId: match[1] }
         }
       }
       const formatName = result?.result?.format?.formatName ?? 'unknown'
