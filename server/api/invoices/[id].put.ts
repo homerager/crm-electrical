@@ -2,6 +2,14 @@ import type { InvoiceType } from '@prisma/client'
 import { isElevatedRole } from '../../utils/authz'
 import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
 import { syncSupplierPricesFromInvoice } from '../../utils/supplierPrices'
+import {
+  addWarehouseLotQty,
+  addObjectLotQty,
+  consumeWarehouseFifo,
+  consumeObjectFifo,
+  reverseWarehouseLot,
+  reverseObjectLot,
+} from '../../utils/stockLots'
 
 interface InvoiceItemInput {
   productId: string
@@ -36,86 +44,58 @@ export default defineEventHandler(async (event) => {
   })
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Накладну не знайдено' })
 
+  const newContractorId = contractorId || null
+  const oldContractorId = existing.contractorId || null
+
   const invoice = await prisma.$transaction(async (tx) => {
-    // 1. Відкат складських ефектів старої накладної
+    // 1. Undo the stock effects of the existing invoice version, per lot.
     for (const item of existing.items) {
-      const delta = existing.type === 'INCOMING' ? -Number(item.quantity) : Number(item.quantity)
+      const qty = Number(item.quantity)
+      const price = Number(item.pricePerUnit)
+      const vat = Number(item.vatPercent)
 
       if (existing.warehouseId) {
-        const stock = await tx.warehouseStock.findUnique({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: existing.warehouseId } },
-        })
-        if (stock) {
-          await tx.warehouseStock.update({
-            where: { productId_warehouseId: { productId: item.productId, warehouseId: existing.warehouseId } },
-            data: { quantity: Math.max(0, Number(stock.quantity) + delta) },
-          })
-          await checkLowStockAfterChange(tx, existing.warehouseId, item.productId)
+        if (existing.type === 'INCOMING') {
+          // Was added to the (supplier, price) lot — remove it back.
+          await reverseWarehouseLot(tx, existing.warehouseId, item.productId, oldContractorId, price, qty)
+        } else {
+          // Was consumed (FIFO) — return the quantity to the matching lot.
+          await addWarehouseLotQty(tx, existing.warehouseId, item.productId, oldContractorId, price, vat, qty)
         }
+        await checkLowStockAfterChange(tx, existing.warehouseId, item.productId)
       } else if (existing.objectId) {
-        const stock = await tx.objectStock.findUnique({
-          where: { objectId_productId: { objectId: existing.objectId, productId: item.productId } },
-        })
-        if (stock) {
-          await tx.objectStock.update({
-            where: { objectId_productId: { objectId: existing.objectId, productId: item.productId } },
-            data: { quantity: Math.max(0, Number(stock.quantity) + delta) },
-          })
+        if (existing.type === 'INCOMING') {
+          await reverseObjectLot(tx, existing.objectId, item.productId, oldContractorId, price, qty)
+        } else {
+          await addObjectLotQty(tx, existing.objectId, item.productId, oldContractorId, price, vat, qty)
         }
       }
     }
 
-    // 2. Застосування складських ефектів нової версії накладної
+    // 2. Apply the stock effects of the new invoice version (same logic as create).
     for (const item of items as InvoiceItemInput[]) {
-      const delta = type === 'INCOMING' ? item.quantity : -item.quantity
+      const qty = Number(item.quantity)
+      const price = item.pricePerUnit || 0
+      const vat = item.vatPercent ?? 0
 
-      if (warehouseId) {
-        const stock = await tx.warehouseStock.findUnique({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId } },
-        })
-        if (stock) {
-          const newQty = Number(stock.quantity) + delta
-          if (newQty < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
-          }
-          await tx.warehouseStock.update({
-            where: { productId_warehouseId: { productId: item.productId, warehouseId } },
-            data: { quantity: newQty },
-          })
-        } else {
-          if (delta < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
-          }
-          await tx.warehouseStock.create({
-            data: { productId: item.productId, warehouseId, quantity: delta },
-          })
+      if (type === 'INCOMING') {
+        if (warehouseId) {
+          await addWarehouseLotQty(tx, warehouseId, item.productId, newContractorId, price, vat, qty)
+          await checkLowStockAfterChange(tx, warehouseId, item.productId)
+        } else if (objectId) {
+          await addObjectLotQty(tx, objectId, item.productId, newContractorId, price, vat, qty)
         }
-        await checkLowStockAfterChange(tx, warehouseId, item.productId)
-      } else if (objectId) {
-        const stock = await tx.objectStock.findUnique({
-          where: { objectId_productId: { objectId, productId: item.productId } },
-        })
-        if (stock) {
-          const newQty = Number(stock.quantity) + delta
-          if (newQty < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на обʼєкті' })
-          }
-          await tx.objectStock.update({
-            where: { objectId_productId: { objectId, productId: item.productId } },
-            data: { quantity: newQty },
-          })
-        } else {
-          if (delta < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на обʼєкті' })
-          }
-          await tx.objectStock.create({
-            data: { objectId, productId: item.productId, quantity: delta },
-          })
+      } else {
+        if (warehouseId) {
+          await consumeWarehouseFifo(tx, warehouseId, item.productId, qty)
+          await checkLowStockAfterChange(tx, warehouseId, item.productId)
+        } else if (objectId) {
+          await consumeObjectFifo(tx, objectId, item.productId, qty)
         }
       }
     }
 
-    // 3. Оновлення накладної та заміна позицій
+    // 3. Update the invoice and replace its items.
     await tx.invoiceItem.deleteMany({ where: { invoiceId: id } })
 
     return tx.invoice.update({
@@ -123,7 +103,7 @@ export default defineEventHandler(async (event) => {
       data: {
         number,
         type: type as InvoiceType,
-        contractorId: contractorId || null,
+        contractorId: newContractorId,
         warehouseId: warehouseId || null,
         objectId: objectId || null,
         date: new Date(date),
@@ -152,7 +132,7 @@ export default defineEventHandler(async (event) => {
 
   // Record actual purchase prices into supplier price lists (INCOMING only).
   await syncSupplierPricesFromInvoice({
-    contractorId: contractorId || null,
+    contractorId: newContractorId,
     type,
     date,
     items: items as InvoiceItemInput[],

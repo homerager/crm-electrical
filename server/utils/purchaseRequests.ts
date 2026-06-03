@@ -1,4 +1,5 @@
 import type { Prisma, PurchaseRequestStatus } from '@prisma/client'
+import { addWarehouseLotQty } from './stockLots'
 
 const OPEN_STATUSES: PurchaseRequestStatus[] = ['DRAFT', 'APPROVED', 'ORDERED']
 
@@ -48,27 +49,6 @@ export function normalizePurchaseRequestItems(rawItems: unknown): PurchaseReques
       note: typeof item.note === 'string' && item.note.trim() ? item.note.trim() : undefined,
     }
   })
-}
-
-export async function addWarehouseStock(
-  tx: Prisma.TransactionClient,
-  warehouseId: string,
-  productId: string,
-  quantity: number,
-) {
-  const existing = await tx.warehouseStock.findUnique({
-    where: { productId_warehouseId: { productId, warehouseId } },
-  })
-
-  if (existing) {
-    await tx.warehouseStock.update({
-      where: { productId_warehouseId: { productId, warehouseId } },
-      data: { quantity: Number(existing.quantity) + quantity },
-    })
-    return
-  }
-
-  await tx.warehouseStock.create({ data: { productId, warehouseId, quantity } })
 }
 
 async function latestUnitPrice(productId: string): Promise<number> {
@@ -169,29 +149,40 @@ export async function createIncomingInvoiceForPurchaseRequest(
     throw createError({ statusCode: 400, statusMessage: 'У заявці немає позицій' })
   }
 
+  const invoiceContractorId = params.contractorId || request.contractorId || null
+
+  const lines = request.items.map((item) => ({
+    productId: item.productId,
+    quantity: Number(item.quantity),
+    pricePerUnit: params.prices?.[item.id] ?? Number(item.estimatedPricePerUnit) ?? 0,
+    vatPercent: Number(item.vatPercent) ?? 0,
+  }))
+
   const invoice = await tx.invoice.create({
     data: {
       number: params.number,
       type: 'INCOMING',
-      contractorId: params.contractorId || request.contractorId || null,
+      contractorId: invoiceContractorId,
       warehouseId: params.warehouseId,
       createdById: params.createdById,
       date: new Date(params.date),
       notes: params.notes || `Створено з заявки на закупівлю для обʼєкта "${request.object.name}"`,
-      items: {
-        create: request.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          pricePerUnit: params.prices?.[item.id] ?? Number(item.estimatedPricePerUnit) ?? 0,
-          vatPercent: Number(item.vatPercent) ?? 0,
-        })),
-      },
+      items: { create: lines },
     },
     include: { items: true },
   })
 
-  for (const item of request.items) {
-    await addWarehouseStock(tx, params.warehouseId, item.productId, Number(item.quantity))
+  // Intake into the lot keyed by (supplier, price) — same semantics as the invoice create handler.
+  for (const line of lines) {
+    await addWarehouseLotQty(
+      tx,
+      params.warehouseId,
+      line.productId,
+      invoiceContractorId,
+      line.pricePerUnit,
+      line.vatPercent,
+      line.quantity,
+    )
   }
 
   const updatedRequest = await tx.purchaseRequest.update({

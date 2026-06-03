@@ -39,17 +39,19 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    const stockAtWarehouse = await tx.warehouseStock.findMany({
+    // Stock is per lot (supplier + price); the inventory item is per product, so sum lots per product.
+    const stockByProduct = await tx.warehouseStock.groupBy({
+      by: ['productId'],
       where: { warehouseId: wh },
-      select: { productId: true, quantity: true },
+      _sum: { quantity: true },
     })
 
-    if (stockAtWarehouse.length > 0) {
+    if (stockByProduct.length > 0) {
       await tx.materialInventoryItem.createMany({
-        data: stockAtWarehouse.map(s => ({
+        data: stockByProduct.map(s => ({
           sessionId: created.id,
           productId: s.productId,
-          expectedQty: s.quantity,
+          expectedQty: s._sum.quantity ?? 0,
         })),
       })
     }

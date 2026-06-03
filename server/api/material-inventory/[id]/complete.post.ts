@@ -1,5 +1,6 @@
 import { isElevatedRole } from '../../../utils/authz'
 import { checkLowStockAfterChange } from '../../../utils/lowStockAlert'
+import { sumWarehouseQty, addWarehouseLotQty, consumeWarehouseFifo } from '../../../utils/stockLots'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -36,17 +37,16 @@ export default defineEventHandler(async (event) => {
         const expected = Number(item.expectedQty)
         if (counted === expected) continue
 
-        const existing = await tx.warehouseStock.findUnique({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: session.warehouseId } },
-          select: { quantity: true },
-        })
-        const from = existing ? Number(existing.quantity) : 0
-
-        await tx.warehouseStock.upsert({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: session.warehouseId } },
-          update: { quantity: counted },
-          create: { productId: item.productId, warehouseId: session.warehouseId, quantity: counted },
-        })
+        // Stock is per lot now; reconcile the product's TOTAL across lots to the counted value.
+        const from = await sumWarehouseQty(tx, session.warehouseId, item.productId)
+        const delta = counted - from
+        if (delta > 0) {
+          // Surplus of unknown origin → record as a legacy adjustment lot (no supplier, price 0).
+          await addWarehouseLotQty(tx, session.warehouseId, item.productId, null, 0, 0, delta)
+        } else if (delta < 0) {
+          // Shortage → remove oldest lots first (FIFO). Bounded by `from`, so it cannot underflow.
+          await consumeWarehouseFifo(tx, session.warehouseId, item.productId, -delta)
+        }
 
         await checkLowStockAfterChange(tx, session.warehouseId, item.productId)
 

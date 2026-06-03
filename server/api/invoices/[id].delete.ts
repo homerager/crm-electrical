@@ -1,6 +1,12 @@
 import { isElevatedRole } from '../../utils/authz'
 import { removeInvoicePdfFile } from '../../utils/invoiceFile'
 import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
+import {
+  addWarehouseLotQty,
+  addObjectLotQty,
+  reverseWarehouseLot,
+  reverseObjectLot,
+} from '../../utils/stockLots'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -16,34 +22,29 @@ export default defineEventHandler(async (event) => {
   })
   if (!invoice) throw createError({ statusCode: 404, statusMessage: 'Накладну не знайдено' })
 
+  const contractorId = invoice.contractorId || null
+
   await prisma.$transaction(async (tx) => {
+    // Undo the invoice's stock effects per lot (supplier + price).
     for (const item of invoice.items) {
-      const delta = invoice.type === 'INCOMING' ? -Number(item.quantity) : Number(item.quantity)
+      const qty = Number(item.quantity)
+      const price = Number(item.pricePerUnit)
+      const vat = Number(item.vatPercent)
 
       if (invoice.warehouseId) {
-        const stock = await tx.warehouseStock.findUnique({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: invoice.warehouseId } },
-        })
-
-        if (stock) {
-          const newQty = Number(stock.quantity) + delta
-          await tx.warehouseStock.update({
-            where: { productId_warehouseId: { productId: item.productId, warehouseId: invoice.warehouseId } },
-            data: { quantity: Math.max(0, newQty) },
-          })
-          await checkLowStockAfterChange(tx, invoice.warehouseId, item.productId)
+        if (invoice.type === 'INCOMING') {
+          // Intake added to the (supplier, price) lot — remove it back.
+          await reverseWarehouseLot(tx, invoice.warehouseId, item.productId, contractorId, price, qty)
+        } else {
+          // Outgoing consumed stock — return the quantity to the matching lot.
+          await addWarehouseLotQty(tx, invoice.warehouseId, item.productId, contractorId, price, vat, qty)
         }
+        await checkLowStockAfterChange(tx, invoice.warehouseId, item.productId)
       } else if (invoice.objectId) {
-        const stock = await tx.objectStock.findUnique({
-          where: { objectId_productId: { objectId: invoice.objectId, productId: item.productId } },
-        })
-
-        if (stock) {
-          const newQty = Number(stock.quantity) + delta
-          await tx.objectStock.update({
-            where: { objectId_productId: { objectId: invoice.objectId, productId: item.productId } },
-            data: { quantity: Math.max(0, newQty) },
-          })
+        if (invoice.type === 'INCOMING') {
+          await reverseObjectLot(tx, invoice.objectId, item.productId, contractorId, price, qty)
+        } else {
+          await addObjectLotQty(tx, invoice.objectId, item.productId, contractorId, price, vat, qty)
         }
       }
     }

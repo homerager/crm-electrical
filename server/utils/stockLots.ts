@@ -124,6 +124,34 @@ export async function decWarehouseLotQty(
   }
 }
 
+/**
+ * Leniently removes `qty` from the exact warehouse lot (supplier, price) — used to UNDO a prior
+ * INCOMING intake (invoice edit/delete). Clamps at the lot's available quantity (the original
+ * intake may since have been partly moved/consumed) and never throws, so reversing an intake is
+ * not blocked by downstream stock movements. Deletes the lot row when it reaches ~0.
+ */
+export async function reverseWarehouseLot(
+  tx: Prisma.TransactionClient,
+  warehouseId: string,
+  productId: string,
+  contractorId: string | null,
+  price: number | string,
+  qty: number,
+) {
+  if (!Number.isFinite(qty) || qty <= EPS) return
+  const pricePerUnit = normalizePrice(price)
+  const lot = await tx.warehouseStock.findFirst({
+    where: { warehouseId, productId, contractorId: contractorId ?? null, pricePerUnit },
+  })
+  if (!lot) return
+  const next = Number(lot.quantity) - qty
+  if (next <= EPS) {
+    await tx.warehouseStock.delete({ where: { id: lot.id } })
+  } else {
+    await tx.warehouseStock.update({ where: { id: lot.id }, data: { quantity: next } })
+  }
+}
+
 /** Sum of all lot quantities for a (warehouse, product) pair. */
 export async function sumWarehouseQty(
   tx: Prisma.TransactionClient,
@@ -279,6 +307,29 @@ export async function decObjectLotQty(
     throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару у вибраному лоті на обʼєкті' })
   }
 
+  const next = Number(lot.quantity) - qty
+  if (next <= EPS) {
+    await tx.objectStock.delete({ where: { id: lot.id } })
+  } else {
+    await tx.objectStock.update({ where: { id: lot.id }, data: { quantity: next } })
+  }
+}
+
+/** Object-lot counterpart of {@link reverseWarehouseLot}. */
+export async function reverseObjectLot(
+  tx: Prisma.TransactionClient,
+  objectId: string,
+  productId: string,
+  contractorId: string | null,
+  price: number | string,
+  qty: number,
+) {
+  if (!Number.isFinite(qty) || qty <= EPS) return
+  const pricePerUnit = normalizePrice(price)
+  const lot = await tx.objectStock.findFirst({
+    where: { objectId, productId, contractorId: contractorId ?? null, pricePerUnit },
+  })
+  if (!lot) return
   const next = Number(lot.quantity) - qty
   if (next <= EPS) {
     await tx.objectStock.delete({ where: { id: lot.id } })
