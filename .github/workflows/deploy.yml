@@ -34,6 +34,9 @@ jobs:
           MAILGUN_DOMAIN: ${{ secrets.MAILGUN_DOMAIN }}
           MAILGUN_FROM: ${{ secrets.MAILGUN_FROM }}
           MAILGUN_URL: ${{ secrets.MAILGUN_URL }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
 
       - name: Backup .env on VPS
         uses: appleboy/ssh-action@v1.2.0
