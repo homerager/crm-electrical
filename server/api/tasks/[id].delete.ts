@@ -2,7 +2,9 @@ import { isElevatedRole } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!auth) throw createError({ statusCode: 401 })
+  if (!auth) {
+    throw createError({ statusCode: 401 })
+  }
 
   const id = getRouterParam(event, 'id')!
 
