@@ -1,10 +1,11 @@
-import { isStrictAdmin } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
 
-  const isAdmin = isStrictAdmin(auth.role)
+  // Чутливі поля (ставка, індивідуальні права) — лише за наявності доступу до модуля користувачів.
+  const canViewUsers = await can(event, 'users.view')
 
   const users = await prisma.user.findMany({
     select: {
@@ -12,7 +13,7 @@ export default defineEventHandler(async (event) => {
       name: true,
       email: true,
       role: true,
-      permissionOverrides: isAdmin,
+      permissionOverrides: canViewUsers,
       isActive: true,
       phone: true,
       telegramChatId: true,
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
       createdAt: true,
       jobTitleId: true,
       jobTitle: { select: { id: true, name: true } },
-      hourlyRate: isAdmin,
+      hourlyRate: canViewUsers,
     },
     orderBy: { createdAt: 'desc' },
   })

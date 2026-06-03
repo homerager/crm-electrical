@@ -1,18 +1,16 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../../../utils/prisma'
-import { isStrictAdmin } from '../../../utils/authz'
+import { requirePermission } from '../../../utils/authz'
 import { writeAuditLog } from '../../../utils/auditLog'
 import { assertPasswordStrong } from '../../../utils/passwordReset'
 
 /**
- * Скидання паролю користувача адміністратором.
- * Адмін задає новий пароль вручну.
+ * Скидання паролю користувача (потрібен дозвіл users.manage).
+ * Новий пароль задається вручну.
  */
 export default defineEventHandler(async (event) => {
+  await requirePermission(event, 'users.manage')
   const auth = event.context.auth
-  if (!isStrictAdmin(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Тільки адміністратор може скидати паролі' })
-  }
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)

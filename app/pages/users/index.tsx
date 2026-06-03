@@ -12,11 +12,14 @@ export default defineComponent({
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Користувачі' })
 
-    const { isAdmin, user: currentUser } = useAuth()
+    const { can, user: currentUser } = useAuth()
     const toast = useToast()
     const router = useRouter()
 
-    if (!isAdmin.value) {
+    /** Доступ до сторінки. Керування (створення/редагування) — окремий дозвіл. */
+    const canManage = computed(() => can('users.manage'))
+
+    if (!can('users.view')) {
       router.push('/')
     }
 
@@ -298,17 +301,19 @@ export default defineComponent({
               { title: 'Реєстрація', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
             ]}
           />
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-account-plus"
-            onClick={() => {
-              error.value = ''
-              refreshJobTitles()
-              createDialog.value = true
-            }}
-          >
-            Додати користувача
-          </v-btn>
+          {canManage.value && (
+            <v-btn
+              color="primary"
+              prepend-icon="mdi-account-plus"
+              onClick={() => {
+                error.value = ''
+                refreshJobTitles()
+                createDialog.value = true
+              }}
+            >
+              Додати користувача
+            </v-btn>
+          )}
         </div>
 
         {/* Telegram setup card */}
@@ -457,25 +462,31 @@ export default defineComponent({
               ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
-                  <v-btn
-                    icon="mdi-pencil"
-                    variant="text"
-                    size="small"
-                    color="primary"
-                    onClick={() => {
-                      refreshJobTitles()
-                      openEdit(item)
-                    }}
-                  />
-                  {item.id !== currentUser.value?.id && (
-                    <v-btn
-                      icon={item.isActive ? 'mdi-account-off' : 'mdi-account-check'}
-                      variant="text"
-                      size="small"
-                      color={item.isActive ? 'error' : 'success'}
-                      onClick={() => toggleActive(item)}
-                    />
-                  )}
+                  {canManage.value
+                    ? (
+                      <>
+                        <v-btn
+                          icon="mdi-pencil"
+                          variant="text"
+                          size="small"
+                          color="primary"
+                          onClick={() => {
+                            refreshJobTitles()
+                            openEdit(item)
+                          }}
+                        />
+                        {item.id !== currentUser.value?.id && (
+                          <v-btn
+                            icon={item.isActive ? 'mdi-account-off' : 'mdi-account-check'}
+                            variant="text"
+                            size="small"
+                            color={item.isActive ? 'error' : 'success'}
+                            onClick={() => toggleActive(item)}
+                          />
+                        )}
+                      </>
+                    )
+                    : <span class="text-disabled">—</span>}
                 </div>
               ),
             }}

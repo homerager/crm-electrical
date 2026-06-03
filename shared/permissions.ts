@@ -19,6 +19,8 @@ export const ACTION_LABELS: Record<string, string> = {
   delete: 'Видалення',
   manage: 'Керування',
   import: 'Імпорт',
+  dashboard: 'Фін. дашборд',
+  salary: 'Зарплатний звіт',
 }
 
 export interface PermissionModule {
@@ -35,7 +37,7 @@ export interface PermissionModule {
  * Додати нову можливість = додати рядок/дію тут (єдине джерело правди).
  */
 export const PERMISSION_MODULES: PermissionModule[] = [
-  { key: 'payments', label: 'Фінанси (оплати)', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'payments', label: 'Фінанси (оплати)', actions: ['view', 'create', 'edit', 'delete', 'dashboard'] },
   { key: 'paymentSchedules', label: 'Графік платежів', actions: ['view', 'manage'] },
   { key: 'objects', label: "Об'єкти", actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'projects', label: 'Проєкти', actions: ['view', 'create', 'edit', 'delete'] },
@@ -44,6 +46,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
   { key: 'contractors', label: 'Підрядники', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'proposals', label: 'Комерційні пропозиції', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'invoices', label: 'Накладні', actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'purchaseRequests', label: 'Заявки на закупівлю', actions: ['view', 'create', 'edit', 'delete'] },
   { key: 'products', label: 'Товари', actions: ['view', 'create', 'edit', 'delete', 'import'] },
   { key: 'supplierPrices', label: 'Прайси постачальників', actions: ['view', 'manage', 'import'] },
   { key: 'warehouses', label: 'Склади', actions: ['view', 'manage'] },
@@ -52,7 +55,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
   { key: 'schedules', label: 'Графік роботи', actions: ['view', 'manage'] },
   { key: 'photoReports', label: 'Фотозвіти', actions: ['view', 'manage'] },
   { key: 'documents', label: 'Документи', actions: ['view', 'manage'] },
-  { key: 'reports', label: 'Звіти', actions: ['view'] },
+  { key: 'reports', label: 'Звіти', actions: ['view', 'salary'] },
   { key: 'users', label: 'Користувачі', actions: ['view', 'manage'] },
   { key: 'settings', label: 'Налаштування', actions: ['manage'] },
   { key: 'auditLog', label: 'Журнал дій', actions: ['view'] },
@@ -76,6 +79,19 @@ function only(moduleKey: string, ...actions: string[]): string[] {
 }
 
 /**
+ * Дозволи, які за замовчуванням має лише ADMIN (адмін-розділи + чутливі звіти).
+ * Їх не отримує жодна інша роль автоматично, але адмін може видати точково через матрицю прав.
+ */
+export const ADMIN_ONLY_PERMISSIONS: string[] = [
+  'users.view',
+  'users.manage',
+  'settings.manage',
+  'auditLog.view',
+  'reports.salary',
+  'payments.dashboard',
+]
+
+/**
  * Дефолтні дозволи для кожної ролі.
  * '*' = всі дозволи (повний доступ).
  * Це лише ДЕФОЛТИ — їх можна перевизначати індивідуально по користувачу.
@@ -84,8 +100,8 @@ export const ROLE_DEFAULTS: Record<Role, string[] | '*'> = {
   // Повний доступ
   ADMIN: '*',
 
-  // Як адмін, але без керування обліковими записами користувачів
-  MANAGER: ALL_PERMISSIONS.filter((p) => p !== 'users.manage'),
+  // Як адмін, але без адмін-розділів (користувачі, налаштування, журнал, зарплата, фін. дашборд)
+  MANAGER: ALL_PERMISSIONS.filter((p) => !ADMIN_ONLY_PERMISSIONS.includes(p)),
 
   // Комірник: склад, товари, інвентаризація, обладнання + перегляд решти
   STOREKEEPER: [
@@ -105,8 +121,11 @@ export const ROLE_DEFAULTS: Record<Role, string[] | '*'> = {
     ...only('photoReports', 'view'),
   ],
 
-  // Працівник: лише власні задачі/графік/фотозвіти (доп. scope-обмеження в middleware)
+  // Працівник: проєкти/об'єкти (перегляд), задачі, власний розклад, фотозвіти
+  // (доп. scope-обмеження «лише своє» — в middleware employee-scope/employee-api)
   EMPLOYEE: [
+    ...only('projects', 'view'),
+    ...only('objects', 'view'),
     ...only('tasks', 'view'),
     ...only('schedules', 'view'),
     ...only('photoReports', 'view', 'manage'),

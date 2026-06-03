@@ -1,12 +1,10 @@
 import type { Role } from '@prisma/client'
-import { isStrictAdmin } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 import { sanitizeOverrides } from '../../../shared/permissions'
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(event, 'users.manage')
   const auth = event.context.auth
-  if (!isStrictAdmin(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)

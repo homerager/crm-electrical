@@ -1,13 +1,10 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../../utils/prisma'
-import { isStrictAdmin } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 import type { Role } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {
-  const auth = event.context.auth
-  if (!auth || !isStrictAdmin(auth.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Тільки адміністратор може реєструвати користувачів' })
-  }
+  await requirePermission(event, 'users.manage')
 
   const body = await readBody(event)
   const { name, email, password, role, phone, jobTitleId, hourlyRate } = body

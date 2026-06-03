@@ -15,12 +15,15 @@ export function useAuth() {
   const initialized = useState<boolean>('auth-initialized', () => false)
 
   const isLoggedIn = computed(() => !!user.value)
+
   /** Повний доступ, включно з керуванням користувачами */
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
+
   /** Як адмін, але без сторінки/ API користувачів */
   const isPrivileged = computed(
     () => user.value?.role === 'ADMIN' || user.value?.role === 'MANAGER',
   )
+
   const isEmployee = computed(() => user.value?.role === 'EMPLOYEE')
 
   /** Ефективні дозволи поточного користувача у вигляді Set для швидкої перевірки. */
@@ -31,7 +34,10 @@ export function useAuth() {
    * Використання: const { can } = useAuth(); ... v-if={can('payments.edit')}
    */
   function can(permission: string): boolean {
-    if (user.value?.role === 'ADMIN') return true
+    if (user.value?.role === 'ADMIN') {
+      return true
+    }
+    
     return permissions.value.has(permission)
   }
 
@@ -65,5 +71,5 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
-  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, permissions, can, initialized, fetchMe, login, logout }
+  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, permissions, initialized, can, fetchMe, login, logout }
 }
