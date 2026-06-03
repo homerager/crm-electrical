@@ -37,6 +37,13 @@ export async function createNotification(
       isRead: notification.isRead,
       createdAt: notification.createdAt.toISOString(),
     })
+
+    // Web Push to user's registered devices (fire-and-forget)
+    void sendWebPush(input.userId, {
+      title: notification.title,
+      body: notification.body,
+      link: notification.link,
+    })
   } catch (e) {
     console.error('[Notification] Failed to create:', e)
   }
@@ -74,6 +81,13 @@ export async function createNotificationForMany(
         createdAt: new Date().toISOString(),
       })
     }
+
+    // Web Push to each user's registered devices (fire-and-forget)
+    void sendWebPushToMany(userIds, {
+      title: data.title,
+      body: data.body ?? null,
+      link: data.link ?? null,
+    })
   } catch (e) {
     console.error('[Notification] Failed to create bulk:', e)
   }

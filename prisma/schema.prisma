@@ -118,6 +118,7 @@ model User {
   materialInventorySessions MaterialInventorySession[]
   passwordResetTokens   PasswordResetToken[]
   documents             Document[]
+  pushSubscriptions     PushSubscription[]
 
   @@map("users")
 }
@@ -690,6 +691,25 @@ model Notification {
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+/// Web Push підписка браузера користувача (PWA). Один користувач — багато пристроїв.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  /// Унікальний endpoint браузера (push-сервіс)
+  endpoint  String   @unique
+  /// Публічний ключ клієнта для шифрування payload
+  p256dh    String
+  /// Auth-секрет клієнта
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 /// Глобальні налаштування CRM (singleton, id = "global")

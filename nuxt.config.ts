@@ -44,6 +44,13 @@ export default defineNuxtConfig({
 
   pwa: {
     registerType: 'prompt',
+    strategies: 'injectManifest',
+    srcDir: 'service-worker',
+    filename: 'sw.ts',
+    injectManifest: {
+      globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+    },
     manifest: {
       name: 'CRM Електрик',
       short_name: 'CRM',
@@ -58,61 +65,6 @@ export default defineNuxtConfig({
         { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
         { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
         { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      ],
-    },
-    workbox: {
-      navigateFallback: undefined,
-      globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-      runtimeCaching: [
-        {
-          urlPattern: /^https?:\/\/.*\/api\/photo-reports.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'api-photo-reports',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
-            cacheableResponse: { statuses: [0, 200] },
-            networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /^https?:\/\/.*\/api\/tasks.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'api-tasks',
-            expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 3 },
-            cacheableResponse: { statuses: [0, 200] },
-            networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /^https?:\/\/.*\/api\/objects.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'api-objects',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
-            cacheableResponse: { statuses: [0, 200] },
-            networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /^https?:\/\/.*\/api\/projects.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'api-projects',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
-            cacheableResponse: { statuses: [0, 200] },
-            networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /^https?:\/\/.*\/uploads\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'uploaded-images',
-            expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
       ],
     },
     client: {
@@ -146,7 +98,12 @@ export default defineNuxtConfig({
     mailgunDomain: process.env.MAILGUN_DOMAIN || '',
     mailgunFrom: process.env.MAILGUN_FROM || '',
     mailgunUrl: process.env.MAILGUN_URL || 'https://api.eu.mailgun.net',
-    public: {},
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+    vapidSubject: process.env.VAPID_SUBJECT || 'mailto:admin@proelectric.com.ua',
+    public: {
+      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
+    },
   },
 
   typescript: {

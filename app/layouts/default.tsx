@@ -17,6 +17,12 @@ export default defineComponent({
     const display = useDisplay()
     const { showInstallOption, isInstalled, install: installPwa } = usePwaInstall()
     const {
+      isSupported: pushSupported,
+      isSubscribed: pushSubscribed,
+      loading: pushLoading,
+      toggle: togglePush,
+    } = usePushNotifications()
+    const {
       items: notifications,
       unreadCount,
       loading: notifLoading,
@@ -390,6 +396,30 @@ export default defineComponent({
                               rounded="lg"
                               base-color="primary"
                             />
+                            {pushSupported.value && (
+                              <v-list-item
+                                prepend-icon={pushSubscribed.value ? 'mdi-bell-ring' : 'mdi-bell-off-outline'}
+                                title="Push-сповіщення"
+                                rounded="lg"
+                                base-color={pushSubscribed.value ? 'success' : undefined}
+                              >
+                                {{
+                                  append: () => (
+                                    <v-switch
+                                      modelValue={pushSubscribed.value}
+                                      loading={pushLoading.value}
+                                      disabled={pushLoading.value}
+                                      color="success"
+                                      hide-details
+                                      onUpdate:modelValue={(v: boolean | null) => {
+                                        if (v === pushSubscribed.value) return
+                                        togglePush()
+                                      }}
+                                    />
+                                  ),
+                                }}
+                              </v-list-item>
+                            )}
                             {showInstallOption.value && (
                               <v-list-item
                                 prepend-icon="mdi-cellphone-arrow-down"
