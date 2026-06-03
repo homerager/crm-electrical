@@ -139,9 +139,41 @@ export default defineComponent({
       items.value.splice(index, 1)
     }
 
+    // Autofill a row's price/VAT from supplier price lists. Only for INCOMING
+    // (purchase) invoices — prefers the chosen contractor, else the best valid price.
+    async function autofillRowPrice(row: InvoiceItemRow) {
+      if (form.type !== 'INCOMING' || !row.productId) return
+      try {
+        const res = await $fetch<any>(`/api/products/${row.productId}/price-comparison`)
+        const valid = (res?.suppliers ?? []).filter((s: any) => s.isValid)
+        let chosen = null as any
+        if (form.contractorId) {
+          chosen = valid.find((s: any) => s.contractor?.id === form.contractorId) ?? null
+        }
+        if (!chosen) chosen = res?.best ?? null
+        if (chosen) {
+          row.pricePerUnit = Number(chosen.price) || 0
+          if (chosen.vatPercent != null) row.vatPercent = Number(chosen.vatPercent)
+        }
+      } catch {
+        // ignore — keep manual price entry
+      }
+    }
+
     function onProductChange(index: number, productId: string) {
       const row = items.value[index]
-      if (row) row._product = products.value.find((p: any) => p.id === productId)
+      if (!row) return
+      row.productId = productId
+      row._product = products.value.find((p: any) => p.id === productId)
+      autofillRowPrice(row)
+    }
+
+    // Re-pull prices for already-added rows when the contractor changes
+    // (creation mode only, to avoid overwriting prices on a saved invoice).
+    async function onContractorChange(contractorId: string) {
+      form.contractorId = contractorId || ''
+      if (isEdit.value || form.type !== 'INCOMING') return
+      await Promise.all(items.value.filter((r) => r.productId).map((r) => autofillRowPrice(r)))
     }
 
     function openPdfPicker() {
@@ -454,12 +486,13 @@ export default defineComponent({
                   </v-col>
                   <v-col cols={12} md={6}>
                     <v-autocomplete
-                      v-model={form.contractorId}
+                      modelValue={form.contractorId}
                       label="Контрагент"
                       items={contractors.value}
                       item-title="name"
                       item-value="id"
                       clearable
+                      onUpdate:modelValue={(value: string) => onContractorChange(value)}
                     />
                   </v-col>
                 </v-row>
@@ -481,7 +514,7 @@ export default defineComponent({
                   <v-row key={index} align="center" class="mb-2">
                     <v-col cols={12} md={4}>
                       <v-autocomplete
-                        v-model={item.productId}
+                        modelValue={item.productId}
                         label="Товар *"
                         items={products.value}
                         item-title="name"
@@ -489,7 +522,7 @@ export default defineComponent({
                         hide-details
                         hint={item._rawName && !item.productId ? `З PDF: ${item._rawName}` : undefined}
                         persistent-hint={!!(item._rawName && !item.productId)}
-                        onChange={(val: string) => onProductChange(index, val)}
+                        onUpdate:modelValue={(val: string) => onProductChange(index, val)}
                       />
                     </v-col>
                     <v-col cols={6} md={2}>

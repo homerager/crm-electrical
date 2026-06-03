@@ -1,6 +1,7 @@
 import type { InvoiceType } from '@prisma/client'
 import { isElevatedRole } from '../../utils/authz'
 import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
+import { syncSupplierPricesFromInvoice } from '../../utils/supplierPrices'
 
 interface InvoiceItemInput {
   productId: string
@@ -147,6 +148,16 @@ export default defineEventHandler(async (event) => {
     entityType: 'Invoice',
     entityId: id,
     changes: { number, type, warehouseId, objectId, contractorId, itemCount: items.length },
+  })
+
+  // Record actual purchase prices into supplier price lists (INCOMING only).
+  await syncSupplierPricesFromInvoice({
+    contractorId: contractorId || null,
+    type,
+    date,
+    items: items as InvoiceItemInput[],
+    userId: auth!.userId,
+    userName: auth!.name,
   })
 
   return { invoice }
