@@ -148,6 +148,7 @@ model Warehouse {
   updatedAt   DateTime @updatedAt
 
   stock                      WarehouseStock[]
+  productSettings            WarehouseProductSetting[]
   objectStockReservations    WarehouseObjectReservation[]
   invoices                   Invoice[]
   movementsFrom              Movement[]       @relation("MovementFrom")
@@ -248,6 +249,9 @@ model Contractor {
   purchaseRequests PurchaseRequest[]
   payments         Payment[]
   supplierPrices   SupplierPrice[]
+  warehouseStockLots WarehouseStock[]
+  objectStockLots    ObjectStock[]
+  movementItems      MovementItem[]
 
   @@map("contractors")
 }
@@ -278,6 +282,7 @@ model Product {
 
   group         ProductGroup?    @relation(fields: [groupId], references: [id])
   stock         WarehouseStock[]
+  warehouseSettings WarehouseProductSetting[]
   warehouseObjectReservations WarehouseObjectReservation[]
   invoiceItems   InvoiceItem[]
   movementItems  MovementItem[]
@@ -289,22 +294,48 @@ model Product {
   @@map("products")
 }
 
+/// Лот залишку на складі. Окремий запис на кожну комбінацію
+/// (склад, товар, постачальник, ціна за одиницю). Однаковий постачальник +
+/// однакова ціна з різних накладних зливаються в один лот.
 model WarehouseStock {
   id          String   @id @default(cuid())
   productId   String
   warehouseId String
+  /// Постачальник (контрагент) лота. null — legacy-лот без відомого постачальника.
+  contractorId String?
+  /// Ціна за одиницю (без ПДВ) — частина ключа лота.
+  pricePerUnit Decimal @default(0) @db.Decimal(12, 2)
+  /// Відсоток ПДВ лота (атрибут, не входить у ключ зливання).
+  vatPercent   Decimal @default(0) @db.Decimal(5, 2)
   quantity    Decimal  @default(0) @db.Decimal(12, 3)
-  /// Мінімальний залишок. Якщо null — не контролюється. Коли quantity опускається нижче — надсилається сповіщення підписаним користувачам.
+  updatedAt   DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  contractor Contractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+
+  @@unique([warehouseId, productId, contractorId, pricePerUnit])
+  @@index([warehouseId, productId])
+  @@map("warehouse_stock")
+}
+
+/// Налаштування товару на складі (поріг мінімального залишку та дедуплікація сповіщень).
+/// Винесено з лота WarehouseStock, бо мінімум — це властивість рівня (склад, товар), а не окремого лота.
+model WarehouseProductSetting {
+  id          String   @id @default(cuid())
+  warehouseId String
+  productId   String
+  /// Мінімальний залишок. Якщо null — не контролюється. Коли сумарний залишок по лотах опускається нижче — надсилається сповіщення підписаним користувачам.
   minStock    Decimal? @db.Decimal(12, 3)
   /// Час останнього сповіщення про досягнення мінімуму. Використовується для дедуплікації (повторно не шлемо, поки не вийдемо з low-state).
   lowStockNotifiedAt DateTime?
   updatedAt   DateTime @updatedAt
 
-  product   Product   @relation(fields: [productId], references: [id])
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, warehouseId])
-  @@map("warehouse_stock")
+  @@unique([warehouseId, productId])
+  @@map("warehouse_product_settings")
 }
 
 /// Резерв товару на складі під конкретний будівельний обʼєкт (фізично залишається на складі)
@@ -324,18 +355,28 @@ model WarehouseObjectReservation {
   @@map("warehouse_object_reservations")
 }
 
-/// Залишок матеріалів на будівельному обʼєкті (після відпуску зі складу; зменшується при списанні та поверненні)
+/// Лот залишку матеріалів на будівельному обʼєкті (після відпуску зі складу;
+/// зменшується при списанні та поверненні). Окремий запис на кожну комбінацію
+/// (обʼєкт, товар, постачальник, ціна за одиницю).
 model ObjectStock {
   id        String   @id @default(cuid())
   objectId  String
   productId String
+  /// Постачальник (контрагент) лота. null — legacy-лот без відомого постачальника.
+  contractorId String?
+  /// Ціна за одиницю (без ПДВ) — частина ключа лота.
+  pricePerUnit Decimal @default(0) @db.Decimal(12, 2)
+  /// Відсоток ПДВ лота (атрибут, не входить у ключ зливання).
+  vatPercent   Decimal @default(0) @db.Decimal(5, 2)
   quantity  Decimal  @default(0) @db.Decimal(12, 3)
   updatedAt DateTime @updatedAt
 
   object   ConstructionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
   product  Product            @relation(fields: [productId], references: [id])
+  contractor Contractor?      @relation(fields: [contractorId], references: [id], onDelete: SetNull)
 
-  @@unique([objectId, productId])
+  @@unique([objectId, productId, contractorId, pricePerUnit])
+  @@index([objectId, productId])
   @@map("object_stock")
 }
 
@@ -409,10 +450,17 @@ model MovementItem {
   id         String  @id @default(cuid())
   movementId String
   productId  String
+  /// Постачальник (контрагент) лота, який перемістили. null — legacy-лот.
+  contractorId String?
+  /// Ціна за одиницю (без ПДВ) лота, який перемістили.
+  pricePerUnit Decimal @default(0) @db.Decimal(12, 2)
+  /// Відсоток ПДВ лота, який перемістили.
+  vatPercent   Decimal @default(0) @db.Decimal(5, 2)
   quantity   Decimal @db.Decimal(12, 3)
 
   movement Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
   product  Product  @relation(fields: [productId], references: [id])
+  contractor Contractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
 
   @@map("movement_items")
 }

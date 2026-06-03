@@ -11,8 +11,15 @@ export default defineEventHandler(async (event) => {
       : undefined,
     include: {
       group: true,
+      // Stock is per lot (warehouse + product + contractor + price). `id` is a
+      // timestamp-prefixed cuid, so ordering by it gives a stable oldest-first (FIFO)
+      // sequence used below to distribute reservations across lots.
       stock: {
-        include: { warehouse: true },
+        include: {
+          warehouse: true,
+          contractor: { select: { id: true, name: true } },
+        },
+        orderBy: { id: 'asc' },
       },
     },
     orderBy: { name: 'asc' },
@@ -42,26 +49,53 @@ export default defineEventHandler(async (event) => {
     reservedForObjectMap.set(`${row.warehouseId}:${row.productId}`, Number(row.quantity))
   }
 
-  const enriched = products.map((p) => ({
-    ...p,
-    supplyHistory: supplyMap.get(p.id) ?? [],
-    stock: p.stock.map((s) => {
+  const enriched = products.map((p) => {
+    // Reservations are tracked at the (warehouse, product) level, not per lot. Distribute
+    // the product-level reservation across this product's lots oldest-first (FIFO) so each
+    // lot exposes its own free quantity while the per-product totals stay consistent
+    // (Σ freeOnWarehouse == physical − reserved). Lots are already ordered by id (FIFO).
+    const remainingReserved = new Map<string, number>()
+    const remainingReservedForObject = new Map<string, number>()
+
+    const stock = p.stock.map((s) => {
       const key = `${s.warehouseId}:${p.id}`
-      const reservedOnWarehouse = reservedByWhProduct.get(key) ?? 0
+      if (!remainingReserved.has(key)) {
+        remainingReserved.set(key, reservedByWhProduct.get(key) ?? 0)
+      }
+
       const physical = Number(s.quantity)
+      const reservedPool = remainingReserved.get(key)!
+      const reservedOnWarehouse = Math.min(physical, Math.max(0, reservedPool))
+      remainingReserved.set(key, reservedPool - reservedOnWarehouse)
       const freeOnWarehouse = physical - reservedOnWarehouse
-      const reservedForSelectedObject = forObjectId ? (reservedForObjectMap.get(key) ?? 0) : 0
-      const maxMovableToSelectedObject = forObjectId ? freeOnWarehouse + reservedForSelectedObject : freeOnWarehouse
-      return {
+
+      const row: Record<string, unknown> = {
         ...s,
         reservedOnWarehouse,
         freeOnWarehouse,
-        ...(forObjectId
-          ? { reservedForSelectedObject, maxMovableToSelectedObject }
-          : {}),
       }
-    }),
-  }))
+
+      if (forObjectId) {
+        if (!remainingReservedForObject.has(key)) {
+          remainingReservedForObject.set(key, reservedForObjectMap.get(key) ?? 0)
+        }
+        const objPool = remainingReservedForObject.get(key)!
+        const reservedForSelectedObject = Math.min(physical, Math.max(0, objPool))
+        remainingReservedForObject.set(key, objPool - reservedForSelectedObject)
+        // Stock reserved for the destination object itself can still be moved there.
+        row.reservedForSelectedObject = reservedForSelectedObject
+        row.maxMovableToSelectedObject = freeOnWarehouse + reservedForSelectedObject
+      }
+
+      return row
+    })
+
+    return {
+      ...p,
+      supplyHistory: supplyMap.get(p.id) ?? [],
+      stock,
+    }
+  })
 
   return { products: enriched }
 })

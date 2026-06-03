@@ -133,6 +133,8 @@ export default defineComponent({
                       <tr>
                         <th>Товар</th>
                         <th>Артикул</th>
+                        <th>Постачальник</th>
+                        <th class="text-right">Ціна, ₴</th>
                         <th class="text-right">Кількість</th>
                         <th class="text-center">Од.</th>
                         <th>Постачальники</th>
@@ -161,6 +163,16 @@ export default defineComponent({
                           <tr key={s.id}>
                             <td>{s.product.name}</td>
                             <td class="text-medium-emphasis">{s.product.sku || '—'}</td>
+                            <td>
+                              {s.contractor?.name
+                                ? <v-chip size="x-small" variant="tonal" color="secondary">{s.contractor.name}</v-chip>
+                                : <span class="text-medium-emphasis">—</span>}
+                            </td>
+                            <td class="text-right">
+                              {Number(s.pricePerUnit) > 0
+                                ? uah(Number(s.pricePerUnit))
+                                : <span class="text-medium-emphasis">—</span>}
+                            </td>
                             <td class={`text-right font-weight-medium ${Number(s.quantity) < 5 ? 'text-error' : ''}`}>
                               {Number(s.quantity).toLocaleString('uk-UA')}
                             </td>

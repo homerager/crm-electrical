@@ -53,11 +53,12 @@ export default defineComponent({
     const summaryHeaders = [
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },
+      { title: 'Постачальник', key: 'contractor', sortable: false, width: 160 },
       { title: 'Загальна кількість', key: 'totalQuantity', align: 'end' as const, width: 160 },
       { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 100 },
       {
-        title: 'Сер. ціна, ₴',
-        key: 'averageUnitPrice',
+        title: 'Ціна, ₴',
+        key: 'pricePerUnit',
         align: 'end' as const,
         width: 120,
         sortable: false,
@@ -79,6 +80,8 @@ export default defineComponent({
     const stockOnSiteHeaders = [
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku', width: 120 },
+      { title: 'Постачальник', key: 'contractor', sortable: false, width: 160 },
+      { title: 'Ціна, ₴', key: 'pricePerUnit', align: 'end' as const, width: 120, sortable: false },
       { title: 'Залишок', key: 'quantity', align: 'end' as const, width: 140 },
       { title: 'Одиниця', key: 'product.unit', align: 'center' as const, width: 100 },
       { title: 'Постачальники', key: 'supplyHistory', sortable: false },
@@ -98,11 +101,12 @@ export default defineComponent({
     const consumedHeaders = [
       { title: 'Товар', key: 'product.name', minWidth: 160 },
       { title: 'Артикул', key: 'product.sku', width: 112 },
+      { title: 'Постачальник', key: 'contractor', sortable: false, width: 150 },
       { title: 'Використано', key: 'totalQuantity', align: 'end' as const, width: 96 },
       { title: 'Одиниця', key: 'unit', align: 'center' as const, width: 88 },
       {
         title: 'Ціна за одиницю, ₴',
-        key: 'averageUnitPrice',
+        key: 'pricePerUnit',
         align: 'end' as const,
         width: 138,
         sortable: false,
@@ -138,6 +142,19 @@ export default defineComponent({
 
     const hoursStr = (h: number) =>
       h.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
+    function renderLotContractor(item: any) {
+      if (!item.contractor?.name) return <span class="text-medium-emphasis">—</span>
+      return (
+        <v-chip size="x-small" variant="tonal" color="secondary">{item.contractor.name}</v-chip>
+      )
+    }
+
+    function renderLotPrice(item: any) {
+      const price = Number(item.pricePerUnit)
+      if (!Number.isFinite(price) || price <= 0) return <span class="text-medium-emphasis">—</span>
+      return <span>{uah(price)}</span>
+    }
 
     function renderContractors(item: any) {
       const contractors = [
@@ -367,6 +384,8 @@ export default defineComponent({
                   >
                     {{
                       'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
+                      'item.contractor': ({ item }: any) => renderLotContractor(item),
+                      'item.pricePerUnit': ({ item }: any) => renderLotPrice(item),
                       'item.quantity': ({ item }: any) => (
                         <strong>{Number(item.quantity).toLocaleString('uk-UA')}</strong>
                       ),
@@ -422,15 +441,11 @@ export default defineComponent({
                   'item.product.sku': ({ item }: any) => (
                     <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
                   ),
+                  'item.contractor': ({ item }: any) => renderLotContractor(item),
                   'item.totalQuantity': ({ item }: any) => (
                     <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
                   ),
-                  'item.averageUnitPrice': ({ item }: any) =>
-                    item.averageUnitPrice == null ? (
-                      <span class="text-medium-emphasis">—</span>
-                    ) : (
-                      <span>{uah(item.averageUnitPrice)}</span>
-                    ),
+                  'item.pricePerUnit': ({ item }: any) => renderLotPrice(item),
                   'item.totalAmount': ({ item }: any) => (
                     <strong>{uah(Number(item.totalAmount) || 0)}</strong>
                   ),
@@ -553,15 +568,11 @@ export default defineComponent({
                 'item.product.sku': ({ item }: any) => (
                   <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>
                 ),
+                'item.contractor': ({ item }: any) => renderLotContractor(item),
                 'item.totalQuantity': ({ item }: any) => (
                   <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
                 ),
-                'item.averageUnitPrice': ({ item }: any) =>
-                  item.averageUnitPrice == null ? (
-                    <span class="text-medium-emphasis">—</span>
-                  ) : (
-                    <span>{uah(item.averageUnitPrice)}</span>
-                  ),
+                'item.pricePerUnit': ({ item }: any) => renderLotPrice(item),
                 'item.totalAmount': ({ item }: any) => (
                   <strong>{uah(Number(item.totalAmount) || 0)}</strong>
                 ),
@@ -626,15 +637,11 @@ export default defineComponent({
                       <span class="text-body-2">{item.product?.name ?? '—'}</span>
                     ),
                     'item.product.sku': ({ item }: any) => <span class="whitespace-nowrap">{item.product?.sku || '—'}</span>,
+                    'item.contractor': ({ item }: any) => renderLotContractor(item),
                     'item.totalQuantity': ({ item }: any) => (
                       <strong>{Number(item.totalQuantity).toLocaleString('uk-UA')}</strong>
                     ),
-                    'item.averageUnitPrice': ({ item }: any) =>
-                      item.averageUnitPrice == null ? (
-                        <span class="text-medium-emphasis">—</span>
-                      ) : (
-                        <span>{uah(item.averageUnitPrice)}</span>
-                      ),
+                    'item.pricePerUnit': ({ item }: any) => renderLotPrice(item),
                     'item.totalAmount': ({ item }: any) =>
                       item.hasMissingPrice ? (
                         <span class="text-medium-emphasis">—</span>

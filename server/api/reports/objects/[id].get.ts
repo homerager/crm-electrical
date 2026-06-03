@@ -1,4 +1,73 @@
-import { getProductSupplyHistory, getWeightedAverageUnitPrices } from '../../../utils/productSupplyHistory'
+import { getProductSupplyHistory } from '../../../utils/productSupplyHistory'
+
+/**
+ * Builds a stable key for grouping movement lines into lots
+ * (product + contractor + price + vat). Price/vat are normalised to 2 decimals so
+ * float drift from Decimal conversion does not split an otherwise identical lot.
+ */
+function lotKey(productId: string, contractorId: string | null, price: number, vat: number) {
+  return `${productId}|${contractorId ?? ''}|${price.toFixed(2)}|${vat.toFixed(2)}`
+}
+
+interface LotSummaryRow {
+  id: string
+  product: any
+  contractor: { id: string; name: string } | null
+  pricePerUnit: number
+  vatPercent: number
+  totalQuantity: number
+  unit: string
+  totalAmount: number
+  /** Kept for backward-compat with the table column; equals the exact lot price now. */
+  averageUnitPrice: number | null
+  hasMissingPrice: boolean
+}
+
+/**
+ * Groups movement lines into per-lot rows carrying the exact cost of each lot. Because
+ * every movement line now records the lot it moved (contractor + price + vat), the cost is
+ * exact and no weighted-average reconstruction is needed.
+ */
+function buildLotSummary(
+  movements: { items: { productId: string; contractorId: string | null; pricePerUnit: unknown; vatPercent: unknown; quantity: unknown; product: any; contractor: { id: string; name: string } | null }[] }[],
+): LotSummaryRow[] {
+  const map = new Map<string, LotSummaryRow>()
+  for (const movement of movements) {
+    for (const item of movement.items) {
+      const price = Number(item.pricePerUnit)
+      const vat = Number(item.vatPercent)
+      const qty = Number(item.quantity)
+      const key = lotKey(item.productId, item.contractorId, price, vat)
+      const existing = map.get(key)
+      if (existing) {
+        existing.totalQuantity += qty
+        existing.totalAmount += qty * price
+      } else {
+        map.set(key, {
+          id: key,
+          product: item.product,
+          contractor: item.contractor,
+          pricePerUnit: price,
+          vatPercent: vat,
+          totalQuantity: qty,
+          unit: item.product.unit,
+          totalAmount: qty * price,
+          averageUnitPrice: price,
+          hasMissingPrice: false,
+        })
+      }
+    }
+  }
+
+  return Array.from(map.values())
+    .map((row) => ({ ...row, totalAmount: Math.round(row.totalAmount * 100) / 100 }))
+    .sort(
+      (a, b) =>
+        a.product.name.localeCompare(b.product.name) ||
+        (a.contractor?.name ?? '').localeCompare(b.contractor?.name ?? '') ||
+        a.pricePerUnit - b.pricePerUnit,
+    )
+}
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')!
@@ -9,68 +78,17 @@ export default defineEventHandler(async (event) => {
   const movements = await prisma.movement.findMany({
     where: { objectId: id, type: 'WAREHOUSE_TO_OBJECT' },
     include: {
-      items: { include: { product: true } },
+      items: { include: { product: true, contractor: { select: { id: true, name: true } } } },
       fromWarehouse: true,
       createdBy: { select: { id: true, name: true } },
     },
     orderBy: { date: 'desc' },
   })
 
-  const pricePairs: { productId: string; warehouseId: string }[] = []
-  for (const movement of movements) {
-    if (!movement.fromWarehouseId) continue
-    for (const item of movement.items) {
-      pricePairs.push({ productId: item.productId, warehouseId: movement.fromWarehouseId })
-    }
-  }
-  const priceMap = await getWeightedAverageUnitPrices(pricePairs)
-
-  const productMap = new Map<
-    string,
-    {
-      product: any
-      totalQuantity: number
-      unit: string
-      totalAmount: number
-      hasMissingPrice: boolean
-    }
-  >()
-
-  for (const movement of movements) {
-    const warehouseId = movement.fromWarehouseId
-    if (!warehouseId) continue
-    for (const item of movement.items) {
-      const key = item.productId
-      const qty = Number(item.quantity)
-      const price = priceMap.get(`${item.productId}:${warehouseId}`) ?? null
-      const lineAmount = price != null ? qty * price : 0
-
-      if (productMap.has(key)) {
-        const row = productMap.get(key)!
-        row.totalQuantity += qty
-        row.totalAmount += lineAmount
-        if (price == null) row.hasMissingPrice = true
-      } else {
-        productMap.set(key, {
-          product: item.product,
-          totalQuantity: qty,
-          unit: item.product.unit,
-          totalAmount: lineAmount,
-          hasMissingPrice: price == null,
-        })
-      }
-    }
-  }
-
-  const summary = Array.from(productMap.values())
-    .map((row) => ({
-      ...row,
-      averageUnitPrice: row.hasMissingPrice ? null : row.totalQuantity > 0 ? row.totalAmount / row.totalQuantity : 0,
-    }))
-    .sort((a, b) => a.product.name.localeCompare(b.product.name))
-
-  const summaryTotalAmount = summary.reduce((s, r) => s + r.totalAmount, 0)
-  const summaryHasMissingPrice = summary.some((r) => r.hasMissingPrice)
+  // "Відпуск зі складу" — released to the object, one row per lot with exact cost.
+  const summary = buildLotSummary(movements)
+  const summaryTotalAmount = Math.round(summary.reduce((s, r) => s + r.totalAmount, 0) * 100) / 100
+  const summaryHasMissingPrice = false
 
   const timeLogs = await prisma.timeLog.findMany({
     where: {
@@ -121,10 +139,11 @@ export default defineEventHandler(async (event) => {
   const laborTotalAmount = laborByUser.reduce((s, r) => s + (typeof r.totalAmount === 'number' ? r.totalAmount : 0), 0)
   const laborHasMissingRate = laborByUser.some((r) => r.hourlyRate == null)
 
+  // Per-lot stock currently on the object (each row carries its exact supplier + price).
   const stockOnSite = await prisma.objectStock.findMany({
     where: { objectId: id, quantity: { gt: 0 } },
-    include: { product: true },
-    orderBy: { product: { name: 'asc' } },
+    include: { product: true, contractor: { select: { id: true, name: true } } },
+    orderBy: [{ product: { name: 'asc' } }, { pricePerUnit: 'asc' }],
   })
 
   const warehouseReservations = await prisma.warehouseObjectReservation.findMany({
@@ -140,7 +159,7 @@ export default defineEventHandler(async (event) => {
     where: { objectId: id, type: 'OBJECT_WRITE_OFF' },
     include: {
       createdBy: { select: { id: true, name: true } },
-      items: { include: { product: true } },
+      items: { include: { product: true, contractor: { select: { id: true, name: true } } } },
     },
     orderBy: { date: 'desc' },
   })
@@ -150,57 +169,15 @@ export default defineEventHandler(async (event) => {
     include: {
       toWarehouse: true,
       createdBy: { select: { id: true, name: true } },
-      items: { include: { product: true } },
+      items: { include: { product: true, contractor: { select: { id: true, name: true } } } },
     },
     orderBy: { date: 'desc' },
   })
 
-  const consumedMap = new Map<
-    string,
-    { product: { id: string; name: string; sku: string | null; unit: string }; totalQuantity: number; unit: string }
-  >()
-  for (const movement of writeOffMovements) {
-    for (const item of movement.items) {
-      const key = item.productId
-      const qty = Number(item.quantity)
-      if (consumedMap.has(key)) {
-        consumedMap.get(key)!.totalQuantity += qty
-      } else {
-        consumedMap.set(key, {
-          product: item.product,
-          totalQuantity: qty,
-          unit: item.product.unit,
-        })
-      }
-    }
-  }
-
-  const inboundValuationByProductId = new Map(summary.map((row) => [row.product.id, row]))
-
-  const consumedSummary = Array.from(consumedMap.values())
-    .map((row) => {
-      const inbound = inboundValuationByProductId.get(row.product.id)
-      let averageUnitPrice: number | null = null
-      let totalAmount = 0
-      let hasMissingPrice = true
-
-      if (inbound && inbound.averageUnitPrice != null) {
-        averageUnitPrice = inbound.averageUnitPrice
-        totalAmount = Math.round(averageUnitPrice * row.totalQuantity * 100) / 100
-        hasMissingPrice = false
-      }
-
-      return {
-        ...row,
-        averageUnitPrice,
-        totalAmount,
-        hasMissingPrice,
-      }
-    })
-    .sort((a, b) => a.product.name.localeCompare(b.product.name))
-
-  const consumedTotalAmount = consumedSummary.reduce((s, r) => s + r.totalAmount, 0)
-  const consumedHasMissingPrice = consumedSummary.some((r) => r.hasMissingPrice)
+  // "Використано на обʼєкті" — written-off lots with exact cost, one row per lot.
+  const consumedSummary = buildLotSummary(writeOffMovements)
+  const consumedTotalAmount = Math.round(consumedSummary.reduce((s, r) => s + r.totalAmount, 0) * 100) / 100
+  const consumedHasMissingPrice = false
 
   const budget = object.budget != null ? Number(object.budget) : null
   const totalExpenses = summaryTotalAmount + laborTotalAmount

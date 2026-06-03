@@ -1,5 +1,6 @@
 import { isElevatedRole } from '../../../utils/authz'
 import { checkLowStockAfterChange } from '../../../utils/lowStockAlert'
+import { sumWarehouseQty } from '../../../utils/stockLots'
 
 /**
  * Встановити (або зняти) мінімальний залишок для пари (warehouseId, productId).
@@ -32,23 +33,23 @@ export default defineEventHandler(async (event) => {
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const existing = await tx.warehouseStock.findUnique({
-      where: { productId_warehouseId: { productId, warehouseId } },
+    const existing = await tx.warehouseProductSetting.findUnique({
+      where: { warehouseId_productId: { warehouseId, productId } },
     })
 
     if (!existing) {
-      // Дозволяємо задати мінімум навіть до появи фізичного залишку — створимо рядок з quantity=0
+      // Дозволяємо задати мінімум навіть до появи фізичного залишку — створимо налаштування
       if (parsed == null) {
         return null
       }
-      await tx.warehouseStock.create({
-        data: { productId, warehouseId, quantity: 0, minStock: parsed },
+      await tx.warehouseProductSetting.create({
+        data: { productId, warehouseId, minStock: parsed },
       })
     } else {
       // При будь-якому оновленні мінімуму скидаємо дедуплікацію — щоб новий поріг переоцінився чесно
       // і user, що зайшов у діалог, міг ретригернути сповіщення.
-      await tx.warehouseStock.update({
-        where: { productId_warehouseId: { productId, warehouseId } },
+      await tx.warehouseProductSetting.update({
+        where: { warehouseId_productId: { warehouseId, productId } },
         data: {
           minStock: parsed,
           lowStockNotifiedAt: null,
@@ -60,10 +61,16 @@ export default defineEventHandler(async (event) => {
       await checkLowStockAfterChange(tx, warehouseId, productId)
     }
 
-    return tx.warehouseStock.findUnique({
-      where: { productId_warehouseId: { productId, warehouseId } },
-      include: { product: { select: { id: true, name: true, unit: true, sku: true } } },
+    const setting = await tx.warehouseProductSetting.findUnique({
+      where: { warehouseId_productId: { warehouseId, productId } },
     })
+    const product = await tx.product.findUnique({
+      where: { id: productId },
+      select: { id: true, name: true, unit: true, sku: true },
+    })
+    const quantity = await sumWarehouseQty(tx, warehouseId, productId)
+
+    return setting ? { ...setting, quantity, product } : null
   })
 
   writeAuditLog({

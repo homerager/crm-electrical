@@ -1,9 +1,20 @@
-import type { MovementType, Prisma } from '@prisma/client'
+import type { MovementType } from '@prisma/client'
 import { consumeReservationForShipment, freeQtyOnWarehouse } from '../../utils/warehouseReservations'
 import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
+import { addObjectLotQty, addWarehouseLotQty, decObjectLotQty, decWarehouseLotQty } from '../../utils/stockLots'
 
+const EPS = 1e-9
+
+/**
+ * One movement line now identifies an exact stock lot — (product, contractor, price) —
+ * not just a product. `vatPercent` is carried so destination lots can be created with the
+ * right attribute. The lot dims are also persisted onto the resulting MovementItem.
+ */
 interface MovementItemInput {
   productId: string
+  contractorId?: string | null
+  pricePerUnit?: number | string
+  vatPercent?: number | string
   quantity: number
 }
 
@@ -15,60 +26,10 @@ function parsePositiveQty(raw: unknown): number {
   return q
 }
 
-async function addWarehouseStock(
-  tx: Prisma.TransactionClient,
-  warehouseId: string,
-  productId: string,
-  qty: number,
-) {
-  const stock = await tx.warehouseStock.findUnique({
-    where: { productId_warehouseId: { productId, warehouseId } },
-  })
-  if (stock) {
-    await tx.warehouseStock.update({
-      where: { productId_warehouseId: { productId, warehouseId } },
-      data: { quantity: Number(stock.quantity) + qty },
-    })
-  } else {
-    await tx.warehouseStock.create({ data: { productId, warehouseId, quantity: qty } })
-  }
-}
-
-async function addObjectStock(tx: Prisma.TransactionClient, objectId: string, productId: string, qty: number) {
-  const row = await tx.objectStock.findUnique({
-    where: { objectId_productId: { objectId, productId } },
-  })
-  if (row) {
-    await tx.objectStock.update({
-      where: { objectId_productId: { objectId, productId } },
-      data: { quantity: Number(row.quantity) + qty },
-    })
-  } else {
-    await tx.objectStock.create({ data: { objectId, productId, quantity: qty } })
-  }
-}
-
-async function removeFromObjectStock(tx: Prisma.TransactionClient, objectId: string, productId: string, qty: number) {
-  const row = await tx.objectStock.findUnique({
-    where: { objectId_productId: { objectId, productId } },
-  })
-  const available = row ? Number(row.quantity) : 0
-  if (available + 1e-9 < qty) {
-    const product = await tx.product.findUnique({ where: { id: productId } })
-    throw createError({
-      statusCode: 400,
-      statusMessage: `Недостатньо товару "${product?.name}" на обʼєкті. Доступно: ${available}`,
-    })
-  }
-  const next = available - qty
-  if (next <= 1e-9) {
-    await tx.objectStock.delete({ where: { objectId_productId: { objectId, productId } } })
-  } else {
-    await tx.objectStock.update({
-      where: { objectId_productId: { objectId, productId } },
-      data: { quantity: next },
-    })
-  }
+/** Parses an optional numeric lot dimension (price / vat), defaulting to 0 for legacy lots. */
+function parseLotNumber(raw: unknown): number {
+  const n = typeof raw === 'number' ? raw : Number(raw)
+  return Number.isFinite(n) ? n : 0
 }
 
 export default defineEventHandler(async (event) => {
@@ -82,7 +43,18 @@ export default defineEventHandler(async (event) => {
 
   const normalizedItems = (items as MovementItemInput[]).map((i) => ({
     productId: i.productId,
+    contractorId: i.contractorId ?? null,
+    pricePerUnit: parseLotNumber(i.pricePerUnit),
+    vatPercent: parseLotNumber(i.vatPercent),
     quantity: parsePositiveQty(i.quantity),
+  }))
+
+  const itemCreateData = normalizedItems.map((i) => ({
+    productId: i.productId,
+    contractorId: i.contractorId,
+    pricePerUnit: i.pricePerUnit,
+    vatPercent: i.vatPercent,
+    quantity: i.quantity,
   }))
 
   if (type === 'WAREHOUSE_TO_WAREHOUSE' || type === 'WAREHOUSE_TO_OBJECT') {
@@ -98,26 +70,14 @@ export default defineEventHandler(async (event) => {
 
     const movement = await prisma.$transaction(async (tx) => {
       for (const item of normalizedItems) {
-        const stock = await tx.warehouseStock.findUnique({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: fromWarehouseId } },
-        })
-
-        const physical = stock ? Number(stock.quantity) : 0
-        if (physical + 1e-9 < item.quantity) {
-          const product = await tx.product.findUnique({ where: { id: item.productId } })
-          throw createError({
-            statusCode: 400,
-            statusMessage: `Недостатньо товару "${product?.name}" на складі. Доступно: ${physical}`,
-          })
-        }
-
         if (type === 'WAREHOUSE_TO_WAREHOUSE') {
+          // Reservations are product-level: don't let a move dip into reserved stock.
           const free = await freeQtyOnWarehouse(tx, fromWarehouseId, item.productId)
-          if (item.quantity > free + 1e-9) {
+          if (item.quantity > free + EPS) {
             const product = await tx.product.findUnique({ where: { id: item.productId } })
             throw createError({
               statusCode: 400,
-              statusMessage: `Частина товару "${product?.name}" зарезервована під обʼєкти. Вільно для переміщення: ${free}`,
+              statusMessage: `Частина товару "${product?.name}" зарезервована під обʼєкти. Вільно для переміщення: ${Math.max(0, free)}`,
             })
           }
         }
@@ -126,20 +86,18 @@ export default defineEventHandler(async (event) => {
           await consumeReservationForShipment(tx, objectId, fromWarehouseId, item.productId, item.quantity)
         }
 
-        await tx.warehouseStock.update({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: fromWarehouseId } },
-          data: { quantity: physical - item.quantity },
-        })
-
+        // Decrement the exact source lot the user picked (validates lot-level availability).
+        await decWarehouseLotQty(tx, fromWarehouseId, item.productId, item.contractorId, item.pricePerUnit, item.quantity)
         await checkLowStockAfterChange(tx, fromWarehouseId, item.productId)
 
         if (type === 'WAREHOUSE_TO_WAREHOUSE' && toWarehouseId) {
-          await addWarehouseStock(tx, toWarehouseId, item.productId, item.quantity)
+          // Mirror the lot onto the destination warehouse (same supplier + price + vat).
+          await addWarehouseLotQty(tx, toWarehouseId, item.productId, item.contractorId, item.pricePerUnit, item.vatPercent, item.quantity)
           await checkLowStockAfterChange(tx, toWarehouseId, item.productId)
         }
 
         if (type === 'WAREHOUSE_TO_OBJECT' && objectId) {
-          await addObjectStock(tx, objectId, item.productId, item.quantity)
+          await addObjectLotQty(tx, objectId, item.productId, item.contractorId, item.pricePerUnit, item.vatPercent, item.quantity)
         }
       }
 
@@ -152,12 +110,7 @@ export default defineEventHandler(async (event) => {
           createdById: auth.userId,
           date: new Date(date),
           notes,
-          items: {
-            create: normalizedItems.map((i) => ({
-              productId: i.productId,
-              quantity: i.quantity,
-            })),
-          },
+          items: { create: itemCreateData },
         },
         include: { items: true },
       })
@@ -175,7 +128,8 @@ export default defineEventHandler(async (event) => {
 
     const movement = await prisma.$transaction(async (tx) => {
       for (const item of normalizedItems) {
-        await removeFromObjectStock(tx, objectId, item.productId, item.quantity)
+        // Write off the exact object lot the user picked (exact cost = lot price).
+        await decObjectLotQty(tx, objectId, item.productId, item.contractorId, item.pricePerUnit, item.quantity)
       }
 
       return tx.movement.create({
@@ -187,12 +141,7 @@ export default defineEventHandler(async (event) => {
           createdById: auth.userId,
           date: new Date(date),
           notes,
-          items: {
-            create: normalizedItems.map((i) => ({
-              productId: i.productId,
-              quantity: i.quantity,
-            })),
-          },
+          items: { create: itemCreateData },
         },
         include: { items: true },
       })
@@ -213,8 +162,9 @@ export default defineEventHandler(async (event) => {
 
     const movement = await prisma.$transaction(async (tx) => {
       for (const item of normalizedItems) {
-        await removeFromObjectStock(tx, objectId, item.productId, item.quantity)
-        await addWarehouseStock(tx, toWarehouseId, item.productId, item.quantity)
+        // Return the exact object lot back to the warehouse as the matching lot.
+        await decObjectLotQty(tx, objectId, item.productId, item.contractorId, item.pricePerUnit, item.quantity)
+        await addWarehouseLotQty(tx, toWarehouseId, item.productId, item.contractorId, item.pricePerUnit, item.vatPercent, item.quantity)
         await checkLowStockAfterChange(tx, toWarehouseId, item.productId)
       }
 
@@ -227,12 +177,7 @@ export default defineEventHandler(async (event) => {
           createdById: auth.userId,
           date: new Date(date),
           notes,
-          items: {
-            create: normalizedItems.map((i) => ({
-              productId: i.productId,
-              quantity: i.quantity,
-            })),
-          },
+          items: { create: itemCreateData },
         },
         include: { items: true },
       })

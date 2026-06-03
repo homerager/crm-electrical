@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client'
+import { sumWarehouseQty } from './stockLots'
 
 const EPS = 1e-9
 
@@ -32,10 +33,7 @@ export async function freeQtyOnWarehouse(
   warehouseId: string,
   productId: string,
 ): Promise<number> {
-  const stock = await tx.warehouseStock.findUnique({
-    where: { productId_warehouseId: { productId, warehouseId } },
-  })
-  const physical = stock ? Number(stock.quantity) : 0
+  const physical = await sumWarehouseQty(tx, warehouseId, productId)
   const reserved = await sumReservedOnWarehouse(tx, warehouseId, productId)
   return physical - reserved
 }
@@ -52,10 +50,7 @@ export async function adjustReservationDelta(
     throw createError({ statusCode: 400, statusMessage: 'Некоректна кількість' })
   }
 
-  const stock = await tx.warehouseStock.findUnique({
-    where: { productId_warehouseId: { productId, warehouseId } },
-  })
-  const physical = stock ? Number(stock.quantity) : 0
+  const physical = await sumWarehouseQty(tx, warehouseId, productId)
   const reservedTotal = await sumReservedOnWarehouse(tx, warehouseId, productId)
   const currentForObject = await getReservationRowQty(tx, objectId, warehouseId, productId)
 
@@ -111,10 +106,7 @@ export async function consumeReservationForShipment(
   const fromFree = shipmentQty - fromRes
 
   const reservedTotal = await sumReservedOnWarehouse(tx, warehouseId, productId)
-  const stock = await tx.warehouseStock.findUnique({
-    where: { productId_warehouseId: { productId, warehouseId } },
-  })
-  const physical = stock ? Number(stock.quantity) : 0
+  const physical = await sumWarehouseQty(tx, warehouseId, productId)
   const freePool = physical - reservedTotal
 
   if (fromFree > freePool + EPS) {

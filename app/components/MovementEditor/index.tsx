@@ -1,8 +1,23 @@
 export interface MovementItemRow {
   productId: string
+  /** Exact lot the line moves — supplier + unit price (+ vat attribute, not part of the merge key). */
+  contractorId: string | null
+  pricePerUnit: number
+  vatPercent: number
   quantity: number
   _product?: any
+  /** Stable key identifying the chosen lot in the dropdown: `${contractorId}|${price}`. */
+  _lotKey?: string
   _availableQty?: number
+}
+
+interface AvailableLot {
+  key: string
+  contractorId: string | null
+  pricePerUnit: number
+  vatPercent: number
+  contractorName: string
+  available: number
 }
 
 export type MovementEditorLayout = 'page' | 'dialog'
@@ -75,23 +90,94 @@ export default defineComponent({
       return free
     }
 
-    /** Доступна кількість з актуального списку товарів (не з відфільтрованого autocomplete). */
-    function maxQtyForProductId(productId: string): number {
-      if (!productId || !form.fromWarehouseId) return 0
-      if (form.type === 'WAREHOUSE_TO_OBJECT' && !form.objectId) return 0
+    function lotKeyOf(contractorId: string | null, price: number | string): string {
+      return `${contractorId ?? ''}|${Number(price).toFixed(2)}`
+    }
+
+    /** Available lots for a product on the from-warehouse, oldest-first (the API orders stock by id). */
+    function lotsForProductId(productId: string): AvailableLot[] {
+      if (!productId || !form.fromWarehouseId) return []
+      if (form.type === 'WAREHOUSE_TO_OBJECT' && !form.objectId) return []
       const p = products.value.find((x: any) => x.id === productId)
-      if (!p) return 0
-      const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-      return maxMovableQty(stock)
+      if (!p) return []
+      return (p.stock ?? [])
+        .filter((s: any) => s.warehouseId === form.fromWarehouseId)
+        .map((s: any): AvailableLot => {
+          const contractorId = s.contractorId ?? null
+          const pricePerUnit = Number(s.pricePerUnit)
+          return {
+            key: lotKeyOf(contractorId, pricePerUnit),
+            contractorId,
+            pricePerUnit,
+            vatPercent: Number(s.vatPercent),
+            contractorName: s.contractor?.name ?? '',
+            available: maxMovableQty(s),
+          }
+        })
+        .filter((l: AvailableLot) => l.available > 0)
+    }
+
+    /** Dropdown items describing each lot as `supplier · ціна · доступно`. */
+    function lotOptions(productId: string, unit: string) {
+      return lotsForProductId(productId).map((l) => ({
+        ...l,
+        title: `${l.contractorName || 'Без постачальника'} · ₴${l.pricePerUnit.toFixed(2)} · ${l.available.toLocaleString('uk-UA')}${unit ? ` ${unit}` : ''}`,
+      }))
+    }
+
+    function applyLotToRow(row: MovementItemRow, lot: AvailableLot) {
+      row.contractorId = lot.contractorId
+      row.pricePerUnit = lot.pricePerUnit
+      row.vatPercent = lot.vatPercent
+      row._lotKey = lot.key
+      row._availableQty = lot.available
+    }
+
+    function clearLotOnRow(row: MovementItemRow) {
+      row.contractorId = null
+      row.pricePerUnit = 0
+      row.vatPercent = 0
+      row._lotKey = ''
+      row._availableQty = 0
+    }
+
+    /** Max movable quantity for the lot currently selected on a row. */
+    function maxQtyForRow(row: MovementItemRow): number {
+      if (!row._lotKey) return 0
+      const lot = lotsForProductId(row.productId).find((l) => l.key === row._lotKey)
+      return lot?.available ?? 0
+    }
+
+    function onLotChange(index: number, key: string) {
+      const row = items.value[index]
+      if (!row) return
+      const lot = lotsForProductId(row.productId).find((l) => l.key === key)
+      if (!lot) {
+        clearLotOnRow(row)
+        return
+      }
+      applyLotToRow(row, lot)
+      if (Number(row.quantity) > lot.available) row.quantity = lot.available
     }
 
     function refreshRowAvailability(index: number) {
       const row = items.value[index]
       if (!row?.productId) return
-      const q = maxQtyForProductId(row.productId)
-      row._availableQty = q
-      const p = products.value.find((x: any) => x.id === row.productId)
-      row._product = p ? { ...p, availableQty: q } : undefined
+      row._product = products.value.find((x: any) => x.id === row.productId)
+      const lots = lotsForProductId(row.productId)
+      if (!row._lotKey) {
+        // Auto-select when only one lot exists; otherwise leave the choice to the user.
+        if (lots.length === 1 && lots[0]) applyLotToRow(row, lots[0])
+        return
+      }
+      const lot = lots.find((l) => l.key === row._lotKey)
+      if (lot) {
+        row.vatPercent = lot.vatPercent
+        row._availableQty = lot.available
+      } else {
+        clearLotOnRow(row)
+        if (lots.length === 1 && lots[0]) applyLotToRow(row, lots[0])
+      }
     }
 
     const typeOptions = [
@@ -104,8 +190,11 @@ export default defineComponent({
       if (form.type === 'WAREHOUSE_TO_OBJECT' && !form.objectId) return []
       return products.value
         .map((p: any) => {
-          const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-          return { ...p, availableQty: maxMovableQty(stock) }
+          // A product can have several lots on the same warehouse; the total movable is their sum.
+          const availableQty = (p.stock ?? [])
+            .filter((s: any) => s.warehouseId === form.fromWarehouseId)
+            .reduce((sum: number, s: any) => sum + maxMovableQty(s), 0)
+          return { ...p, availableQty }
         })
         .filter((p: any) => p.availableQty > 0)
     })
@@ -115,7 +204,7 @@ export default defineComponent({
     )
 
     function addItem() {
-      items.value.push({ productId: '', quantity: 1 })
+      items.value.push({ productId: '', contractorId: null, pricePerUnit: 0, vatPercent: 0, quantity: 1 })
     }
 
     function removeItem(index: number) {
@@ -123,7 +212,40 @@ export default defineComponent({
     }
 
     function onProductChange(index: number) {
+      const row = items.value[index]
+      if (!row) return
+      clearLotOnRow(row)
       refreshRowAvailability(index)
+    }
+
+    /**
+     * Builds a single pre-filled line for the "inject product + qty" flows (low-stock quick move,
+     * purchase request). Auto-selects the first (oldest) available lot; returns null if none exist.
+     */
+    function buildInjectedRow(productId: string, requestedQty?: number): MovementItemRow | null {
+      const p = products.value.find((x: any) => x.id === productId)
+      if (!p) return null
+      const lots = lotsForProductId(productId)
+      const firstLot = lots[0]
+      if (!firstLot) return null
+      const row: MovementItemRow = {
+        productId,
+        contractorId: null,
+        pricePerUnit: 0,
+        vatPercent: 0,
+        quantity: 1,
+        _product: p,
+        _lotKey: '',
+        _availableQty: 0,
+      }
+      applyLotToRow(row, firstLot)
+      const available = row._availableQty ?? 0
+      let qty = available
+      if (requestedQty !== undefined && Number.isFinite(requestedQty) && requestedQty > 0) {
+        qty = Math.min(requestedQty, available)
+      }
+      row.quantity = qty
+      return row
     }
 
     const productQueryApplied = ref(false)
@@ -186,38 +308,12 @@ export default defineComponent({
         const productId = Array.isArray(pq) ? pq[0] : pq
         if (typeof productId !== 'string' || !productId) return
         if (!form.fromWarehouseId) return
-        const rawList = (productsData.value as any)?.products
-        if (!rawList) return
-        const p = rawList.find((x: any) => x.id === productId)
-        if (!p) {
-          productQueryApplied.value = true
-          return
-        }
-        const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-        const availableQty = maxMovableQty(stock)
-        if (availableQty <= 0) {
-          productQueryApplied.value = true
-          return
-        }
+        if (!(productsData.value as any)?.products) return
         const qq = route.query.qty
         const qtyStr = Array.isArray(qq) ? qq[0] : qq
-        let qty: number
-        if (typeof qtyStr === 'string' && qtyStr !== '') {
-          const n = Number(qtyStr)
-          qty = Number.isFinite(n) && n > 0 ? n : availableQty
-        } else {
-          qty = availableQty
-        }
-        qty = Math.min(qty, availableQty)
-        const enriched = { ...p, availableQty }
-        items.value = [
-          {
-            productId,
-            quantity: qty,
-            _product: enriched,
-            _availableQty: availableQty,
-          },
-        ]
+        const requested = typeof qtyStr === 'string' && qtyStr !== '' ? Number(qtyStr) : undefined
+        const row = buildInjectedRow(productId, requested)
+        if (row) items.value = [row]
         productQueryApplied.value = true
       },
       { immediate: true },
@@ -239,32 +335,9 @@ export default defineComponent({
         const productId = props.initialProductId
         if (typeof productId !== 'string' || !productId) return
         if (!form.fromWarehouseId) return
-        const rawList = (productsData.value as any)?.products
-        if (!rawList) return
-        const p = rawList.find((x: any) => x.id === productId)
-        if (!p) {
-          initialLineApplied.value = true
-          return
-        }
-        const stock = (p.stock ?? []).find((s: any) => s.warehouseId === form.fromWarehouseId)
-        const availableQty = maxMovableQty(stock)
-        if (availableQty <= 0) {
-          initialLineApplied.value = true
-          return
-        }
-        let qty = availableQty
-        if (props.initialQty !== undefined && Number.isFinite(props.initialQty) && props.initialQty > 0) {
-          qty = Math.min(props.initialQty, availableQty)
-        }
-        const enriched = { ...p, availableQty }
-        items.value = [
-          {
-            productId,
-            quantity: qty,
-            _product: enriched,
-            _availableQty: availableQty,
-          },
-        ]
+        if (!(productsData.value as any)?.products) return
+        const row = buildInjectedRow(productId, props.initialQty)
+        if (row) items.value = [row]
         initialLineApplied.value = true
       },
       { immediate: true },
@@ -304,14 +377,18 @@ export default defineComponent({
           error.value = 'Оберіть товар у кожному рядку'
           return
         }
+        if (!row._lotKey) {
+          error.value = 'Оберіть партію (постачальник · ціна) у кожному рядку'
+          return
+        }
         const q = Number(row.quantity)
         if (!Number.isFinite(q) || q <= 0) {
           error.value = 'Перевірте кількість у рядках'
           return
         }
-        const max = maxQtyForProductId(row.productId)
+        const max = maxQtyForRow(row)
         if (q > max + 1e-9) {
-          error.value = `Кількість перевищує доступну для одного з товарів (макс. ${max})`
+          error.value = `Кількість перевищує доступну для однієї з партій (макс. ${max})`
           return
         }
       }
@@ -324,7 +401,13 @@ export default defineComponent({
             ...form,
             toWarehouseId: form.type === 'WAREHOUSE_TO_WAREHOUSE' ? form.toWarehouseId : null,
             objectId: form.type === 'WAREHOUSE_TO_OBJECT' ? form.objectId : null,
-            items: items.value.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+            items: items.value.map((i) => ({
+              productId: i.productId,
+              contractorId: i.contractorId,
+              pricePerUnit: i.pricePerUnit,
+              vatPercent: i.vatPercent,
+              quantity: i.quantity,
+            })),
           },
         })
         const movementId = (result as any).movement.id
@@ -475,8 +558,8 @@ export default defineComponent({
                   <v-alert type="warning" variant="tonal">На обраному складі немає товарів</v-alert>
                 )}
                 {items.value.map((item, index) => (
-                  <v-row key={index} align="center" class="mb-2">
-                    <v-col cols={12} md={6}>
+                  <v-row key={index} align="start" class="mb-2">
+                    <v-col cols={12} md={5}>
                       <v-autocomplete
                         modelValue={item.productId}
                         onUpdate:modelValue={(val: string) => {
@@ -492,6 +575,19 @@ export default defineComponent({
                       />
                     </v-col>
                     <v-col cols={12} md={4}>
+                      <v-select
+                        modelValue={item._lotKey ?? ''}
+                        onUpdate:modelValue={(val: string) => onLotChange(index, val)}
+                        label="Партія (постачальник · ціна) *"
+                        items={lotOptions(item.productId, item._product?.unit || '')}
+                        item-title="title"
+                        item-value="key"
+                        hide-details
+                        disabled={saving.value || !item.productId}
+                        no-data-text="Немає доступних партій"
+                      />
+                    </v-col>
+                    <v-col cols={8} md={2}>
                       <v-text-field
                         v-model={item.quantity}
                         label="Кількість *"
@@ -500,12 +596,12 @@ export default defineComponent({
                         step={0.001}
                         hide-details
                         suffix={item._product?.unit || ''}
-                        hint={item._availableQty !== undefined ? `Доступно: ${item._availableQty}` : ''}
+                        hint={item._lotKey ? `Доступно: ${item._availableQty ?? 0}` : ''}
                         persistent-hint
-                        disabled={saving.value}
+                        disabled={saving.value || !item._lotKey}
                       />
                     </v-col>
-                    <v-col cols={12} md={2}>
+                    <v-col cols={4} md={1}>
                       <v-btn
                         icon="mdi-delete"
                         variant="text"

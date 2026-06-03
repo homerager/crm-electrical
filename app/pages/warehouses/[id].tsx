@@ -56,6 +56,8 @@ export default defineComponent({
     const stockHeaders = [
       { title: 'Товар', key: 'product.name' },
       { title: 'Артикул', key: 'product.sku' },
+      { title: 'Постачальник', key: 'contractor', sortable: false, width: 160 },
+      { title: 'Ціна, ₴', key: 'pricePerUnit', align: 'end' as const, width: 120, sortable: false },
       { title: 'Кількість', key: 'quantity', align: 'end' as const },
       { title: 'Одиниця', key: 'product.unit', align: 'end' as const },
       { title: 'Мін. залишок', key: 'minStock', align: 'end' as const, width: 130 },
@@ -104,8 +106,12 @@ export default defineComponent({
       }
     }
 
+    function productTotal(item: any) {
+      return Number(item.productTotalQuantity ?? item.quantity ?? 0)
+    }
+
     function isBelowMin(item: any) {
-      return item.minStock != null && Number(item.quantity) < Number(item.minStock)
+      return item.minStock != null && productTotal(item) < Number(item.minStock)
     }
 
     const movHeaders = [
@@ -169,6 +175,8 @@ export default defineComponent({
                   : [
                       { title: 'Товар', key: 'product.name' },
                       { title: 'Артикул', key: 'product.sku' },
+                      { title: 'Постачальник', key: 'contractor.name' },
+                      { title: 'Ціна', key: 'pricePerUnit', format: (v) => Number(v ?? 0) },
                       { title: 'Кількість', key: 'quantity', format: (v) => Number(v ?? 0) },
                       { title: 'Одиниця', key: 'product.unit' },
                       { title: 'Мін. залишок', key: 'minStock', format: (v) => (v == null ? '' : Number(v)) },
@@ -232,6 +240,16 @@ export default defineComponent({
               no-data-text={stockSearch.value ? 'Нічого не знайдено' : 'Немає даних'}
             >
               {{
+                'item.contractor': ({ item }: any) => (
+                  item.contractor?.name
+                    ? <v-chip size="x-small" variant="tonal" color="secondary">{item.contractor.name}</v-chip>
+                    : <span class="text-medium-emphasis">—</span>
+                ),
+                'item.pricePerUnit': ({ item }: any) => (
+                  Number(item.pricePerUnit) > 0
+                    ? <span>{Number(item.pricePerUnit).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴</span>
+                    : <span class="text-medium-emphasis">—</span>
+                ),
                 'item.quantity': ({ item }: any) => (
                   <span class={isBelowMin(item) ? 'text-error font-weight-bold' : ''}>
                     {Number(item.quantity).toLocaleString('uk-UA')}
@@ -586,7 +604,7 @@ export default defineComponent({
               <div class="text-body-2 text-medium-emphasis mb-4">
                 Поточний залишок:{' '}
                 <span class="font-weight-medium">
-                  {Number(minStockTarget.value?.quantity ?? 0).toLocaleString('uk-UA')}{' '}
+                  {Number(minStockTarget.value?.productTotalQuantity ?? minStockTarget.value?.quantity ?? 0).toLocaleString('uk-UA')}{' '}
                   {minStockTarget.value?.product?.unit}
                 </span>
               </div>

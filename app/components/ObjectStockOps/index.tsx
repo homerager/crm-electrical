@@ -2,12 +2,17 @@ import type { PropType } from 'vue'
 
 export interface ObjectStockRow {
   productId: string
+  contractorId?: string | null
+  pricePerUnit?: unknown
+  vatPercent?: unknown
   quantity: unknown
   product: { name: string; sku?: string | null; unit: string }
+  contractor?: { id: string; name: string } | null
 }
 
 interface LineRow {
-  productId: string
+  /** Selected object lot key: `${productId}|${contractorId}|${price}`. */
+  lotKey: string
   quantity: number
 }
 
@@ -40,29 +45,46 @@ export default defineComponent({
     const wItems = ref<LineRow[]>([])
     const rItems = ref<LineRow[]>([])
 
-    const productOptions = computed(() =>
-      props.stockRows.map((r) => ({
-        id: r.productId,
-        title: `${r.product.name}${r.product.sku ? ` · ${r.product.sku}` : ''}`,
-        maxQty: Number(r.quantity),
-        unit: r.product.unit,
-      })),
+    // Each option is a specific object lot (product + supplier + price), so write-offs and
+    // returns operate on the exact cost lot the user picks.
+    const lotOptions = computed(() =>
+      props.stockRows
+        .filter((r) => Number(r.quantity) > 0)
+        .map((r) => {
+          const contractorId = r.contractorId ?? null
+          const pricePerUnit = Number(r.pricePerUnit ?? 0)
+          const supplier = r.contractor?.name || 'Без постачальника'
+          return {
+            key: `${r.productId}|${contractorId ?? ''}|${pricePerUnit.toFixed(2)}`,
+            productId: r.productId,
+            contractorId,
+            pricePerUnit,
+            vatPercent: Number(r.vatPercent ?? 0),
+            unit: r.product.unit,
+            maxQty: Number(r.quantity),
+            title: `${r.product.name}${r.product.sku ? ` · ${r.product.sku}` : ''} · ${supplier} · ₴${pricePerUnit.toFixed(2)} (${Number(r.quantity).toLocaleString('uk-UA')} ${r.product.unit})`,
+          }
+        }),
     )
 
-    function maxQtyFor(productId: string) {
-      return productOptions.value.find((p) => p.id === productId)?.maxQty ?? 0
+    function lotByKey(key: string) {
+      return lotOptions.value.find((l) => l.key === key)
     }
 
-    function unitFor(productId: string) {
-      return productOptions.value.find((p) => p.id === productId)?.unit ?? ''
+    function maxQtyFor(key: string) {
+      return lotByKey(key)?.maxQty ?? 0
+    }
+
+    function unitFor(key: string) {
+      return lotByKey(key)?.unit ?? ''
     }
 
     function openWriteOff() {
       errW.value = ''
       wForm.date = new Date().toISOString().split('T')[0]
       wForm.notes = ''
-      const first = props.stockRows[0]
-      wItems.value = first ? [{ productId: first.productId, quantity: 1 }] : [{ productId: '', quantity: 1 }]
+      const first = lotOptions.value[0]
+      wItems.value = [{ lotKey: first?.key ?? '', quantity: 1 }]
       writeOffOpen.value = true
     }
 
@@ -71,17 +93,17 @@ export default defineComponent({
       rForm.date = new Date().toISOString().split('T')[0]
       rForm.notes = ''
       rForm.toWarehouseId = warehouses.value[0]?.id ?? ''
-      const first = props.stockRows[0]
-      rItems.value = first ? [{ productId: first.productId, quantity: 1 }] : [{ productId: '', quantity: 1 }]
+      const first = lotOptions.value[0]
+      rItems.value = [{ lotKey: first?.key ?? '', quantity: 1 }]
       returnOpen.value = true
     }
 
     function addWLine() {
-      wItems.value.push({ productId: '', quantity: 1 })
+      wItems.value.push({ lotKey: '', quantity: 1 })
     }
 
     function addRLine() {
-      rItems.value.push({ productId: '', quantity: 1 })
+      rItems.value.push({ lotKey: '', quantity: 1 })
     }
 
     function removeW(i: number) {
@@ -94,24 +116,33 @@ export default defineComponent({
 
     async function submitWriteOff() {
       errW.value = ''
-      const items = wItems.value
-        .filter((l) => l.productId)
-        .map((l) => ({ productId: l.productId, quantity: Number(l.quantity) }))
-      if (items.length === 0) {
-        errW.value = 'Додайте хоча б один товар'
+      const lines = wItems.value.filter((l) => l.lotKey)
+      if (lines.length === 0) {
+        errW.value = 'Оберіть партію хоча б в одному рядку'
         return
       }
-      for (const l of items) {
-        if (!Number.isFinite(l.quantity) || l.quantity <= 0) {
+      for (const l of lines) {
+        const q = Number(l.quantity)
+        if (!Number.isFinite(q) || q <= 0) {
           errW.value = 'Перевірте кількість у рядках'
           return
         }
-        const max = maxQtyFor(l.productId)
-        if (l.quantity > max + 1e-9) {
-          errW.value = `Кількість перевищує залишок на обʼєкті для одного з товарів (макс. ${max})`
+        const max = maxQtyFor(l.lotKey)
+        if (q > max + 1e-9) {
+          errW.value = `Кількість перевищує залишок на обʼєкті для однієї з партій (макс. ${max})`
           return
         }
       }
+      const items = lines.map((l) => {
+        const lot = lotByKey(l.lotKey)!
+        return {
+          productId: lot.productId,
+          contractorId: lot.contractorId,
+          pricePerUnit: lot.pricePerUnit,
+          vatPercent: lot.vatPercent,
+          quantity: Number(l.quantity),
+        }
+      })
       savingW.value = true
       try {
         await $fetch('/api/movements', {
@@ -141,24 +172,33 @@ export default defineComponent({
         errR.value = 'Оберіть склад'
         return
       }
-      const items = rItems.value
-        .filter((l) => l.productId)
-        .map((l) => ({ productId: l.productId, quantity: Number(l.quantity) }))
-      if (items.length === 0) {
-        errR.value = 'Додайте хоча б один товар'
+      const lines = rItems.value.filter((l) => l.lotKey)
+      if (lines.length === 0) {
+        errR.value = 'Оберіть партію хоча б в одному рядку'
         return
       }
-      for (const l of items) {
-        if (!Number.isFinite(l.quantity) || l.quantity <= 0) {
+      for (const l of lines) {
+        const q = Number(l.quantity)
+        if (!Number.isFinite(q) || q <= 0) {
           errR.value = 'Перевірте кількість у рядках'
           return
         }
-        const max = maxQtyFor(l.productId)
-        if (l.quantity > max + 1e-9) {
+        const max = maxQtyFor(l.lotKey)
+        if (q > max + 1e-9) {
           errR.value = `Кількість перевищує залишок на обʼєкті (макс. ${max})`
           return
         }
       }
+      const items = lines.map((l) => {
+        const lot = lotByKey(l.lotKey)!
+        return {
+          productId: lot.productId,
+          contractorId: lot.contractorId,
+          pricePerUnit: lot.pricePerUnit,
+          vatPercent: lot.vatPercent,
+          quantity: Number(l.quantity),
+        }
+      })
       savingR.value = true
       try {
         await $fetch('/api/movements', {
@@ -225,11 +265,11 @@ export default defineComponent({
                   <v-row align="center">
                     <v-col cols={12} md={6}>
                       <v-select
-                        v-model={line.productId}
-                        label="Товар *"
-                        items={productOptions.value}
+                        v-model={line.lotKey}
+                        label="Партія (товар · постачальник · ціна) *"
+                        items={lotOptions.value}
                         item-title="title"
-                        item-value="id"
+                        item-value="key"
                         hide-details
                         disabled={savingW.value}
                       />
@@ -241,9 +281,9 @@ export default defineComponent({
                         type="number"
                         min={0.001}
                         step={0.001}
-                        suffix={line.productId ? unitFor(line.productId) : ''}
+                        suffix={line.lotKey ? unitFor(line.lotKey) : ''}
                         hide-details
-                        disabled={savingW.value}
+                        disabled={savingW.value || !line.lotKey}
                       />
                     </v-col>
                     <v-col cols="auto" class="d-flex align-center justify-md-center pt-3 pt-md-0">
@@ -256,9 +296,9 @@ export default defineComponent({
                       />
                     </v-col>
                   </v-row>
-                  {line.productId ? (
+                  {line.lotKey ? (
                     <div class="text-caption text-medium-emphasis mt-n2 ms-md-1">
-                      На обʼєкті: {maxQtyFor(line.productId)} {unitFor(line.productId)}
+                      На обʼєкті: {maxQtyFor(line.lotKey)} {unitFor(line.lotKey)}
                     </div>
                   ) : null}
                 </div>
@@ -312,11 +352,11 @@ export default defineComponent({
                   <v-row align="center">
                     <v-col cols={12} md={6}>
                       <v-select
-                        v-model={line.productId}
-                        label="Товар *"
-                        items={productOptions.value}
+                        v-model={line.lotKey}
+                        label="Партія (товар · постачальник · ціна) *"
+                        items={lotOptions.value}
                         item-title="title"
-                        item-value="id"
+                        item-value="key"
                         hide-details
                         disabled={savingR.value}
                       />
@@ -328,9 +368,9 @@ export default defineComponent({
                         type="number"
                         min={0.001}
                         step={0.001}
-                        suffix={line.productId ? unitFor(line.productId) : ''}
+                        suffix={line.lotKey ? unitFor(line.lotKey) : ''}
                         hide-details
-                        disabled={savingR.value}
+                        disabled={savingR.value || !line.lotKey}
                       />
                     </v-col>
                     <v-col cols="auto" class="d-flex align-center justify-md-center pt-3 pt-md-0">
@@ -343,9 +383,9 @@ export default defineComponent({
                       />
                     </v-col>
                   </v-row>
-                  {line.productId ? (
+                  {line.lotKey ? (
                     <div class="text-caption text-medium-emphasis mt-n2 ms-md-1">
-                      На обʼєкті: {maxQtyFor(line.productId)} {unitFor(line.productId)}
+                      На обʼєкті: {maxQtyFor(line.lotKey)} {unitFor(line.lotKey)}
                     </div>
                   ) : null}
                 </div>

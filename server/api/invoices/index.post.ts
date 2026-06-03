@@ -2,6 +2,12 @@
 import type { InvoiceType } from '@prisma/client'
 import { checkLowStockAfterChange } from '../../utils/lowStockAlert'
 import { syncSupplierPricesFromInvoice } from '../../utils/supplierPrices'
+import {
+  addWarehouseLotQty,
+  addObjectLotQty,
+  consumeWarehouseFifo,
+  consumeObjectFifo,
+} from '../../utils/stockLots'
 
 interface InvoiceItemInput {
   productId: string
@@ -52,54 +58,41 @@ export default defineEventHandler(async (event) => {
       include: { items: true },
     })
 
+    const lotContractorId = contractorId || null
+
     for (const item of items as InvoiceItemInput[]) {
-      const delta = type === 'INCOMING' ? item.quantity : -item.quantity
-
-      if (warehouseId) {
-        const existing = await tx.warehouseStock.findUnique({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId } },
-        })
-
-        if (existing) {
-          const newQty = Number(existing.quantity) + delta
-          if (newQty < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
-          }
-          await tx.warehouseStock.update({
-            where: { productId_warehouseId: { productId: item.productId, warehouseId } },
-            data: { quantity: newQty },
-          })
-        } else {
-          if (delta < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на складі' })
-          }
-          await tx.warehouseStock.create({
-            data: { productId: item.productId, warehouseId, quantity: delta },
-          })
+      if (type === 'INCOMING') {
+        // Intake merges into the lot keyed by (location, product, supplier, unit price);
+        // vatPercent is stored as a lot attribute (set on first creation of the lot).
+        if (warehouseId) {
+          await addWarehouseLotQty(
+            tx,
+            warehouseId,
+            item.productId,
+            lotContractorId,
+            item.pricePerUnit || 0,
+            item.vatPercent ?? 0,
+            item.quantity,
+          )
+          await checkLowStockAfterChange(tx, warehouseId, item.productId)
+        } else if (objectId) {
+          await addObjectLotQty(
+            tx,
+            objectId,
+            item.productId,
+            lotContractorId,
+            item.pricePerUnit || 0,
+            item.vatPercent ?? 0,
+            item.quantity,
+          )
         }
-
-        await checkLowStockAfterChange(tx, warehouseId, item.productId)
-      } else if (objectId) {
-        const existing = await tx.objectStock.findUnique({
-          where: { objectId_productId: { objectId, productId: item.productId } },
-        })
-
-        if (existing) {
-          const newQty = Number(existing.quantity) + delta
-          if (newQty < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на обʼєкті' })
-          }
-          await tx.objectStock.update({
-            where: { objectId_productId: { objectId, productId: item.productId } },
-            data: { quantity: newQty },
-          })
-        } else {
-          if (delta < 0) {
-            throw createError({ statusCode: 400, statusMessage: 'Недостатньо товару на обʼєкті' })
-          }
-          await tx.objectStock.create({
-            data: { objectId, productId: item.productId, quantity: delta },
-          })
+      } else {
+        // OUTGOING: a sale price can't identify a cost lot, so consume oldest lots first (FIFO).
+        if (warehouseId) {
+          await consumeWarehouseFifo(tx, warehouseId, item.productId, item.quantity)
+          await checkLowStockAfterChange(tx, warehouseId, item.productId)
+        } else if (objectId) {
+          await consumeObjectFifo(tx, objectId, item.productId, item.quantity)
         }
       }
     }
