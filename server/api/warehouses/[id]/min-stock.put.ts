@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../../utils/authz'
+import { requirePermission } from '../../../utils/authz'
 import { checkLowStockAfterChange } from '../../../utils/lowStockAlert'
 import { sumWarehouseQty } from '../../../utils/stockLots'
 
@@ -11,9 +11,7 @@ import { sumWarehouseQty } from '../../../utils/stockLots'
  */
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!isElevatedRole(auth?.role) && auth?.role !== 'STOREKEEPER') {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'warehouses.manage')
 
   const warehouseId = getRouterParam(event, 'id')!
   const body = await readBody(event)

@@ -1,10 +1,8 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!isElevatedRole(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'warehouses.manage')
 
   const body = await readBody(event)
   const { name, address, description } = body

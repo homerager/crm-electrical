@@ -1,10 +1,7 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
-  const auth = event.context.auth
-  if (!isElevatedRole(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'products.edit')
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)

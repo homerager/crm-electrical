@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 type ImportRow = {
   contractor?: string
@@ -16,9 +16,7 @@ type RowError = { row: number; message: string }
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!isElevatedRole(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'supplierPrices.import')
 
   const body = await readBody<{ items?: ImportRow[]; contractorId?: string }>(event)
   const items = Array.isArray(body?.items) ? body!.items : []
