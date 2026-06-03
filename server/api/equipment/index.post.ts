@@ -1,12 +1,10 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 import { emptyToNull } from '../../utils/strings'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isElevatedRole(auth.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'equipment.create')
 
   const body = await readBody(event)
   const { name, model, serialNumber, barcode, status, currentWarehouseId, currentObjectId, responsibleUserId } = body
