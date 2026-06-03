@@ -27,7 +27,7 @@ function priorityMeta(val: string) {
 export default defineComponent({
   name: 'TaskDetailPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'tasks.view' })
 
     const route = useRoute()
     const { user, isPrivileged, isEmployee } = useAuth()

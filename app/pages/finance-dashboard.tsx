@@ -3,7 +3,7 @@ import { useTheme } from 'vuetify'
 export default defineComponent({
   name: 'FinanceDashboardPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'admin-only'] })
+    definePageMeta({ middleware: ['auth'] })
 
     useHead({ title: 'Фінансовий дашборд' })
 

@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'InventorySessionPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'equipment.view' })
 
     const route = useRoute()
     const router = useRouter()

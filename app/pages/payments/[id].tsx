@@ -19,7 +19,7 @@ const METHODS: Record<string, string> = {
 export default defineComponent({
   name: 'PaymentDetailPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'finance'] })
+    definePageMeta({ middleware: ['auth'], permission: 'payments.view' })
 
     const route = useRoute()
     const id = route.params.id as string

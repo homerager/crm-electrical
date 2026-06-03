@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'SalaryReportPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'admin-only'] })
+    definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Зарплатний звіт' })
 
     // Default: current month

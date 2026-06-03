@@ -18,7 +18,7 @@ function roundHours(value: number) {
 export default defineComponent({
   name: 'WorkJournalPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'admin'] })
+    definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Журнал робіт' })
 
     const toast = useToast()

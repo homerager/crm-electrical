@@ -1,11 +1,9 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 import { emptyToNull } from '../../utils/strings'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!isElevatedRole(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'clients.create')
 
   const body = await readBody(event)
   const { name, contactPerson, phone, email, address, notes, taxCode, iban, bankName, bankMfo } = body

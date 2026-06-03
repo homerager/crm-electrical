@@ -21,7 +21,7 @@ const STAGES = ['BEFORE', 'IN_PROGRESS', 'AFTER'] as const
 export default defineComponent({
   name: 'PhotoReportDetailPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'photoReports.view' })
 
     const route = useRoute()
     const reportId = route.params.id as string

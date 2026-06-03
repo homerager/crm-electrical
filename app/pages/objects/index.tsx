@@ -251,35 +251,40 @@ export default defineComponent({
           </v-data-table>
         </v-card>
 
-        <v-dialog v-model={dialog.value} max-width={500}>
+        <v-dialog v-model={dialog.value} max-width={920}>
           <v-card>
             <v-card-title>{editItem.value ? 'Редагувати обʼєкт' : 'Новий обʼєкт'}</v-card-title>
             <v-card-text>
               {error.value && <v-alert type="error" variant="tonal" class="mb-3">{error.value}</v-alert>}
-              <v-text-field v-model={form.name} label="Назва *" class="mb-3" />
-              <v-text-field v-model={form.address} label="Адреса" class="mb-3" />
-              <v-text-field
-                v-model={form.budget}
-                label="Бюджет, ₴"
-                type="number"
-                min="0"
-                step="0.01"
-                class="mb-3"
-                hint="Загальний бюджет обʼєкта (необовʼязково)"
-                persistent-hint
-              />
-              <v-text-field
-                v-model={form.markupPercent}
-                label="Націнка, %"
-                type="number"
-                min="0"
-                max="999"
-                step="0.01"
-                class="mb-3"
-                prepend-inner-icon="mdi-percent"
-                hint="Відсоток націнки для кошторису та акту (необовʼязково)"
-                persistent-hint
-              />
+              <div class="d-flex d-flex-wrap lg-d-flex-nowrap gap-4">
+                <v-text-field v-model={form.name} label="Назва *" class="lg-w-1-2 w-full mb-3" />    
+                <v-text-field v-model={form.address} label="Адреса" class="lg-w-1-2 w-full mb-3" />
+              </div> 
+              <div class="d-flex d-flex-wrap lg-d-flex-nowrap gap-4">
+                <v-text-field
+                  v-model={form.budget}
+                  label="Бюджет, ₴"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="lg-w-1-2 w-full mb-3"
+                  hint="Загальний бюджет обʼєкта (необовʼязково)"
+                  persistent-hint
+                />
+                <v-text-field
+                  v-model={form.markupPercent}
+                  label="Націнка, %"
+                  type="number"
+                  min="0"
+                  max="999"
+                  step="0.01"
+                  class="lg-w-1-2 w-full mb-3"
+                  prepend-inner-icon="mdi-percent"
+                  hint="Відсоток націнки для кошторису та акту (необовʼязково)"
+                  persistent-hint
+                />
+              </div>
+              
               <v-text-field
                 v-model={form.clientVatPercent}
                 label="ПДВ для клієнта, %"

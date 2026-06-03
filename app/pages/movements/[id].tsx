@@ -36,7 +36,7 @@ function movementDetailMeta(type: string) {
 export default defineComponent({
   name: 'MovementDetailPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'warehouses.view' })
 
     const route = useRoute()
     const id = route.params.id as string

@@ -5,6 +5,7 @@ import {
   effectivePermissions,
   type Role,
 } from '~~/shared/permissions'
+import TableExportBtn from '~/components/TableExportBtn'
 
 export default defineComponent({
   name: 'UsersPage',
@@ -18,10 +19,6 @@ export default defineComponent({
 
     /** Доступ до сторінки. Керування (створення/редагування) — окремий дозвіл. */
     const canManage = computed(() => can('users.manage'))
-
-    if (!can('users.view')) {
-      router.push('/')
-    }
 
     const { data, refresh, pending } = useFetch('/api/users')
     const users = computed(() => (data.value as any)?.users ?? [])

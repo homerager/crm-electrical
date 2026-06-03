@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'AuditLogPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'admin'] })
+    definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Журнал змін' })
 
     const page = ref(1)

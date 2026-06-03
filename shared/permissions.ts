@@ -19,8 +19,8 @@ export const ACTION_LABELS: Record<string, string> = {
   delete: 'Видалення',
   manage: 'Керування',
   import: 'Імпорт',
-  dashboard: 'Фін. дашборд',
-  salary: 'Зарплатний звіт',
+  dashboard: 'Дашборд',
+  salary: 'Зарплата',
 }
 
 export interface PermissionModule {
@@ -152,9 +152,15 @@ export function effectivePermissions(
   const set = new Set(defaultPermissionsForRole(role))
   if (overrides) {
     for (const [perm, allowed] of Object.entries(overrides)) {
-      if (!ALL.has(perm)) continue // ігноруємо застарілі/невідомі ключі
-      if (allowed) set.add(perm)
-      else set.delete(perm)
+      if (!ALL.has(perm)) {
+        continue // ігноруємо застарілі/невідомі ключі
+      }
+
+      if (allowed) {
+        set.add(perm)
+      } else {
+        set.delete(perm)
+      }
     }
   }
   return set
@@ -178,4 +184,58 @@ export function sanitizeOverrides(input: unknown): PermissionOverrides {
     }
   }
   return out
+}
+
+/**
+ * Карта «префікс маршруту → потрібний дозвіл» для захисту сторінок.
+ * Збіг — за найбільш специфічним (найдовшим) префіксом, тому порядок тут не важливий.
+ * Маршрути без запису (напр. '/', '/login', '/profile') доступні будь-якому авторизованому.
+ */
+export const ROUTE_PERMISSIONS: Record<string, string> = {
+  '/clients': 'clients.view',
+  '/proposals': 'proposals.view',
+  '/warehouses': 'warehouses.view',
+  '/products': 'products.view',
+  '/product-groups': 'products.view',
+  '/movements': 'warehouses.view',
+  '/inventory': 'inventory.view',
+  '/equipment': 'equipment.view',
+  '/projects': 'projects.view',
+  '/objects': 'objects.view',
+  '/documents': 'documents.view',
+  '/tasks': 'tasks.view',
+  '/tasks/salary': 'reports.salary',
+  '/schedule': 'schedules.view',
+  '/time-logs/manual': 'schedules.manage',
+  '/finance-dashboard': 'payments.dashboard',
+  '/payments': 'payments.view',
+  '/payments/schedule': 'paymentSchedules.view',
+  '/contractors': 'contractors.view',
+  '/invoices': 'invoices.view',
+  '/supplier-prices': 'supplierPrices.view',
+  '/purchase-requests': 'purchaseRequests.view',
+  '/reports': 'reports.view',
+  '/photo-reports': 'photoReports.view',
+  '/settings': 'settings.manage',
+  '/users': 'users.view',
+  '/job-titles': 'settings.manage',
+  '/audit-log': 'auditLog.view',
+}
+
+// Префікси, відсортовані від найдовшого до найкоротшого (один раз при завантаженні модуля).
+const ROUTE_PREFIXES = Object.keys(ROUTE_PERMISSIONS).sort((a, b) => b.length - a.length)
+
+/**
+ * Повертає дозвіл, потрібний для маршруту, або null якщо сторінка відкрита всім авторизованим.
+ * Зіставляє за найбільш специфічним префіксом, тож /payments/schedule → paymentSchedules.view,
+ * а /payments/123 → payments.view.
+ */
+export function requiredPermissionForPath(path: string): string | null {
+  const clean = path.split('?')[0]!.replace(/\/+$/, '') || '/'
+  for (const prefix of ROUTE_PREFIXES) {
+    if (clean === prefix || clean.startsWith(prefix + '/')) {
+      return ROUTE_PERMISSIONS[prefix]!
+    }
+  }
+  return null
 }

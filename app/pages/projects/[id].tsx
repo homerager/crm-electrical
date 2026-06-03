@@ -21,7 +21,7 @@ function priorityMeta(val: string) { return PRIORITIES.find((p) => p.value === v
 export default defineComponent({
   name: 'ProjectDetailPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'projects.view' })
 
     const route = useRoute()
     const router = useRouter()

@@ -5,7 +5,7 @@ import AuditLogPanel from '../../../components/AuditLogPanel'
 export default defineComponent({
   name: 'ObjectReportPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'reports.view' })
 
     const route = useRoute()
     const id = route.params.id as string

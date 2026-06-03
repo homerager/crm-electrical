@@ -25,7 +25,7 @@ const STATUS_OPTIONS = [
 export default defineComponent({
   name: 'EquipmentCardPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'equipment.view' })
 
     const route = useRoute()
     const id = computed(() => route.params.id as string)

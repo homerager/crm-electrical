@@ -1,10 +1,12 @@
+import TableExportBtn from "~/components/TableExportBtn"
+
 export default defineComponent({
   name: 'PhotoReportsPage',
+
   setup() {
     definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Фото-звіти' })
 
-    const { isPrivileged } = useAuth()
     const toast = useToast()
     const { isOnline } = useNetworkStatus()
     const { enqueue } = useOfflineQueue()
@@ -25,7 +27,9 @@ export default defineComponent({
     const form = reactive({ title: '', description: '', objectId: '' })
 
     const filteredReports = computed(() => {
-      if (!filterObjectId.value) return reports.value
+      if (!filterObjectId.value) {
+        return reports.value
+      }
       return reports.value.filter((r: any) => r.objectId === filterObjectId.value)
     })
 

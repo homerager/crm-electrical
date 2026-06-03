@@ -2,6 +2,42 @@
   --v-list-prepend-gap: 15px;
 }
 
+
+
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.d-flex-wrap {
+  flex-wrap: wrap;
+}
+
+.w-full {
+  width: 100%;
+}
+
+@media (min-width: 991px) {
+  .lg-d-flex-nowrap {
+    flex-wrap: nowrap!important;
+  }
+
+  .lg-w-1-2 {
+    width: 50%;
+  }
+}
+
 /*
  * Safe area insets for iPhone notch / Dynamic Island / home indicator.
  * Applied unconditionally — in normal browser these resolve to 0.
@@ -106,22 +142,6 @@
   .task-detail-sidebar {
     width: 280px;
   }
-}
-
-.gap-1 {
-  gap: 4px;
-}
-
-.gap-2 {
-  gap: 8px;
-}
-
-.gap-3 {
-  gap: 12px;
-}
-
-.gap-4 {
-  gap: 16px;
 }
 
 /* Remove extra indentation from v-list-group children in the nav drawer */

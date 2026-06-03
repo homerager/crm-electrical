@@ -32,7 +32,7 @@ function shiftDate(iso: string, days: number) {
 export default defineComponent({
   name: 'WorkJournalDayPage',
   setup() {
-    definePageMeta({ middleware: ['auth', 'admin'] })
+    definePageMeta({ middleware: ['auth'] })
     useHead({ title: 'Роботи за день' })
 
     const route = useRoute()

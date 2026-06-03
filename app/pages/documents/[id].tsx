@@ -22,7 +22,7 @@ const UNIT_OPTIONS = ['шт', 'м', 'м²', 'м³', 'кг', 'т', 'л', 'уп', 
 export default defineComponent({
   name: 'DocumentEditPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'documents.view' })
 
     const route = useRoute()
     const docId = computed(() => route.params.id as string)

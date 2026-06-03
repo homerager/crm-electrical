@@ -1,7 +1,7 @@
 export default defineComponent({
   name: 'MaterialInventorySessionPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'inventory.view' })
 
     const route = useRoute()
     const id = computed(() => route.params.id as string)

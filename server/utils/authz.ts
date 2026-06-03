@@ -22,16 +22,22 @@ export function isStrictAdmin(role: string | undefined): boolean {
  */
 export async function getEffectivePermissions(event: H3Event): Promise<Set<string>> {
   const cached = event.context.permissions as Set<string> | undefined
-  if (cached) return cached
+  if (cached) {
+    return cached
+  }
 
   const auth = event.context.auth
-  if (!auth) return new Set()
+  if (!auth) {
+    return new Set()
+  }
 
   const dbUser = await prisma.user.findUnique({
     where: { id: auth.userId },
     select: { role: true, permissionOverrides: true },
   })
-  if (!dbUser) return new Set()
+  if (!dbUser) {
+    return new Set()
+  }
 
   const set = effectivePermissions(
     dbUser.role as Role,
@@ -50,7 +56,7 @@ export async function can(event: H3Event, permission: string): Promise<boolean> 
 /** Кидає 403, якщо у користувача немає дозволу. Зручно ставити на початку handler-а. */
 export async function requirePermission(event: H3Event, permission: string): Promise<void> {
   if (!(await can(event, permission))) {
-    throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 }
 

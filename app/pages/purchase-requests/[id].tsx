@@ -23,7 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default defineComponent({
   name: 'PurchaseRequestDetailPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'purchaseRequests.view' })
 
     const route = useRoute()
     const toast = useToast()

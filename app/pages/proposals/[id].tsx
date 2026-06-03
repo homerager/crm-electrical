@@ -12,7 +12,7 @@ interface FormItem {
 export default defineComponent({
   name: 'ProposalEditPage',
   setup() {
-    definePageMeta({ middleware: ['auth'] })
+    definePageMeta({ middleware: ['auth'], permission: 'proposals.view' })
 
     const route = useRoute()
     const toast = useToast()
