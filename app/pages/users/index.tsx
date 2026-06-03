@@ -1,3 +1,11 @@
+import {
+  PERMISSION_MODULES,
+  ACTION_LABELS,
+  defaultPermissionsForRole,
+  effectivePermissions,
+  type Role,
+} from '~~/shared/permissions'
+
 export default defineComponent({
   name: 'UsersPage',
   setup() {
@@ -111,6 +119,31 @@ export default defineComponent({
       hourlyRate: '',
     })
 
+    // ── Матриця дозволів (індивідуальні overrides поверх дефолтів ролі) ──
+    const editOverrides = reactive<Record<string, boolean>>({})
+    const roleDefaultSet = computed(() => new Set(defaultPermissionsForRole(editForm.role as Role)))
+    const effectiveSet = computed(() => effectivePermissions(editForm.role as Role, editOverrides))
+    const isAdminRole = computed(() => editForm.role === 'ADMIN')
+    const overrideCount = computed(() => Object.keys(editOverrides).length)
+
+    function isGranted(perm: string) {
+      return isAdminRole.value || effectiveSet.value.has(perm)
+    }
+    function isOverridden(perm: string) {
+      return perm in editOverrides
+    }
+    function togglePerm(perm: string, value: boolean) {
+      const isDefault = roleDefaultSet.value.has(perm)
+      if (value === isDefault) delete editOverrides[perm]
+      else editOverrides[perm] = value
+    }
+    function resetPermsToRole() {
+      for (const k of Object.keys(editOverrides)) delete editOverrides[k]
+    }
+    function grantedInModule(moduleKey: string, actions: string[]) {
+      return actions.filter((a) => isGranted(`${moduleKey}.${a}`)).length
+    }
+
     const webhookLoading = ref(false)
     const webhookStatus = ref<{ ok: boolean; msg: string } | null>(null)
 
@@ -147,6 +180,8 @@ export default defineComponent({
         jobTitleId: item.jobTitleId ?? null,
         hourlyRate: item.hourlyRate != null && item.hourlyRate !== '' ? String(item.hourlyRate) : '',
       })
+      resetPermsToRole()
+      Object.assign(editOverrides, (item.permissionOverrides ?? {}) as Record<string, boolean>)
       error.value = ''
       editDialog.value = true
     }
@@ -203,6 +238,7 @@ export default defineComponent({
             phone: editForm.phone,
             jobTitleId: editForm.jobTitleId || null,
             hourlyRate: editForm.hourlyRate.trim() === '' ? null : editForm.hourlyRate.trim(),
+            permissionOverrides: { ...editOverrides },
           },
         })
         editDialog.value = false
@@ -546,7 +582,7 @@ export default defineComponent({
         </v-dialog>
 
         {/* Edit dialog */}
-        <v-dialog v-model={editDialog.value} max-width={520}>
+        <v-dialog v-model={editDialog.value} max-width={720}>
           <v-card>
             <v-card-title class="pa-4">Редагувати користувача</v-card-title>
             <v-card-text class="pa-4 pt-0">
@@ -620,6 +656,96 @@ export default defineComponent({
                   prepend-icon={editForm.lowStockNotifications ? 'mdi-bell-alert-outline' : 'mdi-bell-off-outline'}
                 />
               </div>
+
+              <v-divider class="my-4" />
+
+              {/* ── Права доступу ───────────────────────────────── */}
+              <div class="d-flex align-center mb-2" style="gap:8px">
+                <v-icon color="primary">mdi-shield-key-outline</v-icon>
+                <span class="text-subtitle-2 font-weight-bold">Права доступу</span>
+                {overrideCount.value > 0 && (
+                  <v-chip size="x-small" color="warning" variant="tonal">
+                    Індивідуальних: {overrideCount.value}
+                  </v-chip>
+                )}
+                <v-spacer />
+                <v-btn
+                  variant="text"
+                  size="small"
+                  color="primary"
+                  prepend-icon="mdi-restore"
+                  disabled={isAdminRole.value || overrideCount.value === 0}
+                  onClick={resetPermsToRole}
+                >
+                  За роллю
+                </v-btn>
+              </div>
+
+              {isAdminRole.value
+                ? (
+                  <v-alert type="info" variant="tonal" density="compact" class="mb-2">
+                    Адміністратор має повний доступ до всіх розділів. Права не налаштовуються.
+                  </v-alert>
+                )
+                : (
+                  <>
+                    <div class="text-caption text-medium-emphasis mb-2">
+                      Галочки за замовчуванням визначає роль. Зміна окремої галочки створює
+                      <span class="text-warning font-weight-medium"> індивідуальне</span> право для цього користувача.
+                    </div>
+                    <v-expansion-panels variant="accordion" multiple class="mb-2">
+                      {PERMISSION_MODULES.map((mod) => {
+                        const granted = grantedInModule(mod.key, mod.actions)
+                        return (
+                          <v-expansion-panel key={mod.key}>
+                            {{
+                              title: () => (
+                                <div class="d-flex align-center" style="gap:8px; width:100%">
+                                  <span class="font-weight-medium">{mod.label}</span>
+                                  <v-spacer />
+                                  <v-chip
+                                    size="x-small"
+                                    variant="tonal"
+                                    color={granted === 0 ? 'default' : granted === mod.actions.length ? 'success' : 'primary'}
+                                  >
+                                    {granted}/{mod.actions.length}
+                                  </v-chip>
+                                </div>
+                              ),
+                              text: () => (
+                                <div class="d-flex flex-wrap" style="gap:4px 20px">
+                                  {mod.actions.map((action) => {
+                                    const perm = `${mod.key}.${action}`
+                                    return (
+                                      <v-checkbox
+                                        key={perm}
+                                        modelValue={isGranted(perm)}
+                                        onUpdate:modelValue={(v: boolean | null) => togglePerm(perm, !!v)}
+                                        density="compact"
+                                        hide-details
+                                        color="primary"
+                                        class={isOverridden(perm) ? 'perm-override' : ''}
+                                      >
+                                        {{
+                                          label: () => (
+                                            <span class={isOverridden(perm) ? 'text-warning font-weight-medium' : ''}>
+                                              {ACTION_LABELS[action] ?? action}
+                                              {isOverridden(perm) && ' •'}
+                                            </span>
+                                          ),
+                                        }}
+                                      </v-checkbox>
+                                    )
+                                  })}
+                                </div>
+                              ),
+                            }}
+                          </v-expansion-panel>
+                        )
+                      })}
+                    </v-expansion-panels>
+                  </>
+                )}
 
               <v-divider class="my-4" />
               <v-btn

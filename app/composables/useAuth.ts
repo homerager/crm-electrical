@@ -6,6 +6,8 @@ export interface AuthUser {
   isActive: boolean
   emailNotifications: boolean
   jobTitle?: { id: string; name: string } | null
+  /** Ефективні дозволи (дефолти ролі + індивідуальні overrides), напр. ['payments.view', ...] */
+  permissions?: string[]
 }
 
 export function useAuth() {
@@ -20,6 +22,18 @@ export function useAuth() {
     () => user.value?.role === 'ADMIN' || user.value?.role === 'MANAGER',
   )
   const isEmployee = computed(() => user.value?.role === 'EMPLOYEE')
+
+  /** Ефективні дозволи поточного користувача у вигляді Set для швидкої перевірки. */
+  const permissions = computed(() => new Set(user.value?.permissions ?? []))
+
+  /**
+   * Перевірка дозволу на клієнті. ADMIN завжди має повний доступ.
+   * Використання: const { can } = useAuth(); ... v-if={can('payments.edit')}
+   */
+  function can(permission: string): boolean {
+    if (user.value?.role === 'ADMIN') return true
+    return permissions.value.has(permission)
+  }
 
   async function fetchMe() {
     try {
@@ -51,5 +65,5 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
-  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, initialized, fetchMe, login, logout }
+  return { user, isLoggedIn, isAdmin, isPrivileged, isEmployee, permissions, can, initialized, fetchMe, login, logout }
 }

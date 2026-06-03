@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../../utils/prisma'
 import { signJwt } from '../../utils/jwt'
+import { effectivePermissions } from '../../../shared/permissions'
+import type { Role, PermissionOverrides } from '../../../shared/permissions'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -17,6 +19,7 @@ export default defineEventHandler(async (event) => {
       name: true,
       email: true,
       role: true,
+      permissionOverrides: true,
       isActive: true,
       passwordHash: true,
       jobTitle: { select: { id: true, name: true } },
@@ -46,6 +49,10 @@ export default defineEventHandler(async (event) => {
     path: '/',
   })
 
+  const permissions = [
+    ...effectivePermissions(user.role as Role, (user.permissionOverrides ?? {}) as PermissionOverrides),
+  ]
+
   return {
     user: {
       id: user.id,
@@ -54,6 +61,7 @@ export default defineEventHandler(async (event) => {
       role: user.role,
       isActive: user.isActive,
       jobTitle: user.jobTitle,
+      permissions,
     },
   }
 })

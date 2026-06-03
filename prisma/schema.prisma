@@ -80,6 +80,8 @@ model User {
   email          String    @unique
   passwordHash   String
   role           Role      @default(STOREKEEPER)
+  /// Індивідуальні перевизначення дозволів поверх дефолтів ролі: { "payments.edit": true, "users.manage": false }
+  permissionOverrides Json @default("{}")
   isActive       Boolean   @default(true)
   phone          String?
   telegramChatId     String?

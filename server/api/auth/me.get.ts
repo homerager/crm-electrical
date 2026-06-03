@@ -1,4 +1,6 @@
 import { prisma } from '../../utils/prisma'
+import { effectivePermissions } from '../../../shared/permissions'
+import type { Role, PermissionOverrides } from '../../../shared/permissions'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -11,6 +13,7 @@ export default defineEventHandler(async (event) => {
       name: true,
       email: true,
       role: true,
+      permissionOverrides: true,
       isActive: true,
       phone: true,
       telegramChatId: true,
@@ -24,5 +27,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'User not found' })
   }
 
-  return { user }
+  const permissions = [
+    ...effectivePermissions(user.role as Role, (user.permissionOverrides ?? {}) as PermissionOverrides),
+  ]
+  const { permissionOverrides, ...rest } = user
+
+  return { user: { ...rest, permissions } }
 })

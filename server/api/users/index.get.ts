@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
       name: true,
       email: true,
       role: true,
+      permissionOverrides: isAdmin,
       isActive: true,
       phone: true,
       telegramChatId: true,

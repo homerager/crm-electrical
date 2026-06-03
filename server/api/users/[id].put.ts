@@ -1,5 +1,6 @@
 import type { Role } from '@prisma/client'
 import { isStrictAdmin } from '../../utils/authz'
+import { sanitizeOverrides } from '../../../shared/permissions'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -9,7 +10,10 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { role, isActive, name, phone, jobTitleId, hourlyRate, emailNotifications, lowStockNotifications } = body
+  const { role, isActive, name, phone, jobTitleId, hourlyRate, emailNotifications, lowStockNotifications, permissionOverrides } = body
+
+  const resolvedOverrides =
+    permissionOverrides !== undefined ? sanitizeOverrides(permissionOverrides) : undefined
 
   let resolvedHourlyRate: number | null | undefined
   if (hourlyRate !== undefined) {
@@ -53,12 +57,14 @@ export default defineEventHandler(async (event) => {
       ...(resolvedHourlyRate !== undefined && { hourlyRate: resolvedHourlyRate }),
       ...(typeof emailNotifications === 'boolean' && { emailNotifications }),
       ...(typeof lowStockNotifications === 'boolean' && { lowStockNotifications }),
+      ...(resolvedOverrides !== undefined && { permissionOverrides: resolvedOverrides }),
     },
     select: {
       id: true,
       name: true,
       email: true,
       role: true,
+      permissionOverrides: true,
       isActive: true,
       phone: true,
       telegramChatId: true,
