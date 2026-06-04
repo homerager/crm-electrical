@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
   const isAssigneeOfTask = log.task?.assignedToId === auth.userId
   const isOwnLog = log.userId === auth.userId
-  if (!isOwnLog && !isElevatedRole(auth.role) && !isAssigneeOfTask) {
+  if (!isOwnLog && !(await can(event, 'schedules.manage')) && !isAssigneeOfTask) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 

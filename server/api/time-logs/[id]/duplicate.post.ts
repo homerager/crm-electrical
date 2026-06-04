@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../../utils/authz'
+import { requirePermission } from '../../../utils/authz'
 
 /**
  * Дублює запис журналу робіт — створює точну копію (той самий працівник, дата,
@@ -8,9 +8,7 @@ import { isElevatedRole } from '../../../utils/authz'
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isElevatedRole(auth.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
-  }
+  await requirePermission(event, 'schedules.manage')
 
   const id = getRouterParam(event, 'id')!
   const source = await prisma.timeLog.findUnique({ where: { id } })

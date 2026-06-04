@@ -1,5 +1,5 @@
 import { isEmptyCommentContent, sanitizeCommentHtml } from '../../../../utils/commentHtml'
-import { isElevatedRole } from '../../../../utils/authz'
+import { can } from '../../../../utils/authz'
 
 type Body = { content: string; attachmentIds?: string[] }
 
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Коментар не знайдено' })
   }
 
-  if (existing.userId !== auth.userId && !isElevatedRole(auth.role)) {
+  if (existing.userId !== auth.userId && !(await can(event, 'tasks.manage'))) {
     throw createError({ statusCode: 403, statusMessage: 'Немає прав на редагування' })
   }
 

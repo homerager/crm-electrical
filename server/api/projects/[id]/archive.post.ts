@@ -1,12 +1,10 @@
-import { isElevatedRole } from '../../../utils/authz'
+import { requirePermission } from '../../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   const id = getRouterParam(event, 'id')!
 
-  if (!isElevatedRole(auth?.role)) {
-    throw createError({ statusCode: 403, message: 'Тільки адмін або менеджер може архівувати проєкт' })
-  }
+  await requirePermission(event, 'projects.edit')
 
   const body = await readBody(event).catch(() => ({})) as { archived?: boolean }
   const shouldArchive = body?.archived !== false

@@ -1,14 +1,14 @@
-import { isElevatedRole } from '../utils/authz'
+import { can } from '../utils/authz'
 
 /**
- * API фінансів (оплати) — лише для ADMIN та MANAGER.
+ * Базовий гейт API фінансів: для доступу до /api/payments потрібен щонайменше
+ * дозвіл payments.view. Точніші перевірки (create/edit/delete) — у самих ендпоінтах.
  */
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const url = getRequestURL(event)
   if (!url.pathname.startsWith('/api/payments')) return
 
-  const auth = event.context.auth
-  if (!isElevatedRole(auth?.role)) {
+  if (!(await can(event, 'payments.view'))) {
     throw createError({ statusCode: 403, message: 'Недостатньо прав' })
   }
 })

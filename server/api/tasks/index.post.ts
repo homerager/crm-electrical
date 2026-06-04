@@ -1,6 +1,6 @@
 import { sendTelegramMessage, buildTaskCreatedMessage } from '../../utils/telegram'
 import { sendEmail, buildTaskAssignedEmail } from '../../utils/email'
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     if (proj?.archivedAt) {
       throw createError({ statusCode: 409, statusMessage: 'Проєкт в архіві — створення завдань заборонено' })
     }
-    if (!isElevatedRole(auth.role)) {
+    if (!(await can(event, 'tasks.manage'))) {
       const member = await prisma.projectMember.findUnique({
         where: { projectId_userId: { projectId, userId: auth.userId } },
       })

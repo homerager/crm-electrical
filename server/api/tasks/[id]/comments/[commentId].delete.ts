@@ -1,6 +1,6 @@
 import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { isElevatedRole } from '../../../../utils/authz'
+import { can } from '../../../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Коментар не знайдено' })
   }
 
-  if (existing.userId !== auth.userId && !isElevatedRole(auth.role)) {
+  if (existing.userId !== auth.userId && !(await can(event, 'tasks.manage'))) {
     throw createError({ statusCode: 403, statusMessage: 'Немає прав на видалення' })
   }
 

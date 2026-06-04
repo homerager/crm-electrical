@@ -1,8 +1,8 @@
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
-  const auth = event.context.auth
-  const isElevated = isElevatedRole(auth?.role)
+  const auth = event.context.auth!
+  const isElevated = await can(event, 'projects.manage')
   const query = getQuery(event)
   const archivedParam = String(query.archived ?? 'false').toLowerCase()
   const archivedFilter: 'only' | 'all' | 'none' =

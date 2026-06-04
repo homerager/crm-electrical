@@ -1,11 +1,11 @@
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
 
   const id = getRouterParam(event, 'id')!
-  const isElevated = isElevatedRole(auth.role)
+  const isElevated = await can(event, 'tasks.manage')
 
   const task = await prisma.task.findUnique({
     where: { id },
