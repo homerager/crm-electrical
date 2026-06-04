@@ -6,12 +6,18 @@ let _logoBase64: string | null = null
 
 function getLogoDataUri(): string | null {
   if (_logoBase64 !== undefined && _logoBase64 !== null) return _logoBase64
-  try {
-    const buf = readFileSync(join(process.cwd(), 'public/static/images/logo.png'))
-    _logoBase64 = `data:image/png;base64,${buf.toString('base64')}`
-  } catch {
-    _logoBase64 = null
+  const candidates = [
+    join(process.cwd(), '.output/public/static/images/logo.png'),
+    join(process.cwd(), 'public/static/images/logo.png'),
+  ]
+  for (const p of candidates) {
+    try {
+      const buf = readFileSync(p)
+      _logoBase64 = `data:image/png;base64,${buf.toString('base64')}`
+      return _logoBase64
+    } catch {}
   }
+  _logoBase64 = null
   return _logoBase64
 }
 

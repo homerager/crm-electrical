@@ -45,7 +45,6 @@ export function useAuth() {
     try {
       const headers = import.meta.server ? useRequestHeaders(['cookie']) : {}
       const data = await $fetch<{ user: AuthUser }>('/api/auth/me', { headers })
-      console.log('[useAuth] fetchMe raw data:', JSON.stringify(data))
       user.value = data.user
     } catch (e) {
       console.error('[useAuth] fetchMe error:', e)
@@ -60,7 +59,6 @@ export function useAuth() {
       method: 'POST',
       body: { email, password },
     })
-    console.log('[useAuth] login raw data:', JSON.stringify(data))
     user.value = data.user
     return data.user
   }
