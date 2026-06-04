@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
 
   const where: any = {}
 
-  if (!isElevatedRole(auth.role)) {
+  if (!(await can(event, 'schedules.manage'))) {
     where.userId = auth.userId
   } else if (userId) {
     where.userId = userId

@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 type ImportRow = {
   name?: string
@@ -25,10 +25,8 @@ function parseNumber(value: unknown): number | null {
 }
 
 export default defineEventHandler(async (event) => {
+  await requirePermission(event, 'proposals.create')
   const auth = event.context.auth
-  if (!isElevatedRole(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
 
   const body = await readBody<{ items?: ImportRow[] }>(event)
   const items = Array.isArray(body?.items) ? body!.items : []

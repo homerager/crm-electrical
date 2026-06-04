@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 import { getScheduleHours } from '../../utils/scheduleHours'
 
 const VALID_TYPES = ['WORK', 'DAY_OFF', 'VACATION', 'SICK_LEAVE', 'BIRTHDAY']
@@ -7,7 +7,7 @@ const VALID_SHIFTS = ['FULL_DAY', 'MORNING', 'AFTERNOON']
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isElevatedRole(auth.role)) throw createError({ statusCode: 403 })
+  await requirePermission(event, 'schedules.manage')
 
   const body = await readBody(event)
   const { userId, objectId, date, type, shift, description, hours } = body

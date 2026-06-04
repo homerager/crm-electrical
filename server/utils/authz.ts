@@ -35,6 +35,7 @@ export async function getEffectivePermissions(event: H3Event): Promise<Set<strin
     where: { id: auth.userId },
     select: { role: true, permissionOverrides: true },
   })
+  
   if (!dbUser) {
     return new Set()
   }
@@ -54,9 +55,9 @@ export async function can(event: H3Event, permission: string): Promise<boolean> 
 }
 
 /** Кидає 403, якщо у користувача немає дозволу. Зручно ставити на початку handler-а. */
-export async function requirePermission(event: H3Event, permission: string): Promise<void> {
+export async function requirePermission(event: H3Event, permission: string, statusMessage?: string): Promise<void> {
   if (!(await can(event, permission))) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    throw createError({ statusCode: 403, statusMessage: statusMessage ?? 'Forbidden' })
   }
 }
 
@@ -66,6 +67,9 @@ export function userHasPermission(
   overrides: PermissionOverrides | null | undefined,
   permission: string,
 ): boolean {
-  if (!role) return false
+  if (!role) {
+    return false
+  }
+
   return hasPermission(role as Role, overrides, permission)
 }

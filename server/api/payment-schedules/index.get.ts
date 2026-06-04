@@ -1,9 +1,9 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isElevatedRole(auth.role)) throw createError({ statusCode: 403 })
+  await requirePermission(event, 'paymentSchedules.view')
 
   const query = getQuery(event)
   const objectId = query.objectId as string | undefined
