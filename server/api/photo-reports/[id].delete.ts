@@ -1,5 +1,5 @@
 import { unlink } from 'node:fs/promises'
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 import { getPhotoFilePath } from '../../utils/photoReportFile'
 import { writeAuditLog } from '../../utils/auditLog'
 
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   })
   if (!report) throw createError({ statusCode: 404, statusMessage: 'Фото-звіт не знайдено' })
 
-  if (!isElevatedRole(auth.role) && report.createdById !== auth.userId) {
+  if (!(await can(event, 'photoReports.manage')) && report.createdById !== auth.userId) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
   writeAuditLog({
     userId: auth.userId,
-    userName: auth.userName,
+    userName: auth.name,
     action: 'DELETE',
     entityType: 'PhotoReport',
     entityId: id,

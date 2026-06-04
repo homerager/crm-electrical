@@ -1,10 +1,10 @@
-import { isElevatedRole } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 import { getWeightedAverageUnitPrices } from '../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isElevatedRole(auth.role)) throw createError({ statusCode: 403 })
+  await requirePermission(event, 'payments.view')
 
   const objects = await prisma.constructionObject.findMany({
     select: { id: true, name: true, status: true, budget: true, clientId: true },

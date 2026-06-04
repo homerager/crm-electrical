@@ -128,7 +128,7 @@ export const ROLE_DEFAULTS: Record<Role, string[] | '*'> = {
     ...only('objects', 'view'),
     ...only('tasks', 'view'),
     ...only('schedules', 'view'),
-    ...only('photoReports', 'view', 'manage'),
+    ...only('photoReports', 'view'),
   ],
 }
 

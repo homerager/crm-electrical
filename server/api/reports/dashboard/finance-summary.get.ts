@@ -1,9 +1,9 @@
-import { isStrictAdmin } from '../../../utils/authz'
+import { requirePermission } from '../../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isStrictAdmin(auth.role)) throw createError({ statusCode: 403 })
+  await requirePermission(event, 'payments.dashboard')
 
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)

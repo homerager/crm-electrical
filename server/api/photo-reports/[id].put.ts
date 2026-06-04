@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 import { writeAuditLog, computeChanges } from '../../utils/auditLog'
 
 interface Body {
@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const existing = await prisma.photoReport.findUnique({ where: { id } })
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Фото-звіт не знайдено' })
 
-  if (!isElevatedRole(auth.role) && existing.createdById !== auth.userId) {
+  if (!(await can(event, 'photoReports.manage')) && existing.createdById !== auth.userId) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   const changes = computeChanges(existing as any, updated as any)
   writeAuditLog({
     userId: auth.userId,
-    userName: auth.userName,
+    userName: auth.name,
     action: 'UPDATE',
     entityType: 'PhotoReport',
     entityId: id,

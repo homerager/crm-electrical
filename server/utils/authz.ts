@@ -7,15 +7,6 @@ import {
   hasPermission,
 } from '../../shared/permissions'
 
-/** ADMIN або MANAGER — ті самі права, що й адмін, окрім керування обліковими записами користувачів (лише ADMIN). */
-export function isElevatedRole(role: string | undefined): boolean {
-  return role === 'ADMIN' || role === 'MANAGER'
-}
-
-export function isStrictAdmin(role: string | undefined): boolean {
-  return role === 'ADMIN'
-}
-
 /**
  * Завантажує ефективні дозволи поточного користувача (дефолти ролі + індивідуальні overrides).
  * Результат кешується на event.context, щоб не робити зайвих запитів у межах одного запиту.

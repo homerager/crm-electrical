@@ -1,10 +1,8 @@
-import { isStrictAdmin } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
-  if (!isStrictAdmin(auth?.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  await requirePermission(event, 'settings.manage')
 
   const id = getRouterParam(event, 'id')!
   await prisma.requisite.delete({ where: { id } })

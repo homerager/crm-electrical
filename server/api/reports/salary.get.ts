@@ -1,11 +1,9 @@
-import { isStrictAdmin } from '../../utils/authz'
+import { requirePermission } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  if (!isStrictAdmin(auth.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
-  }
+  await requirePermission(event, 'reports.salary')
 
   const query = getQuery(event)
   const from = query.from ? new Date(query.from as string) : undefined

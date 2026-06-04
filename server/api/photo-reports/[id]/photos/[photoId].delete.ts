@@ -1,5 +1,5 @@
 import { unlink } from 'node:fs/promises'
-import { isElevatedRole } from '../../../../utils/authz'
+import { can } from '../../../../utils/authz'
 import { getPhotoFilePath } from '../../../../utils/photoReportFile'
 
 export default defineEventHandler(async (event) => {
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   })
   if (!photo) throw createError({ statusCode: 404, statusMessage: 'Фото не знайдено' })
 
-  if (!isElevatedRole(auth.role) && photo.report.createdById !== auth.userId) {
+  if (!(await can(event, 'photoReports.manage')) && photo.report.createdById !== auth.userId) {
     throw createError({ statusCode: 403, statusMessage: 'Недостатньо прав' })
   }
 

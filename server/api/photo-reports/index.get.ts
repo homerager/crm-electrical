@@ -1,4 +1,4 @@
-import { isElevatedRole } from '../../utils/authz'
+import { can } from '../../utils/authz'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const where: any = {}
   if (objectId) where.objectId = objectId
 
-  if (!isElevatedRole(auth.role)) {
+  if (!(await can(event, 'photoReports.manage'))) {
     where.createdById = auth.userId
   }
 
