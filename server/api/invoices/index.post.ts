@@ -16,12 +16,27 @@ interface InvoiceItemInput {
   vatPercent?: number
 }
 
+/** Coerces a form value (often a string from <input type="number">) to a positive quantity. */
+function parsePositiveQty(raw: unknown): number {
+  const q = Number(raw)
+  if (!Number.isFinite(q) || q <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Кількість має бути більшою за 0' })
+  }
+  return q
+}
+
+/** Coerces an optional numeric field (price / vat), defaulting to 0. */
+function parseNumber(raw: unknown): number {
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : 0
+}
+
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth!
   const body = await readBody(event)
-  const { number, type, contractorId, warehouseId, objectId, date, notes, items, pdf } = body
+  const { number, type, contractorId, warehouseId, objectId, date, notes, items: rawItems, pdf } = body
 
-  if (!number || !type || !date || !items?.length) {
+  if (!number || !type || !date || !rawItems?.length) {
     throw createError({ statusCode: 400, statusMessage: 'Заповніть всі обовʼязкові поля' })
   }
   if (!warehouseId && !objectId) {
@@ -30,6 +45,15 @@ export default defineEventHandler(async (event) => {
   if (warehouseId && objectId) {
     throw createError({ statusCode: 400, statusMessage: 'Оберіть або склад, або обʼєкт' })
   }
+
+  // Normalise numeric fields up front — the form sends them as strings, and the lot helpers
+  // require real numbers (Number.isFinite rejects numeric strings).
+  const items: InvoiceItemInput[] = (rawItems as InvoiceItemInput[]).map((item) => ({
+    productId: item.productId,
+    quantity: parsePositiveQty(item.quantity),
+    pricePerUnit: parseNumber(item.pricePerUnit),
+    vatPercent: parseNumber(item.vatPercent),
+  }))
 
   const invoice = await prisma.$transaction(async (tx) => {
     const created = await tx.invoice.create({

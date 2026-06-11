@@ -23,6 +23,7 @@ export type AuditEntityType =
   | 'Equipment'
   | 'InventorySession'
   | 'SupplierPrice'
+  | 'ElectricalPanel'
 
 interface AuditLogInput {
   userId?: string | null

@@ -67,7 +67,15 @@ export default defineComponent({
         value: 'projects',
         children: [
           { title: 'Список проєктів', icon: 'mdi-folder-multiple-outline', to: '/projects', perm: 'projects.view' },
-          { title: 'Обʼєкти', icon: 'mdi-office-building-outline', to: '/objects', perm: 'objects.view' },
+          {
+            title: 'Обʼєкти',
+            icon: 'mdi-office-building-outline',
+            value: 'objects',
+            children: [
+              { title: 'Список обʼєктів', icon: 'mdi-format-list-bulleted', to: '/objects', perm: 'objects.view' },
+              { title: 'Електрощити', icon: 'mdi-fuse', to: '/electrical-panels', perm: 'electricalPanels.view' },
+            ],
+          },
           { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents', perm: 'documents.view' },
           { title: 'Завдання', icon: 'mdi-checkbox-marked-circle-outline', to: '/tasks', perm: 'tasks.view' },
           { title: 'Календар завдань', icon: 'mdi-calendar-month-outline', to: '/tasks/calendar', perm: 'tasks.view' },
