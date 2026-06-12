@@ -1,19 +1,35 @@
 import TableExportBtn from '~/components/TableExportBtn'
 
+/** Suggested work types — merged with the distinct types already used in the DB. */
+const PRESET_TYPES = [
+  'Електрощит',
+  'СЕС',
+  'Прокладання кабелів',
+  'Системи освітлення',
+  'Повітряні лінії ЛЕП',
+  'Автоматика та захист',
+  'Резервне живлення та АВР',
+]
+
 export default defineComponent({
-  name: 'ElectricalPanelsPage',
+  name: 'InstallationWorksPage',
 
   setup() {
-    definePageMeta({ middleware: ['auth'], permission: 'electricalPanels.view' })
-    useHead({ title: 'Електрощити' })
+    definePageMeta({ middleware: ['auth'], permission: 'electricalInstallationWorks.view' })
+    useHead({ title: 'Монтажні роботи' })
 
     const toast = useToast()
     const { can } = useAuth()
-    const { data, refresh, pending } = useFetch('/api/electrical-panels')
+    const { data, refresh, pending } = useFetch('/api/electrical-installation-works')
     const { data: objectsData } = useFetch('/api/objects')
+    const { data: typesData } = useFetch('/api/electrical-installation-works/types')
 
-    const panels = computed(() => (data.value as any)?.panels ?? [])
+    const works = computed(() => (data.value as any)?.works ?? [])
     const objects = computed(() => (objectsData.value as any)?.objects ?? [])
+    const typeOptions = computed(() => {
+      const used = ((typesData.value as any)?.types ?? []) as string[]
+      return [...new Set([...PRESET_TYPES, ...used])]
+    })
 
     const dialog = ref(false)
     const deleteDialog = ref(false)
@@ -22,20 +38,29 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
     const filterObjectId = ref('')
+    const filterType = ref('')
 
-    const form = reactive({ name: '', description: '', objectId: '' })
+    const form = reactive({ type: 'Електрощит', name: '', description: '', objectId: '' })
 
-    const filteredPanels = computed(() => {
-      if (!filterObjectId.value) return panels.value
-      return panels.value.filter((p: any) => p.objectId === filterObjectId.value)
-    })
+    const filteredWorks = computed(() =>
+      works.value.filter(
+        (w: any) =>
+          (!filterObjectId.value || w.objectId === filterObjectId.value) &&
+          (!filterType.value || w.type === filterType.value),
+      ),
+    )
 
     const uah = (n: number) =>
       `₴${Number(n || 0).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', description: '', objectId: filterObjectId.value || '' })
+      Object.assign(form, {
+        type: filterType.value || 'Електрощит',
+        name: '',
+        description: '',
+        objectId: filterObjectId.value || '',
+      })
       error.value = ''
       dialog.value = true
     }
@@ -43,6 +68,7 @@ export default defineComponent({
     function openEdit(item: any) {
       editItem.value = item
       Object.assign(form, {
+        type: item.type,
         name: item.name,
         description: item.description || '',
         objectId: item.objectId,
@@ -62,13 +88,13 @@ export default defineComponent({
       const isEdit = !!editItem.value
       try {
         if (editItem.value) {
-          await $fetch(`/api/electrical-panels/${editItem.value.id}`, { method: 'PUT', body: form })
+          await $fetch(`/api/electrical-installation-works/${editItem.value.id}`, { method: 'PUT', body: form })
         } else {
-          await $fetch('/api/electrical-panels', { method: 'POST', body: form })
+          await $fetch('/api/electrical-installation-works', { method: 'POST', body: form })
         }
         dialog.value = false
         await refresh()
-        toast.success(isEdit ? 'Електрощит оновлено' : 'Електрощит створено')
+        toast.success(isEdit ? 'Роботу оновлено' : 'Роботу створено')
       } catch (e: any) {
         error.value = e?.data?.statusMessage || 'Помилка збереження'
         toast.error(error.value)
@@ -80,39 +106,41 @@ export default defineComponent({
     async function confirmDelete() {
       if (!deleteItem.value) return
       try {
-        await $fetch(`/api/electrical-panels/${deleteItem.value.id}`, { method: 'DELETE' })
+        await $fetch(`/api/electrical-installation-works/${deleteItem.value.id}`, { method: 'DELETE' })
         deleteDialog.value = false
         await refresh()
-        toast.success('Електрощит видалено')
+        toast.success('Роботу видалено')
       } catch (e: any) {
         toast.error(e?.data?.statusMessage || 'Помилка видалення')
       }
     }
 
     const headers = [
+      { title: 'Тип', key: 'type', width: 180 },
       { title: 'Назва', key: 'name' },
-      { title: 'Обʼєкт', key: 'object', width: 220 },
-      { title: 'Матеріалів', key: 'count', align: 'center' as const, width: 120 },
-      { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 140 },
-      { title: 'Автор', key: 'createdBy', width: 160 },
-      { title: 'Дата', key: 'createdAt', width: 130 },
+      { title: 'Обʼєкт', key: 'object', width: 200 },
+      { title: 'Матеріалів', key: 'count', align: 'center' as const, width: 110 },
+      { title: 'Сума, ₴', key: 'totalAmount', align: 'end' as const, width: 130 },
+      { title: 'Автор', key: 'createdBy', width: 150 },
+      { title: 'Дата', key: 'createdAt', width: 120 },
       { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 180 },
     ]
 
-    const canCreate = computed(() => can('electricalPanels.create'))
-    const canEdit = computed(() => can('electricalPanels.edit'))
-    const canDelete = computed(() => can('electricalPanels.delete'))
+    const canCreate = computed(() => can('electricalInstallationWorks.create'))
+    const canEdit = computed(() => can('electricalInstallationWorks.edit'))
+    const canDelete = computed(() => can('electricalInstallationWorks.delete'))
 
     return () => (
       <div>
         <div class="page-toolbar">
-          <div class="text-h5 font-weight-bold">Електрощити</div>
+          <div class="text-h5 font-weight-bold">Монтажні роботи</div>
           <v-spacer />
           <TableExportBtn
             class="mr-2"
-            filename="Електрощити"
-            rows={filteredPanels.value}
+            filename="Монтажні роботи"
+            rows={filteredWorks.value}
             columns={[
+              { title: 'Тип', key: 'type' },
               { title: 'Назва', key: 'name' },
               { title: 'Обʼєкт', key: 'object.name' },
               { title: 'Матеріалів', key: '_count.materials' },
@@ -123,7 +151,7 @@ export default defineComponent({
           />
           {canCreate.value && (
             <v-btn color="primary" prepend-icon="mdi-plus" onClick={openCreate}>
-              Новий щит
+              Нова робота
             </v-btn>
           )}
         </div>
@@ -144,13 +172,27 @@ export default defineComponent({
                   hide-details
                 />
               </v-col>
+              <v-col cols={12} sm={4}>
+                <v-autocomplete
+                  v-model={filterType.value}
+                  label="Фільтр по типу"
+                  items={typeOptions.value}
+                  clearable
+                  density="compact"
+                  prepend-inner-icon="mdi-shape-outline"
+                  hide-details
+                />
+              </v-col>
             </v-row>
           </v-card-text>
 
-          <v-data-table headers={headers} items={filteredPanels.value} loading={pending.value} hover>
+          <v-data-table headers={headers} items={filteredWorks.value} loading={pending.value} hover>
             {{
+              'item.type': ({ item }: any) => (
+                <v-chip size="small" variant="tonal" color="primary">{item.type}</v-chip>
+              ),
               'item.name': ({ item }: any) => (
-                <nuxt-link to={`/electrical-panels/${item.id}`} class="text-primary font-weight-medium text-decoration-none">
+                <nuxt-link to={`/electrical-installation-works/${item.id}`} class="text-primary font-weight-medium text-decoration-none">
                   {item.name}
                 </nuxt-link>
               ),
@@ -165,14 +207,14 @@ export default defineComponent({
               ),
               'item.actions': ({ item }: any) => (
                 <div class="d-flex gap-1 justify-end">
-                  <v-btn icon="mdi-eye" variant="text" size="small" color="info" to={`/electrical-panels/${item.id}`} title="Переглянути" />
+                  <v-btn icon="mdi-eye" variant="text" size="small" color="info" to={`/electrical-installation-works/${item.id}`} title="Переглянути" />
                   <v-btn
                     icon="mdi-file-pdf-box"
                     variant="text"
                     size="small"
                     color="error"
                     title="Завантажити PDF"
-                    href={`/api/electrical-panels/${item.id}/pdf`}
+                    href={`/api/electrical-installation-works/${item.id}/pdf`}
                     target="_blank"
                   />
                   {canEdit.value && (
@@ -187,11 +229,20 @@ export default defineComponent({
           </v-data-table>
         </v-card>
 
-        <v-dialog v-model={dialog.value} max-width={500}>
+        <v-dialog v-model={dialog.value} max-width={520}>
           <v-card>
-            <v-card-title>{editItem.value ? 'Редагувати електрощит' : 'Новий електрощит'}</v-card-title>
+            <v-card-title>{editItem.value ? 'Редагувати роботу' : 'Нова монтажна робота'}</v-card-title>
             <v-card-text>
               {error.value && <v-alert type="error" variant="tonal" class="mb-3">{error.value}</v-alert>}
+              <v-combobox
+                v-model={form.type}
+                label="Вид роботи *"
+                items={typeOptions.value}
+                prepend-inner-icon="mdi-shape-outline"
+                hint="Оберіть зі списку або впишіть свій (напр. СЕС)"
+                persistent-hint
+                class="mb-3"
+              />
               <v-text-field v-model={form.name} label="Назва / маркування *" class="mb-3" />
               <v-autocomplete
                 v-model={form.objectId}
@@ -213,7 +264,7 @@ export default defineComponent({
                 color="primary"
                 variant="elevated"
                 loading={saving.value}
-                disabled={!form.name || !form.objectId}
+                disabled={!form.name || !form.objectId || !form.type}
                 onClick={save}
               >
                 {editItem.value ? 'Зберегти' : 'Створити'}
@@ -222,12 +273,12 @@ export default defineComponent({
           </v-card>
         </v-dialog>
 
-        <v-dialog v-model={deleteDialog.value} max-width={440}>
+        <v-dialog v-model={deleteDialog.value} max-width={460}>
           <v-card>
-            <v-card-title>Видалити електрощит?</v-card-title>
+            <v-card-title>Видалити роботу?</v-card-title>
             <v-card-text>
-              Електрощит "{deleteItem.value?.name}" буде видалено. Усі списані в нього матеріали
-              повернуться на залишок обʼєкта.
+              Роботу "{deleteItem.value?.name}" ({deleteItem.value?.type}) буде видалено. Усі списані
+              в неї матеріали повернуться на залишок обʼєкта.
             </v-card-text>
             <v-card-actions class="pa-4 pt-0">
               <v-spacer />

@@ -5,16 +5,16 @@ import { addObjectLotQty } from '../../../../utils/stockLots'
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  await requirePermission(event, 'electricalPanels.edit')
+  await requirePermission(event, 'electricalInstallationWorks.edit')
 
   const id = getRouterParam(event, 'id')!
   const materialId = getRouterParam(event, 'materialId')!
 
-  const material = await prisma.electricalPanelMaterial.findUnique({
+  const material = await prisma.electricalInstallationWorkMaterial.findUnique({
     where: { id: materialId },
-    include: { panel: { select: { id: true, objectId: true } } },
+    include: { work: { select: { id: true, objectId: true } } },
   })
-  if (!material || material.panelId !== id) {
+  if (!material || material.workId !== id) {
     throw createError({ statusCode: 404, statusMessage: 'Позицію не знайдено' })
   }
 
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     if (material.writtenOff && material.productId) {
       await addObjectLotQty(
         tx,
-        material.panel.objectId,
+        material.work.objectId,
         material.productId,
         material.contractorId,
         Number(material.pricePerUnit),
@@ -34,14 +34,14 @@ export default defineEventHandler(async (event) => {
     if (material.movementId) {
       await tx.movement.deleteMany({ where: { id: material.movementId } })
     }
-    await tx.electricalPanelMaterial.delete({ where: { id: materialId } })
+    await tx.electricalInstallationWorkMaterial.delete({ where: { id: materialId } })
   })
 
   writeAuditLog({
     userId: auth.userId,
     userName: auth.name,
     action: 'UPDATE',
-    entityType: 'ElectricalPanel',
+    entityType: 'ElectricalInstallationWork',
     entityId: id,
     changes: { removedMaterial: material.name, returnedToStock: material.writtenOff },
   })

@@ -6,22 +6,22 @@ interface StockLine {
 }
 
 export default defineComponent({
-  name: 'ElectricalPanelDetailPage',
+  name: 'InstallationWorkDetailPage',
 
   setup() {
-    definePageMeta({ middleware: ['auth'], permission: 'electricalPanels.view' })
+    definePageMeta({ middleware: ['auth'], permission: 'electricalInstallationWorks.view' })
 
     const route = useRoute()
     const id = route.params.id as string
     const toast = useToast()
     const { can } = useAuth()
 
-    const { data, pending, refresh } = useFetch(`/api/electrical-panels/${id}`)
-    const panel = computed(() => (data.value as any)?.panel)
+    const { data, pending, refresh } = useFetch(`/api/electrical-installation-works/${id}`)
+    const work = computed(() => (data.value as any)?.work)
     const objectStock = computed(() => (data.value as any)?.objectStock ?? [])
-    const materials = computed(() => panel.value?.materials ?? [])
+    const materials = computed(() => work.value?.materials ?? [])
 
-    useHead({ title: computed(() => (panel.value ? `Електрощит: ${panel.value.name}` : 'Електрощит')) })
+    useHead({ title: computed(() => (work.value ? `${work.value.type}: ${work.value.name}` : 'Монтажна робота')) })
 
     const uah = (n: number) =>
       `₴${Number(n || 0).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -32,7 +32,7 @@ export default defineComponent({
     )
     const writtenOffCount = computed(() => materials.value.filter((m: any) => m.writtenOff).length)
 
-    const canEdit = computed(() => can('electricalPanels.edit'))
+    const canEdit = computed(() => can('electricalInstallationWorks.edit'))
 
     // ---- object stock lot options (for the "from stock" mode) -------------------------------
     const lotOptions = computed(() =>
@@ -132,7 +132,7 @@ export default defineComponent({
 
       saving.value = true
       try {
-        await $fetch(`/api/electrical-panels/${id}/materials`, { method: 'POST', body: { items } })
+        await $fetch(`/api/electrical-installation-works/${id}/materials`, { method: 'POST', body: { items } })
         addOpen.value = false
         await refresh()
         toast.success('Матеріали додано')
@@ -154,7 +154,7 @@ export default defineComponent({
     async function confirmDeleteMaterial() {
       if (!delItem.value) return
       try {
-        await $fetch(`/api/electrical-panels/${id}/materials/${delItem.value.id}`, { method: 'DELETE' })
+        await $fetch(`/api/electrical-installation-works/${id}/materials/${delItem.value.id}`, { method: 'DELETE' })
         delOpen.value = false
         await refresh()
         toast.success('Позицію видалено')
@@ -165,7 +165,7 @@ export default defineComponent({
 
     const materialHeaders = [
       { title: 'Найменування', key: 'name' },
-      { title: 'Тип', key: 'type', width: 130, sortable: false },
+      { title: 'Тип', key: 'mtype', width: 130, sortable: false },
       { title: 'Од.', key: 'unit', align: 'center' as const, width: 80 },
       { title: 'Кількість', key: 'quantity', align: 'end' as const, width: 120 },
       { title: 'Ціна, ₴', key: 'pricePerUnit', align: 'end' as const, width: 110 },
@@ -213,17 +213,20 @@ export default defineComponent({
     return () => (
       <div>
         <div class="page-toolbar no-print">
-          <v-btn variant="outlined" prepend-icon="mdi-arrow-left" to="/electrical-panels" class="mr-2">
+          <v-btn variant="outlined" prepend-icon="mdi-arrow-left" to="/electrical-installation-works" class="mr-2">
             Назад
           </v-btn>
-          <div class="text-h5 font-weight-bold">{panel.value?.name ?? '...'}</div>
+          {work.value && (
+            <v-chip class="mr-2" color="primary" variant="tonal" size="small">{work.value.type}</v-chip>
+          )}
+          <div class="text-h5 font-weight-bold">{work.value?.name ?? '...'}</div>
           <v-spacer />
-          {panel.value && (
+          {work.value && (
             <v-btn
               prepend-icon="mdi-file-pdf-box"
               variant="outlined"
               color="error"
-              href={`/api/electrical-panels/${id}/pdf`}
+              href={`/api/electrical-installation-works/${id}/pdf`}
               target="_blank"
             >
               PDF
@@ -233,37 +236,41 @@ export default defineComponent({
 
         {pending.value && <v-progress-linear indeterminate color="primary" />}
 
-        {panel.value && (
+        {work.value && (
           <>
             <v-card variant="outlined" class="mb-4">
               <v-card-text>
                 <v-row>
-                  <v-col cols={12} md={4}>
+                  <v-col cols={12} md={3}>
+                    <div class="text-body-2 text-medium-emphasis">Вид роботи</div>
+                    <div class="font-weight-medium">{work.value.type}</div>
+                  </v-col>
+                  <v-col cols={12} md={3}>
                     <div class="text-body-2 text-medium-emphasis">Обʼєкт</div>
                     <nuxt-link to={`/objects`} class="text-primary text-decoration-none font-weight-medium">
-                      {panel.value.object?.name ?? '—'}
+                      {work.value.object?.name ?? '—'}
                     </nuxt-link>
-                    {panel.value.object?.address && (
-                      <div class="text-caption text-medium-emphasis">{panel.value.object.address}</div>
+                    {work.value.object?.address && (
+                      <div class="text-caption text-medium-emphasis">{work.value.object.address}</div>
                     )}
                   </v-col>
-                  <v-col cols={12} md={3}>
+                  <v-col cols={12} md={2}>
                     <div class="text-body-2 text-medium-emphasis">Замовник</div>
-                    <div>{panel.value.object?.client?.name ?? '—'}</div>
+                    <div>{work.value.object?.client?.name ?? '—'}</div>
                   </v-col>
-                  <v-col cols={12} md={3}>
+                  <v-col cols={12} md={2}>
                     <div class="text-body-2 text-medium-emphasis">Автор</div>
-                    <div>{panel.value.createdBy?.name ?? '—'}</div>
+                    <div>{work.value.createdBy?.name ?? '—'}</div>
                   </v-col>
                   <v-col cols={12} md={2}>
                     <div class="text-body-2 text-medium-emphasis">Дата</div>
-                    <div>{new Date(panel.value.createdAt).toLocaleDateString('uk-UA')}</div>
+                    <div>{new Date(work.value.createdAt).toLocaleDateString('uk-UA')}</div>
                   </v-col>
                 </v-row>
-                {panel.value.description && (
+                {work.value.description && (
                   <div class="mt-3">
                     <div class="text-body-2 text-medium-emphasis">Опис</div>
-                    <div>{panel.value.description}</div>
+                    <div>{work.value.description}</div>
                   </div>
                 )}
               </v-card-text>
@@ -314,7 +321,7 @@ export default defineComponent({
                           {item.note && <div class="text-caption text-medium-emphasis fst-italic">{item.note}</div>}
                         </div>
                       ),
-                      'item.type': ({ item }: any) =>
+                      'item.mtype': ({ item }: any) =>
                         item.writtenOff ? (
                           <v-chip size="x-small" variant="tonal" color="success">Списано з обʼєкта</v-chip>
                         ) : (
@@ -363,7 +370,7 @@ export default defineComponent({
                 <v-icon class="mr-2" icon="mdi-history" size="small" />
                 Історія змін
               </v-card-title>
-              <AuditLogPanel entityType="ElectricalPanel" entityId={id} />
+              <AuditLogPanel entityType="ElectricalInstallationWork" entityId={id} />
             </v-card>
 
             {/* Add material dialog */}

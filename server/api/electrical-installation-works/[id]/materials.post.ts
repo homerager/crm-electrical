@@ -3,7 +3,7 @@ import { writeAuditLog } from '../../../utils/auditLog'
 import { decObjectLotQty } from '../../../utils/stockLots'
 
 /**
- * One line to add to a panel.
+ * One line to add to a work.
  *  - kind 'stock'  → catalog product taken from the object's stock: writes off the exact lot
  *                    (product + supplier + price) via an OBJECT_WRITE_OFF movement.
  *  - kind 'custom' → free-text item: recorded for documentation only, no stock impact.
@@ -36,7 +36,7 @@ function num(raw: unknown): number {
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  await requirePermission(event, 'electricalPanels.edit')
+  await requirePermission(event, 'electricalInstallationWorks.edit')
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody<{ items: ItemInput[]; date?: string }>(event)
@@ -45,8 +45,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Додайте хоча б одну позицію' })
   }
 
-  const panel = await prisma.electricalPanel.findUnique({ where: { id } })
-  if (!panel) throw createError({ statusCode: 404, statusMessage: 'Електрощит не знайдено' })
+  const work = await prisma.electricalInstallationWork.findUnique({ where: { id } })
+  if (!work) throw createError({ statusCode: 404, statusMessage: 'Роботу не знайдено' })
 
   const date = body.date ? new Date(body.date) : new Date()
 
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
         const vatPercent = num(item.vatPercent)
 
         // Write off the exact object lot (throws if the object lacks the quantity).
-        await decObjectLotQty(tx, panel.objectId, item.productId, contractorId, pricePerUnit, quantity)
+        await decObjectLotQty(tx, work.objectId, item.productId, contractorId, pricePerUnit, quantity)
 
         const product = await tx.product.findUnique({
           where: { id: item.productId },
@@ -74,10 +74,10 @@ export default defineEventHandler(async (event) => {
         const movement = await tx.movement.create({
           data: {
             type: 'OBJECT_WRITE_OFF',
-            objectId: panel.objectId,
+            objectId: work.objectId,
             createdById: auth.userId,
             date,
-            notes: `Електрощит: ${panel.name}`,
+            notes: `${work.type}: ${work.name}`,
             items: {
               create: [{ productId: item.productId, contractorId, pricePerUnit, vatPercent, quantity }],
             },
@@ -85,9 +85,9 @@ export default defineEventHandler(async (event) => {
         })
 
         out.push(
-          await tx.electricalPanelMaterial.create({
+          await tx.electricalInstallationWorkMaterial.create({
             data: {
-              panelId: id,
+              workId: id,
               productId: item.productId,
               name: product?.name ?? item.name ?? 'Матеріал',
               unit: product?.unit ?? item.unit ?? 'шт',
@@ -111,9 +111,9 @@ export default defineEventHandler(async (event) => {
           throw createError({ statusCode: 400, statusMessage: 'Вкажіть назву довільної позиції' })
         }
         out.push(
-          await tx.electricalPanelMaterial.create({
+          await tx.electricalInstallationWorkMaterial.create({
             data: {
-              panelId: id,
+              workId: id,
               productId: null,
               name: item.name.trim(),
               unit: item.unit?.trim() || 'шт',
@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
     userId: auth.userId,
     userName: auth.name,
     action: 'UPDATE',
-    entityType: 'ElectricalPanel',
+    entityType: 'ElectricalInstallationWork',
     entityId: id,
     changes: { addedMaterials: created.length },
   })

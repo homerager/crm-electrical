@@ -1,16 +1,16 @@
 import { setResponseHeader } from 'h3'
 import { requirePermission } from '../../../utils/authz'
-import { buildElectricalPanelPdf } from '../../../utils/electricalPanelPdf'
+import { buildInstallationWorkPdf } from '../../../utils/installationWorkPdf'
 import { getProductSupplyHistory } from '../../../utils/productSupplyHistory'
 
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  await requirePermission(event, 'electricalPanels.view')
+  await requirePermission(event, 'electricalInstallationWorks.view')
 
   const id = getRouterParam(event, 'id')!
 
-  const panel = await prisma.electricalPanel.findUnique({
+  const work = await prisma.electricalInstallationWork.findUnique({
     where: { id },
     include: {
       object: { select: { name: true, address: true, client: { select: { name: true } } } },
@@ -22,12 +22,12 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  if (!panel) throw createError({ statusCode: 404, statusMessage: 'Електрощит не знайдено' })
+  if (!work) throw createError({ statusCode: 404, statusMessage: 'Роботу не знайдено' })
 
   // Resolve the incoming invoice(s) each catalog lot was supplied by (same supplier + price).
-  const productIds = [...new Set(panel.materials.map((m) => m.productId).filter(Boolean) as string[])]
+  const productIds = [...new Set(work.materials.map((m) => m.productId).filter(Boolean) as string[])]
   const historyMap = await getProductSupplyHistory(productIds)
-  const invoiceLabelFor = (m: (typeof panel.materials)[number]): string | null => {
+  const invoiceLabelFor = (m: (typeof work.materials)[number]): string | null => {
     if (!m.productId) return null
     const all = historyMap.get(m.productId) ?? []
     const price = Number(m.pricePerUnit)
@@ -39,15 +39,16 @@ export default defineEventHandler(async (event) => {
     return numbers.length > 0 ? `Накладні: ${numbers.join(', ')}` : null
   }
 
-  const buffer = await buildElectricalPanelPdf({
-    name: panel.name,
-    description: panel.description,
-    objectName: panel.object.name,
-    objectAddress: panel.object.address,
-    clientName: panel.object.client?.name ?? null,
-    createdByName: panel.createdBy.name,
-    createdAt: panel.createdAt,
-    materials: panel.materials.map((m) => ({
+  const buffer = await buildInstallationWorkPdf({
+    type: work.type,
+    name: work.name,
+    description: work.description,
+    objectName: work.object.name,
+    objectAddress: work.object.address,
+    clientName: work.object.client?.name ?? null,
+    createdByName: work.createdBy.name,
+    createdAt: work.createdAt,
+    materials: work.materials.map((m) => ({
       name: m.name,
       unit: m.unit,
       quantity: Number(m.quantity),
@@ -59,7 +60,7 @@ export default defineEventHandler(async (event) => {
     })),
   })
 
-  const safeName = panel.name.replace(/[^\w\s.-]+/g, '_').trim().substring(0, 60)
+  const safeName = `${work.type}-${work.name}`.replace(/[^\w\s.-]+/g, '_').trim().substring(0, 60)
 
   const query = getQuery(event)
   const inline = query.inline === '1' || query.inline === 'true'
@@ -68,7 +69,7 @@ export default defineEventHandler(async (event) => {
   setResponseHeader(
     event,
     'content-disposition',
-    `${inline ? 'inline' : 'attachment'}; filename="electrical-panel.pdf"; filename*=UTF-8''${encodeURIComponent(`Електрощит-${safeName}.pdf`)}`,
+    `${inline ? 'inline' : 'attachment'}; filename="installation-work.pdf"; filename*=UTF-8''${encodeURIComponent(`${safeName}.pdf`)}`,
   )
   setResponseHeader(event, 'cache-control', 'private, no-cache')
 

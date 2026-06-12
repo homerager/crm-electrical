@@ -11,7 +11,8 @@ interface MaterialForPdf {
   invoiceLabel?: string | null
 }
 
-export interface ElectricalPanelPdfInput {
+export interface InstallationWorkPdfInput {
+  type: string
   name: string
   description: string | null
   objectName: string
@@ -22,16 +23,17 @@ export interface ElectricalPanelPdfInput {
   materials: MaterialForPdf[]
 }
 
-export async function buildElectricalPanelPdf(input: ElectricalPanelPdfInput): Promise<Buffer> {
+export async function buildInstallationWorkPdf(input: InstallationWorkPdfInput): Promise<Buffer> {
   const pdfMake = getPdfMake()
   const dateStr = new Date(input.createdAt).toLocaleDateString('uk-UA')
 
   const content: Record<string, unknown>[] = [
-    { text: 'СПЕЦИФІКАЦІЯ ЕЛЕКТРОЩИТА', style: 'title', alignment: 'center' },
-    { text: input.name, style: 'subtitle', alignment: 'center', margin: [0, 4, 0, 16] },
+    { text: 'СПЕЦИФІКАЦІЯ МАТЕРІАЛІВ', style: 'title', alignment: 'center' },
+    { text: `${input.type}: ${input.name}`, style: 'subtitle', alignment: 'center', margin: [0, 4, 0, 16] },
   ]
 
   const infoLines: Record<string, unknown>[] = [
+    { text: [{ text: 'Вид роботи: ', bold: true }, input.type] },
     { text: [{ text: 'Обʼєкт: ', bold: true }, input.objectName] },
   ]
   if (input.objectAddress) {
@@ -112,7 +114,7 @@ export async function buildElectricalPanelPdf(input: ElectricalPanelPdfInput): P
     pageSize: 'A4',
     pageMargins: [40, 48, 40, 56],
     defaultStyle: { font: 'Roboto', fontSize: 9 },
-    info: { title: `Електрощит: ${input.name}` },
+    info: { title: `${input.type}: ${input.name}` },
     styles: defaultDocStyles,
     content,
     footer: pdfFooter,

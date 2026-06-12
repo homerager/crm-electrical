@@ -73,7 +73,7 @@ export default defineComponent({
             value: 'objects',
             children: [
               { title: 'Список обʼєктів', icon: 'mdi-format-list-bulleted', to: '/objects', perm: 'objects.view' },
-              { title: 'Електрощити', icon: 'mdi-fuse', to: '/electrical-panels', perm: 'electricalPanels.view' },
+              { title: 'Монтажні роботи', icon: 'mdi-fuse', to: '/electrical-installation-works', perm: 'electricalInstallationWorks.view' },
             ],
           },
           { title: 'Документи', icon: 'mdi-file-document-edit-outline', to: '/documents', perm: 'documents.view' },

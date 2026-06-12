@@ -95,33 +95,33 @@ model User {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  invoices                  Invoice[]
-  movements                 Movement[]
-  createdTasks              Task[]                     @relation("TaskCreatedBy")
-  assignedTasks             Task[]                     @relation("TaskAssignedTo")
-  timeLogs                  TimeLog[]                  @relation("TimeLogWork")
-  timeLogsCreated           TimeLog[]                  @relation("TimeLogCreatedBy")
-  comments                  TaskComment[]
-  attachments               TaskAttachment[]
-  projectsCreated           Project[]
-  projectMembers            ProjectMember[]
-  notifications             Notification[]
-  purchaseRequests          PurchaseRequest[]
-  proposals                 Proposal[]
-  payments                  Payment[]
-  paymentSchedules          PaymentSchedule[]
-  photoReports              PhotoReport[]
-  schedules                 Schedule[]                 @relation("ScheduleUser")
-  schedulesCreated          Schedule[]                 @relation("ScheduleCreatedBy")
-  responsibleEquipment      Equipment[]                @relation("EquipmentResponsible")
-  equipmentMovements        EquipmentMovement[]
-  equipmentStatusLogs       EquipmentStatusLog[]
-  inventorySessions         InventorySession[]
-  materialInventorySessions MaterialInventorySession[]
-  passwordResetTokens       PasswordResetToken[]
-  documents                 Document[]
-  pushSubscriptions         PushSubscription[]
-  electricalPanels          ElectricalPanel[]
+  invoices                    Invoice[]
+  movements                   Movement[]
+  createdTasks                Task[]                       @relation("TaskCreatedBy")
+  assignedTasks               Task[]                       @relation("TaskAssignedTo")
+  timeLogs                    TimeLog[]                    @relation("TimeLogWork")
+  timeLogsCreated             TimeLog[]                    @relation("TimeLogCreatedBy")
+  comments                    TaskComment[]
+  attachments                 TaskAttachment[]
+  projectsCreated             Project[]
+  projectMembers              ProjectMember[]
+  notifications               Notification[]
+  purchaseRequests            PurchaseRequest[]
+  proposals                   Proposal[]
+  payments                    Payment[]
+  paymentSchedules            PaymentSchedule[]
+  photoReports                PhotoReport[]
+  schedules                   Schedule[]                   @relation("ScheduleUser")
+  schedulesCreated            Schedule[]                   @relation("ScheduleCreatedBy")
+  responsibleEquipment        Equipment[]                  @relation("EquipmentResponsible")
+  equipmentMovements          EquipmentMovement[]
+  equipmentStatusLogs         EquipmentStatusLog[]
+  inventorySessions           InventorySession[]
+  materialInventorySessions   MaterialInventorySession[]
+  passwordResetTokens         PasswordResetToken[]
+  documents                   Document[]
+  pushSubscriptions           PushSubscription[]
+  electricalInstallationWorks ElectricalInstallationWork[]
 
   @@map("users")
 }
@@ -183,28 +183,28 @@ model ConstructionObject {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  client                     Client?                      @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  projectId                  String?
-  project                    Project?                     @relation("ProjectObjects", fields: [projectId], references: [id], onDelete: SetNull)
-  invoices                   Invoice[]
-  movements                  Movement[]
-  stock                      ObjectStock[]
-  warehouseStockReservations WarehouseObjectReservation[]
-  purchaseRequests           PurchaseRequest[]
-  tasks                      Task[]
-  timeLogs                   TimeLog[]
+  client                      Client?                      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId                   String?
+  project                     Project?                     @relation("ProjectObjects", fields: [projectId], references: [id], onDelete: SetNull)
+  invoices                    Invoice[]
+  movements                   Movement[]
+  stock                       ObjectStock[]
+  warehouseStockReservations  WarehouseObjectReservation[]
+  purchaseRequests            PurchaseRequest[]
+  tasks                       Task[]
+  timeLogs                    TimeLog[]
   /// Проєкти, де цей обʼєкт обраний як типовий для нових завдань
-  projectsWithDefaultObject  Project[]
-  payments                   Payment[]
-  paymentSchedules           PaymentSchedule[]
-  photoReports               PhotoReport[]
-  schedules                  Schedule[]
-  equipment                  Equipment[]
-  equipmentMovementsFrom     EquipmentMovement[]          @relation("EqMovementFromObject")
-  equipmentMovementsTo       EquipmentMovement[]          @relation("EqMovementToObject")
-  inventorySessions          InventorySession[]
-  documents                  Document[]
-  electricalPanels           ElectricalPanel[]
+  projectsWithDefaultObject   Project[]
+  payments                    Payment[]
+  paymentSchedules            PaymentSchedule[]
+  photoReports                PhotoReport[]
+  schedules                   Schedule[]
+  equipment                   Equipment[]
+  equipmentMovementsFrom      EquipmentMovement[]          @relation("EqMovementFromObject")
+  equipmentMovementsTo        EquipmentMovement[]          @relation("EqMovementToObject")
+  inventorySessions           InventorySession[]
+  documents                   Document[]
+  electricalInstallationWorks ElectricalInstallationWork[]
 
   @@map("construction_objects")
 }
@@ -250,14 +250,14 @@ model Contractor {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  invoices                 Invoice[]
-  purchaseRequests         PurchaseRequest[]
-  payments                 Payment[]
-  supplierPrices           SupplierPrice[]
-  warehouseStockLots       WarehouseStock[]
-  objectStockLots          ObjectStock[]
-  movementItems            MovementItem[]
-  electricalPanelMaterials ElectricalPanelMaterial[]
+  invoices                            Invoice[]
+  purchaseRequests                    PurchaseRequest[]
+  payments                            Payment[]
+  supplierPrices                      SupplierPrice[]
+  warehouseStockLots                  WarehouseStock[]
+  objectStockLots                     ObjectStock[]
+  movementItems                       MovementItem[]
+  electricalInstallationWorkMaterials ElectricalInstallationWorkMaterial[]
 
   @@map("contractors")
 }
@@ -286,17 +286,17 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  group                       ProductGroup?                @relation(fields: [groupId], references: [id])
-  stock                       WarehouseStock[]
-  warehouseSettings           WarehouseProductSetting[]
-  warehouseObjectReservations WarehouseObjectReservation[]
-  invoiceItems                InvoiceItem[]
-  movementItems               MovementItem[]
-  objectStock                 ObjectStock[]
-  purchaseRequestItems        PurchaseRequestItem[]
-  materialInventoryItems      MaterialInventoryItem[]
-  supplierPrices              SupplierPrice[]
-  electricalPanelMaterials    ElectricalPanelMaterial[]
+  group                               ProductGroup?                        @relation(fields: [groupId], references: [id])
+  stock                               WarehouseStock[]
+  warehouseSettings                   WarehouseProductSetting[]
+  warehouseObjectReservations         WarehouseObjectReservation[]
+  invoiceItems                        InvoiceItem[]
+  movementItems                       MovementItem[]
+  objectStock                         ObjectStock[]
+  purchaseRequestItems                PurchaseRequestItem[]
+  materialInventoryItems              MaterialInventoryItem[]
+  supplierPrices                      SupplierPrice[]
+  electricalInstallationWorkMaterials ElectricalInstallationWorkMaterial[]
 
   @@map("products")
 }
@@ -444,12 +444,12 @@ model Movement {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  fromWarehouse            Warehouse?                @relation("MovementFrom", fields: [fromWarehouseId], references: [id])
-  toWarehouse              Warehouse?                @relation("MovementTo", fields: [toWarehouseId], references: [id])
-  object                   ConstructionObject?       @relation(fields: [objectId], references: [id])
-  createdBy                User                      @relation(fields: [createdById], references: [id])
-  items                    MovementItem[]
-  electricalPanelMaterials ElectricalPanelMaterial[]
+  fromWarehouse                       Warehouse?                           @relation("MovementFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse                         Warehouse?                           @relation("MovementTo", fields: [toWarehouseId], references: [id])
+  object                              ConstructionObject?                  @relation(fields: [objectId], references: [id])
+  createdBy                           User                                 @relation(fields: [createdById], references: [id])
+  items                               MovementItem[]
+  electricalInstallationWorkMaterials ElectricalInstallationWorkMaterial[]
 
   @@map("movements")
 }
@@ -1205,13 +1205,18 @@ model Document {
 }
 
 // ---------------------------------------------------------------------------
-// Electrical panels (електрощити) assembled on a construction object
+// Electrical installation works (монтажні роботи) performed on a construction object.
+// Each record is one piece of work of a given `type` (Електрощит, СЕС, прокладання
+// кабелів тощо) with the list of materials it consumed.
 // ---------------------------------------------------------------------------
 
-/// Електрощит, зібраний на будівельному обʼєкті. Містить перелік використаних матеріалів.
-model ElectricalPanel {
+/// Монтажна робота на будівельному обʼєкті. `type` — вид роботи (Електрощит, СЕС,
+/// Прокладання кабелів...). Містить перелік використаних матеріалів.
+model ElectricalInstallationWork {
   id          String   @id @default(cuid())
-  /// Назва/маркування щита, напр. "ЩР-1", "Ввідно-розподільчий щит"
+  /// Вид роботи (вільний текст із підказками): "Електрощит", "СЕС", "Прокладання кабелів" тощо
+  type        String   @default("Електрощит")
+  /// Назва/маркування конкретної роботи, напр. "ЩР-1", "СЕС 30 кВт на даху"
   name        String
   description String?
   objectId    String
@@ -1219,22 +1224,22 @@ model ElectricalPanel {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  object    ConstructionObject        @relation(fields: [objectId], references: [id], onDelete: Cascade)
-  createdBy User                      @relation(fields: [createdById], references: [id])
-  materials ElectricalPanelMaterial[]
+  object    ConstructionObject                   @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  createdBy User                                 @relation(fields: [createdById], references: [id])
+  materials ElectricalInstallationWorkMaterial[]
 
   @@index([objectId])
   @@index([createdById])
-  @@map("electrical_panels")
+  @@map("electrical_installation_works")
 }
 
-/// Матеріал, використаний в електрощиті. Каталожні позиції (productId != null) можуть
+/// Матеріал, використаний у монтажній роботі. Каталожні позиції (productId != null) можуть
 /// списуватися із залишку на обʼєкті (ObjectStock) через рух OBJECT_WRITE_OFF —
 /// тоді writtenOff = true й заповнено movementId для реверсу при видаленні.
 /// Довільні позиції (productId = null) — лише інформативні, без впливу на залишки.
-model ElectricalPanelMaterial {
+model ElectricalInstallationWorkMaterial {
   id           String   @id @default(cuid())
-  panelId      String
+  workId       String
   /// Товар із каталогу. null — довільна (custom) позиція.
   productId    String?
   /// Назва позиції: знімок назви товару для каталожних, або введена вручну для довільних.
@@ -1255,11 +1260,11 @@ model ElectricalPanelMaterial {
   note         String?
   createdAt    DateTime @default(now())
 
-  panel      ElectricalPanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
-  product    Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  contractor Contractor?     @relation(fields: [contractorId], references: [id], onDelete: SetNull)
-  movement   Movement?       @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  work       ElectricalInstallationWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+  product    Product?                   @relation(fields: [productId], references: [id], onDelete: SetNull)
+  contractor Contractor?                @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  movement   Movement?                  @relation(fields: [movementId], references: [id], onDelete: SetNull)
 
-  @@index([panelId])
-  @@map("electrical_panel_materials")
+  @@index([workId])
+  @@map("electrical_installation_work_materials")
 }

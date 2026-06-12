@@ -4,11 +4,11 @@ import { getProductSupplyHistory } from '../../utils/productSupplyHistory'
 export default defineEventHandler(async (event) => {
   const auth = event.context.auth
   if (!auth) throw createError({ statusCode: 401 })
-  await requirePermission(event, 'electricalPanels.view')
+  await requirePermission(event, 'electricalInstallationWorks.view')
 
   const id = getRouterParam(event, 'id')!
 
-  const panel = await prisma.electricalPanel.findUnique({
+  const work = await prisma.electricalInstallationWork.findUnique({
     where: { id },
     include: {
       object: {
@@ -31,14 +31,14 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  if (!panel) throw createError({ statusCode: 404, statusMessage: 'Електрощит не знайдено' })
+  if (!work) throw createError({ statusCode: 404, statusMessage: 'Роботу не знайдено' })
 
   // Attach the incoming invoices each catalog material was supplied by. Records are filtered to the
   // exact lot used (same supplier + unit price); when none match (e.g. legacy lots) we fall back to
   // the product's full supply history so the user still sees where it came from.
-  const productIds = [...new Set(panel.materials.map((m) => m.productId).filter(Boolean) as string[])]
+  const productIds = [...new Set(work.materials.map((m) => m.productId).filter(Boolean) as string[])]
   const historyMap = await getProductSupplyHistory(productIds)
-  const materialsWithSupply = panel.materials.map((m) => {
+  const materialsWithSupply = work.materials.map((m) => {
     if (!m.productId) return { ...m, supplyHistory: [] }
     const all = historyMap.get(m.productId) ?? []
     const price = Number(m.pricePerUnit)
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
 
   // Available object stock lots (qty > 0) — feed the "add material from stock" picker.
   const objectStock = await prisma.objectStock.findMany({
-    where: { objectId: panel.objectId, quantity: { gt: 0 } },
+    where: { objectId: work.objectId, quantity: { gt: 0 } },
     include: {
       product: { select: { id: true, name: true, sku: true, unit: true } },
       contractor: { select: { id: true, name: true } },
@@ -60,5 +60,5 @@ export default defineEventHandler(async (event) => {
     orderBy: [{ productId: 'asc' }, { pricePerUnit: 'asc' }],
   })
 
-  return { panel: { ...panel, materials: materialsWithSupply }, objectStock }
+  return { work: { ...work, materials: materialsWithSupply }, objectStock }
 })
