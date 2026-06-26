@@ -186,6 +186,39 @@ export default defineEventHandler(async (event) => {
     ? Math.round((totalExpenses / budget) * 10000) / 100
     : null
 
+  // Client-facing estimate — mirrors how documents (кошторис/акт/договір) apply
+  // markup and VAT, so the report gives a quick "потенційний дохід/маржа" view.
+  // Base = released materials cost + logged labor cost.
+  const settings = await prisma.settings.findUnique({ where: { id: 'global' } })
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const objectMarkup = object.markupPercent != null ? Number(object.markupPercent) : null
+  const materialMarkup = objectMarkup
+    ?? (settings?.defaultMaterialMarkupPercent != null ? Number(settings.defaultMaterialMarkupPercent) : 0)
+  const laborMarkup = objectMarkup
+    ?? (settings?.defaultLaborMarkupPercent != null ? Number(settings.defaultLaborMarkupPercent) : 0)
+  const clientVatPercent = object.clientVatPercent != null
+    ? Number(object.clientVatPercent)
+    : settings?.defaultClientVatPercent != null
+      ? Number(settings.defaultClientVatPercent)
+      : 0
+  const clientMaterials = round2(summaryTotalAmount * (1 + materialMarkup / 100))
+  const clientLabor = round2(laborTotalAmount * (1 + laborMarkup / 100))
+  const clientSubtotal = round2(clientMaterials + clientLabor)
+  const clientVatAmount = round2(clientSubtotal * clientVatPercent / 100)
+  const clientTotal = round2(clientSubtotal + clientVatAmount)
+  const clientMargin = round2(clientSubtotal - totalExpenses)
+  const clientPricing = {
+    materialMarkupPercent: materialMarkup,
+    laborMarkupPercent: laborMarkup,
+    vatPercent: clientVatPercent,
+    materials: clientMaterials,
+    labor: clientLabor,
+    subtotal: clientSubtotal,
+    vatAmount: clientVatAmount,
+    total: clientTotal,
+    margin: clientMargin,
+  }
+
   const allProductIds = [
     ...new Set([
       ...summary.map((r) => r.product.id),
@@ -235,5 +268,6 @@ export default defineEventHandler(async (event) => {
     totalExpenses,
     budgetRemaining,
     budgetUsedPercent,
+    clientPricing,
   }
 })

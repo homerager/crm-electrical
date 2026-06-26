@@ -259,3 +259,19 @@
   opacity: 0.45;
   font-size: 0.75rem;
 }
+
+.v-table > .v-table__wrapper > table > tbody > tr > td,
+.v-table > .v-table__wrapper > table > tbody > tr > th,
+.v-table > .v-table__wrapper > table > thead > tr > td,
+.v-table > .v-table__wrapper > table > thead > tr > th,
+.v-table > .v-table__wrapper > table > tfoot > tr > td,
+.v-table > .v-table__wrapper > table > tfoot > tr > th {
+  padding: 0 12px!important;
+}
+
+
+.v-table > .v-table__wrapper > table > thead > tr > th span {
+  white-space: nowrap;
+}
+
+/* .v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--sortable */

@@ -47,7 +47,7 @@ export default defineComponent({
     const editItem = ref<any>(null)
     const deleteItem = ref<any>(null)
 
-    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, markupPercent: '' as string | number, clientVatPercent: '' as string | number, clientId: '', projectId: '' })
+    const form = reactive({ name: '', address: '', description: '', status: 'ACTIVE', budget: '' as string | number, markupPercent: '' as string | number, clientVatPercent: null as number | null, clientId: '', projectId: '' })
 
     const statusOptions = [
       { title: 'Активний', value: 'ACTIVE' },
@@ -55,15 +55,21 @@ export default defineComponent({
       { title: 'Призупинений', value: 'SUSPENDED' },
     ]
 
+    const vatOptions = [
+      { title: 'Базовий ПДВ', value: null },
+      { title: 'Без ПДВ', value: 0 },
+      { title: '20%', value: 20 },
+    ]
+
     function openCreate() {
       editItem.value = null
-      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: '', clientId: '', projectId: filterProjectId.value || '' })
+      Object.assign(form, { name: '', address: '', description: '', status: 'ACTIVE', budget: '', markupPercent: '', clientVatPercent: null, clientId: '', projectId: filterProjectId.value || '' })
       dialog.value = true
     }
 
     function openEdit(item: any) {
       editItem.value = item
-      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', markupPercent: item.markupPercent ?? '', clientVatPercent: item.clientVatPercent ?? '', clientId: item.clientId || '', projectId: item.projectId || '' })
+      Object.assign(form, { name: item.name, address: item.address || '', description: item.description || '', status: item.status, budget: item.budget ?? '', markupPercent: item.markupPercent ?? '', clientVatPercent: item.clientVatPercent != null ? Number(item.clientVatPercent) : null, clientId: item.clientId || '', projectId: item.projectId || '' })
       dialog.value = true
     }
 
@@ -111,15 +117,15 @@ export default defineComponent({
 
     const headers = [
       { title: 'Назва', key: 'name' },
-      { title: 'Проєкт', key: 'project', width: 180 },
-      { title: 'Клієнт', key: 'client', width: 180 },
+      { title: 'Проєкт', key: 'project', width: 160 },
+      { title: 'Клієнт', key: 'client', width: 160 },
       { title: 'Адреса', key: 'address' },
-      { title: 'Бюджет, ₴', key: 'budget', align: 'end' as const, width: 150 },
+      { title: 'Бюджет, ₴', key: 'budget', align: 'end' as const, width: 130 },
       { title: 'Націнка', key: 'markupPercent', align: 'end' as const, width: 110 },
       { title: 'ПДВ клієнту', key: 'clientVatPercent', align: 'end' as const, width: 120 },
-      { title: 'Статус', key: 'status', width: 140 },
-      { title: 'Дата створення', key: 'createdAt', width: 160 },
-      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 140 },
+      { title: 'Статус', key: 'status', width: 120 },
+      { title: 'Дата створення', key: 'createdAt', width: 120 },
+      { title: 'Дії', key: 'actions', sortable: false, align: 'end' as const, width: 130 },
     ]
 
     return () => (
@@ -183,7 +189,7 @@ export default defineComponent({
               { title: 'Адреса', key: 'address' },
               { title: 'Бюджет, ₴', key: 'budget', format: (v) => (v == null ? '' : Number(v)) },
               { title: 'Націнка, %', key: 'markupPercent', format: (v) => (v == null ? '' : Number(v)) },
-              { title: 'ПДВ, %', key: 'clientVatPercent', format: (v) => (v == null ? '' : Number(v)) },
+              { title: 'ПДВ, %', key: 'clientVatPercent', format: (v) => (v == null ? '' : Number(v) === 0 ? 'Без ПДВ' : Number(v)) },
               { title: 'Статус', key: 'status', format: (v) => STATUS_LABELS[v as string] || v },
               { title: 'Опис', key: 'description' },
               { title: 'Створено', key: 'createdAt', format: (v) => (v ? new Date(v).toLocaleDateString('uk-UA') : '') },
@@ -220,9 +226,11 @@ export default defineComponent({
                   : <span class="text-medium-emphasis">—</span>
               ),
               'item.clientVatPercent': ({ item }: any) => (
-                item.clientVatPercent != null
-                  ? <v-chip size="small" color="blue" variant="tonal">ПДВ {Number(item.clientVatPercent)}%</v-chip>
-                  : <span class="text-medium-emphasis">—</span>
+                item.clientVatPercent == null
+                  ? <span class="text-medium-emphasis">—</span>
+                  : Number(item.clientVatPercent) === 0
+                    ? <v-chip size="small" color="grey" variant="tonal">Без ПДВ</v-chip>
+                    : <v-chip size="small" color="blue" variant="tonal">ПДВ {Number(item.clientVatPercent)}%</v-chip>
               ),
               'item.status': ({ item }: any) => (
                 <v-chip size="small" color={STATUS_COLORS[item.status]} variant="tonal">
@@ -233,7 +241,7 @@ export default defineComponent({
                 <span>{new Date(item.createdAt).toLocaleDateString('uk-UA')}</span>
               ),
               'item.name': ({ item }: any) => (
-                <nuxt-link to={`/tasks?objectId=${item.id}`} class="text-primary text-decoration-none font-weight-medium">
+                <nuxt-link to={`/tasks?objectId=${item.id}`} class="text-primary text-decoration-none font-weight-semibold whitespace-nowrap">
                   {item.name}
                 </nuxt-link>
               ),
@@ -287,16 +295,15 @@ export default defineComponent({
                 />
               </div>
               
-              <v-text-field
+              <v-select
                 v-model={form.clientVatPercent}
-                label="ПДВ для клієнта, %"
-                type="number"
-                min="0"
-                max="100"
-                step="1"
+                label="ПДВ для клієнта"
+                items={vatOptions}
+                item-title="title"
+                item-value="value"
                 class="mb-3"
                 prepend-inner-icon="mdi-bank-outline"
-                hint="ПДВ у документах для клієнта: 0 = без ПДВ, 20 = 20%. Якщо не задано — береться з налаштувань"
+                hint="ПДВ у документах для клієнта. «Базовий ПДВ» — береться з налаштувань"
                 persistent-hint
               />
               <v-autocomplete

@@ -34,6 +34,7 @@ export default defineComponent({
     const totalExpenses = computed(() => Number(report.value?.totalExpenses) || 0)
     const budgetRemaining = computed(() => report.value?.budgetRemaining != null ? Number(report.value.budgetRemaining) : null)
     const budgetUsedPercent = computed(() => report.value?.budgetUsedPercent != null ? Number(report.value.budgetUsedPercent) : null)
+    const clientPricing = computed(() => report.value?.clientPricing ?? null)
 
     const stockOnSite = computed(() => report.value?.stockOnSite ?? [])
     const warehouseReservations = computed(
@@ -869,6 +870,65 @@ export default defineComponent({
                       {laborHasMissingRate.value ? 'для деяких працівників не задана ставка' : ''}.
                     </v-alert>
                   )}
+                </v-card-text>
+              </v-card>
+            )}
+
+            {clientPricing.value && clientPricing.value.subtotal > 0 && (
+              <v-card class="mb-4" variant="outlined" style={{ borderColor: 'rgba(33,150,243,0.4)' }}>
+                <v-card-title class="d-flex align-center flex-wrap">
+                  <v-icon class="mr-2" icon="mdi-account-cash-outline" color="info" />
+                  Для клієнта (з націнкою та ПДВ)
+                  <v-spacer />
+                  <span class="text-caption text-medium-emphasis">оцінка для кошторису/акту</span>
+                </v-card-title>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Матеріали</div>
+                      <div class="text-h6">{uah(Number(clientPricing.value.materials))}</div>
+                      <div class="text-caption text-medium-emphasis">націнка {Number(clientPricing.value.materialMarkupPercent)}%</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Праця</div>
+                      <div class="text-h6">{uah(Number(clientPricing.value.labor))}</div>
+                      <div class="text-caption text-medium-emphasis">націнка {Number(clientPricing.value.laborMarkupPercent)}%</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">Сума без ПДВ</div>
+                      <div class="text-h6 font-weight-bold">{uah(Number(clientPricing.value.subtotal))}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6} md={3}>
+                      <div class="text-body-2 text-medium-emphasis">ПДВ</div>
+                      <div class="text-h6">
+                        {Number(clientPricing.value.vatPercent) === 0
+                          ? <span class="text-medium-emphasis">Без ПДВ</span>
+                          : uah(Number(clientPricing.value.vatAmount))}
+                      </div>
+                      {Number(clientPricing.value.vatPercent) > 0 && (
+                        <div class="text-caption text-medium-emphasis">ставка {Number(clientPricing.value.vatPercent)}%</div>
+                      )}
+                    </v-col>
+                  </v-row>
+
+                  <v-divider class="my-3" />
+
+                  <v-row>
+                    <v-col cols={12} sm={6}>
+                      <div class="text-body-2 text-medium-emphasis">Разом до сплати клієнтом</div>
+                      <div class="text-h5 font-weight-bold text-info">{uah(Number(clientPricing.value.total))}</div>
+                    </v-col>
+                    <v-col cols={12} sm={6}>
+                      <div class="text-body-2 text-medium-emphasis">Маржа (без ПДВ, проти собівартості)</div>
+                      <div class={`text-h5 font-weight-bold ${Number(clientPricing.value.margin) < 0 ? 'text-error' : 'text-success'}`}>
+                        {uah(Number(clientPricing.value.margin))}
+                      </div>
+                    </v-col>
+                  </v-row>
+
+                  <div class="text-caption text-medium-emphasis mt-2">
+                    Орієнтовний розрахунок на основі відпущених матеріалів і зафіксованої праці. Точні суми — у згенерованих документах.
+                  </div>
                 </v-card-text>
               </v-card>
             )}
